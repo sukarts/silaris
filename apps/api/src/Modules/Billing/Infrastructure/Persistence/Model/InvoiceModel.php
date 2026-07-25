@@ -6,6 +6,7 @@ namespace Silaris\Modules\Billing\Infrastructure\Persistence\Model;
 
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Laravel\Scout\Searchable;
 use Silaris\Modules\Crm\Infrastructure\Persistence\Model\PartyModel;
 use Silaris\Modules\Shared\Infrastructure\Persistence\BaseModel;
 use Silaris\Modules\Shared\Infrastructure\Persistence\Concerns\BelongsToTenant;
@@ -14,6 +15,7 @@ use Silaris\Modules\Shipment\Infrastructure\Persistence\Model\ShipmentModel;
 class InvoiceModel extends BaseModel
 {
     use BelongsToTenant;
+    use Searchable;
 
     protected $table = 'invoices';
 
@@ -49,5 +51,25 @@ class InvoiceModel extends BaseModel
     public function isDraft(): bool
     {
         return $this->status === 'draft';
+    }
+
+    /** Index Meilisearch (préfixe Scout appliqué automatiquement). */
+    public function searchableAs(): string
+    {
+        return config('scout.prefix').'invoices';
+    }
+
+    public function toSearchableArray(): array
+    {
+        return [
+            'id' => $this->id,
+            'tenant_id' => $this->tenant_id,
+            'number' => $this->number,
+        ];
+    }
+
+    public function shouldBeSearchable(): bool
+    {
+        return $this->number !== null;
     }
 }

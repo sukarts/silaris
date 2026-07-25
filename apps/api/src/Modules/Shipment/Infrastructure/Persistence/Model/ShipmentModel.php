@@ -6,6 +6,7 @@ namespace Silaris\Modules\Shipment\Infrastructure\Persistence\Model;
 
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Laravel\Scout\Searchable;
 use Silaris\Modules\Crm\Infrastructure\Persistence\Model\PartyModel;
 use Silaris\Modules\Identity\Infrastructure\Persistence\Model\UserModel;
 use Silaris\Modules\Shared\Infrastructure\Persistence\BaseModel;
@@ -18,6 +19,7 @@ use Silaris\Modules\Tenancy\Infrastructure\Persistence\Model\BranchModel;
 class ShipmentModel extends BaseModel
 {
     use BelongsToTenant;
+    use Searchable;
 
     protected $table = 'shipments';
 
@@ -36,6 +38,7 @@ class ShipmentModel extends BaseModel
         'is_archived' => 'bool',
     ];
 
+    /** @return BelongsTo<PartyModel, $this> */
     public function client(): BelongsTo
     {
         return $this->belongsTo(PartyModel::class, 'client_id');
@@ -74,5 +77,23 @@ class ShipmentModel extends BaseModel
     public function cargoItems(): HasMany
     {
         return $this->hasMany(CargoItemModel::class, 'shipment_id');
+    }
+
+    /** Index Meilisearch (préfixe Scout appliqué automatiquement). */
+    public function searchableAs(): string
+    {
+        return config('scout.prefix').'shipments';
+    }
+
+    public function toSearchableArray(): array
+    {
+        return [
+            'id' => $this->id,
+            'tenant_id' => $this->tenant_id,
+            'reference' => $this->reference,
+            'client_name' => $this->client?->name,
+            'origin' => $this->origin_locode,
+            'destination' => $this->destination_locode,
+        ];
     }
 }
