@@ -1,31 +1,45 @@
 # Blueprint Render — MVP SILARIS. Docs : https://render.com/docs/blueprint-spec
-# Provisionne API + web + worker + scheduler + PostgreSQL + Redis managés.
-# Meilisearch, stockage S3 (R2/AWS) et SMTP : services externes (voir docs/exploitation/guide-deploiement-mvp.md).
+# Provisionne API + web + worker + scheduler + PostgreSQL + Redis (Key Value) managés.
+# Meilisearch, stockage S3 (R2/AWS) et SMTP : services externes (voir
+# docs/exploitation/guide-deploiement-mvp.md). Toute valeur `sync: false` se colle
+# dans le dashboard Render au premier déploiement (secrets — jamais dans le repo).
+#
+# L'API, le worker et le cron partagent EXACTEMENT le même environnement : il est
+# défini une fois via l'ancre YAML `&api-env` puis réutilisé (`*api-env`). Les ancres
+# sont résolues par le parseur YAML avant Render — worker/cron reçoivent donc bien
+# toutes les variables DB/Redis/secrets (sinon ils ne démarrent pas).
 
 databases:
   - name: silaris-postgres
-    plan: standard            # Postgres managé : sauvegardes + PITR gérés par Render
+    plan: standard            # Postgres managé : sauvegardes quotidiennes + PITR
     postgresMajorVersion: "16"
 
 services:
+  # ── Redis managé (Render Key Value) ──────────────────────────────────────
+  - type: keyvalue
+    name: silaris-redis
+    plan: standard
+    ipAllowList: []           # accessible uniquement depuis le réseau privé Render
+
   # ── API (php-fpm + nginx via l'image prod) ───────────────────────────────
   - type: web
     name: silaris-api
     runtime: image
     image:
-      url: ghcr.io/sukarts/silaris-api:latest   # publié par build.yml
+      url: "ghcr.io/sukarts/silaris-api:latest"     # publié par build.yml
     plan: standard
     healthCheckPath: /api/v1/health
-    preDeployCommand: "php artisan migrate --force"   # migration avant bascule
-    envVars:
+    # Migrations + seed des référentiels (idempotent) avant la bascule de trafic.
+    preDeployCommand: "php artisan migrate --force && php artisan db:seed --force"
+    envVars: &api-env
       - key: APP_ENV
         value: production
       - key: APP_DEBUG
         value: "false"
       - key: APP_KEY
-        sync: false                                    # secret — collé dans le dashboard
+        sync: false                                # secret — `php artisan key:generate --show`
       - key: APP_URL
-        fromService: { type: web, name: silaris-api, property: host }
+        sync: false                                # ex. https://silaris-api.onrender.com
       - key: LOG_CHANNEL
         value: stderr
       - key: DB_CONNECTION
@@ -40,8 +54,11 @@ services:
         fromDatabase: { name: silaris-postgres, property: user }
       - key: DB_PASSWORD
         fromDatabase: { name: silaris-postgres, property: password }
+      # MVP : l'app se connecte en propriétaire → DB_SYSTEM_CONNECTION = pgsql.
+      # Durcissement post-MVP : créer un rôle non-propriétaire silaris_login et
+      # pointer les creds applicatifs dessus, DB_SYSTEM_* restant sur le propriétaire.
       - key: DB_SYSTEM_CONNECTION
-        value: pgsql                                   # MVP : app = propriétaire ; durcir en rôle non-propriétaire ensuite
+        value: pgsql
       - key: REDIS_HOST
         fromService: { type: keyvalue, name: silaris-redis, property: host }
       - key: REDIS_PORT
@@ -71,7 +88,7 @@ services:
       - key: AWS_BUCKET
         sync: false
       - key: AWS_ENDPOINT
-        sync: false
+        sync: false                                # ex. https://<account>.r2.cloudflarestorage.com
       - key: AWS_USE_PATH_STYLE_ENDPOINT
         value: "true"
       - key: MAIL_MAILER
@@ -84,41 +101,34 @@ services:
         sync: false
       - key: MAIL_PASSWORD
         sync: false
+      - key: MAIL_FROM_ADDRESS
+        sync: false
 
-  # ── Worker Horizon ───────────────────────────────────────────────────────
+  # ── Worker Horizon (files : outbox, notifications, sync Odoo) ─────────────
   - type: worker
     name: silaris-worker
     runtime: image
-    image: { url: ghcr.io/sukarts/silaris-api:latest }
+    image: { url: "ghcr.io/sukarts/silaris-api:latest" }
     plan: standard
     dockerCommand: "php artisan horizon"
-    envVars:
-      - fromGroup: silaris-shared
+    envVars: *api-env
 
-  # ── Scheduler (Render Cron déclenchant schedule:run) ─────────────────────
+  # ── Scheduler (Render Cron → schedule:run chaque minute) ─────────────────
   - type: cron
     name: silaris-scheduler
     runtime: image
-    image: { url: ghcr.io/sukarts/silaris-api:latest }
+    image: { url: "ghcr.io/sukarts/silaris-api:latest" }
     schedule: "* * * * *"
     dockerCommand: "php artisan schedule:run"
-    envVars:
-      - fromGroup: silaris-shared
+    envVars: *api-env
 
-  # ── Frontend Next.js ─────────────────────────────────────────────────────
+  # ── Frontend Next.js (image standalone) ──────────────────────────────────
   - type: web
     name: silaris-web
     runtime: image
-    image: { url: ghcr.io/sukarts/silaris-web:latest }
+    image: { url: "ghcr.io/sukarts/silaris-web:latest" }
     plan: standard
     healthCheckPath: /login
     envVars:
       - key: NEXT_PUBLIC_API_URL
-        fromService: { type: web, name: silaris-api, property: host }
-
-# Groupe partagé worker/cron (mêmes secrets DB/Redis/etc. que l'API — voir dashboard)
-envVarGroups:
-  - name: silaris-shared
-    envVars:
-      - key: APP_ENV
-        value: production
+        sync: false                                # URL publique de silaris-api (+ /api/v1)
