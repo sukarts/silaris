@@ -39,6 +39,17 @@ final class ProvisionTenant extends Command
 
     protected $description = 'Provisionne un nouveau tenant + société + agence + administrateur (onboarding prod).';
 
+    private static function unambiguousPassword(int $length = 16): string
+    {
+        $chars = 'abcdefghjkmnpqrstuvwxyzABCDEFGHJKMNPQRSTUVWXYZ23456789';
+        $password = '';
+        for ($i = 0; $i < $length; $i++) {
+            $password .= $chars[random_int(0, strlen($chars) - 1)];
+        }
+
+        return $password;
+    }
+
     public function handle(): int
     {
         $name = (string) ($this->option('name') ?: $this->ask('Nom du tenant'));
@@ -54,7 +65,9 @@ final class ProvisionTenant extends Command
         $branchCode = Str::upper((string) $this->option('branch-code'));
         $branchName = (string) ($this->option('branch-name') ?: 'Siège');
         $timezone = (string) $this->option('timezone');
-        $password = (string) ($this->option('password') ?: Str::password(16));
+        // Mot de passe sans caractères ambigus (1/l/I, 0/O/o, symboles piégeux) :
+        // il est recopié depuis un terminal — leçon du déploiement MVP.
+        $password = (string) ($this->option('password') ?: self::unambiguousPassword());
 
         // Validations défensives -------------------------------------------------
         if ($name === '' || $slug === '' || $email === '' || $first === '' || $last === '') {
