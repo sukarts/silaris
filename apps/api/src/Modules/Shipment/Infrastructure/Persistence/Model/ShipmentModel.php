@@ -38,6 +38,7 @@ class ShipmentModel extends BaseModel
         'is_archived' => 'bool',
     ];
 
+    /** @return BelongsTo<PartyModel, $this> */
     public function client(): BelongsTo
     {
         return $this->belongsTo(PartyModel::class, 'client_id');
