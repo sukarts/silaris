@@ -30,7 +30,7 @@ services:
     plan: standard
     healthCheckPath: /api/v1/health
     # Migrations + seed des référentiels (idempotent) avant la bascule de trafic.
-    preDeployCommand: "php artisan migrate --force && php artisan db:seed --force"
+    preDeployCommand: "sh -c 'php artisan migrate --force && php artisan db:seed --force'"
     envVars: &api-env
       - key: APP_ENV
         value: production
