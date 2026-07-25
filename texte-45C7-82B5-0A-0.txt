@@ -1,0 +1,277 @@
+Exigences de Sécurité et de Déploiement
+Plateforme de Gestion de Transit International (TMS)
+Version : 1.0 Objectif : Définir les exigences de sécurité, de conformité, de disponibilité et de déploiement de la plateforme.
+⸻
+1. Objectifs de sécurité
+Le logiciel doit garantir :
+	●	La confidentialité des données.
+	●	L’intégrité des informations.
+	●	La disponibilité permanente du service.
+	●	La traçabilité de toutes les opérations.
+	●	La protection contre les cyberattaques.
+	●	La conformité avec les réglementations applicables (ex. RGPD si des données de résidents européens sont traitées).
+Le système doit être conçu selon le principe du Security by Design.
+⸻
+2. Gestion des utilisateurs
+Authentification
+Le système doit supporter :
+	●	Authentification par email et mot de passe.
+	●	Authentification via Microsoft 365 ou Google Workspace (SSO) (option).
+	●	Authentification multifacteur (MFA/2FA).
+	●	Politique de mots de passe robustes.
+	●	Expiration automatique des sessions.
+	●	Déconnexion automatique après une période d’inactivité.
+⸻
+Politique des mots de passe
+Minimum :
+	●	12 caractères.
+	●	1 majuscule.
+	●	1 minuscule.
+	●	1 chiffre.
+	●	1 caractère spécial.
+Interdictions :
+	●	Mot de passe déjà utilisé.
+	●	Informations personnelles.
+	●	Mots de passe faibles.
+⸻
+Gestion des sessions
+Le système doit :
+	●	Générer un jeton sécurisé.
+	●	Révoquer les sessions à la déconnexion.
+	●	Permettre la déconnexion de tous les appareils.
+	●	Détecter les connexions simultanées suspectes.
+⸻
+3. Gestion des rôles
+Le logiciel utilise un système RBAC (Role-Based Access Control).
+Rôles
+	●	Super Administrateur
+	●	Administrateur
+	●	Directeur
+	●	Responsable d’exploitation
+	●	Agent Transit
+	●	Commercial
+	●	Comptable (consultation/export vers ERP uniquement)
+	●	Chauffeur
+	●	Client
+	●	Invité
+Chaque rôle possède uniquement les droits nécessaires à ses fonctions (principe du moindre privilège).
+⸻
+4. Permissions
+Permissions granulaires :
+	●	Lire
+	●	Créer
+	●	Modifier
+	●	Supprimer
+	●	Exporter
+	●	Importer
+	●	Valider
+	●	Clôturer
+	●	Archiver
+	●	Synchroniser avec Odoo
+Chaque module dispose de son propre ensemble de permissions.
+⸻
+5. Journalisation (Audit)
+Toutes les opérations doivent être historisées.
+Exemple :
+	●	Connexion
+	●	Déconnexion
+	●	Création dossier
+	●	Modification dossier
+	●	Suppression document
+	●	Téléchargement
+	●	Génération facture
+	●	Synchronisation API
+	●	Changement de rôle
+	●	Modification des paramètres
+Le journal doit contenir :
+	●	Utilisateur
+	●	Date
+	●	Heure
+	●	Adresse IP
+	●	Navigateur
+	●	Action
+	●	Ancienne valeur
+	●	Nouvelle valeur
+Les journaux doivent être conservés pendant une durée définie par la politique interne de l’entreprise.
+⸻
+6. Sécurité des données
+Toutes les communications doivent être chiffrées via HTTPS (TLS).
+Les mots de passe doivent être hachés avec un algorithme robuste (Argon2id ou bcrypt).
+Les données sensibles doivent être chiffrées au repos si nécessaire :
+	●	Clés API
+	●	Tokens
+	●	Secrets
+	●	Informations bancaires (si stockées)
+	●	Documents confidentiels
+⸻
+7. Sécurité des documents
+Les documents ne doivent jamais être accessibles directement par URL publique.
+Accès :
+	●	Vérification des permissions.
+	●	URL temporaires signées.
+	●	Journalisation des téléchargements.
+Types de documents :
+	●	BL
+	●	HBL
+	●	MBL
+	●	AWB
+	●	Factures
+	●	Contrats
+	●	Documents douaniers
+⸻
+8. Sécurité des API
+Toutes les API REST doivent être protégées.
+Prévoir :
+	●	Authentification JWT ou OAuth2.
+	●	Limitation de débit (Rate Limiting).
+	●	Rotation des clés API.
+	●	Expiration des tokens.
+	●	Validation stricte des entrées.
+	●	Journalisation des appels.
+Toutes les intégrations externes doivent utiliser des comptes de service dédiés.
+⸻
+9. Protection contre les attaques
+Le logiciel doit être protégé contre :
+	●	Injection SQL.
+	●	Cross Site Scripting (XSS).
+	●	Cross Site Request Forgery (CSRF).
+	●	Clickjacking.
+	●	Brute Force.
+	●	Vol de session.
+	●	Upload de fichiers malveillants.
+	●	Exécution de code arbitraire.
+	●	Déni de service (DoS) au niveau applicatif.
+⸻
+10. Sauvegardes
+Sauvegardes automatiques :
+	●	Base de données.
+	●	Documents.
+	●	Configuration.
+	●	Paramètres.
+Plan recommandé :
+	●	Sauvegarde quotidienne.
+	●	Sauvegarde hebdomadaire.
+	●	Sauvegarde mensuelle.
+Les sauvegardes doivent être chiffrées et stockées sur un site distinct.
+Des tests réguliers de restauration doivent être prévus.
+⸻
+11. Haute disponibilité
+Le système doit pouvoir fonctionner 24h/24 et 7j/7.
+Prévoir :
+	●	Répartition de charge (Load Balancer).
+	●	Redondance des serveurs.
+	●	Redondance de la base de données.
+	●	Surveillance des services.
+	●	Alertes en cas d’incident.
+Objectif recommandé :
+	●	Disponibilité ≥ 99,9 %.
+⸻
+12. Déploiement
+Le projet doit être conteneurisé avec Docker.
+Conteneurs recommandés :
+	●	Frontend (Next.js)
+	●	Backend (Laravel)
+	●	PostgreSQL
+	●	Redis
+	●	Nginx
+	●	Service de tâches planifiées
+	●	Worker pour les files d’attente
+⸻
+13. Environnements
+Le projet doit disposer d’environnements séparés :
+	●	Développement
+	●	Test
+	●	Préproduction
+	●	Production
+Chaque environnement possède :
+	●	Sa base de données.
+	●	Ses variables d’environnement.
+	●	Ses clés API.
+	●	Ses journaux.
+⸻
+14. CI/CD
+Mettre en place un pipeline d’intégration et de déploiement continu.
+Étapes :
+	1.	Analyse du code.
+	2.	Tests automatiques.
+	3.	Vérification de la qualité.
+	4.	Construction des images Docker.
+	5.	Déploiement.
+	6.	Vérification post-déploiement.
+	7.	Possibilité de retour arrière (rollback).
+⸻
+15. Surveillance (Monitoring)
+Mettre en place un système de supervision permettant de suivre :
+	●	Disponibilité.
+	●	Utilisation CPU.
+	●	Mémoire.
+	●	Stockage.
+	●	Temps de réponse.
+	●	Files d’attente.
+	●	Synchronisations API.
+	●	Erreurs applicatives.
+Prévoir également une centralisation des journaux pour faciliter les diagnostics.
+⸻
+16. Gestion des fichiers
+Les fichiers doivent être stockés dans un espace compatible S3 (Amazon S3, MinIO ou équivalent).
+Fonctionnalités :
+	●	Versionnage.
+	●	Archivage.
+	●	Suppression logique.
+	●	Contrôle d’accès.
+	●	Vérification de l’intégrité.
+⸻
+17. Sécurité des intégrations
+Toutes les connexions avec :
+	●	Compagnies maritimes
+	●	Compagnies aériennes
+	●	Odoo
+	●	SMS Gateway
+	●	WhatsApp Business API
+	●	Services d’email
+doivent être sécurisées par :
+	●	HTTPS.
+	●	Authentification forte.
+	●	Clés API stockées de manière sécurisée.
+	●	Journalisation.
+	●	Gestion des erreurs et des délais d’attente.
+	●	Mécanismes de reprise après incident.
+⸻
+18. Continuité d’activité
+Prévoir un Plan de Reprise d’Activité (PRA) et un Plan de Continuité d’Activité (PCA).
+Objectifs recommandés :
+	●	RPO (Recovery Point Objective) : ≤ 15 minutes.
+	●	RTO (Recovery Time Objective) : ≤ 2 heures.
+⸻
+19. Exigences de performance
+Le système doit supporter :
+	●	Au moins 500 utilisateurs connectés simultanément (dimensionnable).
+	●	Plus de 100 000 dossiers.
+	●	Plusieurs millions d’événements de tracking.
+	●	Des recherches rapides (idéalement < 2 secondes sur les opérations courantes).
+	●	Des traitements asynchrones pour les synchronisations, notifications et imports.
+⸻
+20. Documentation technique obligatoire
+La livraison devra inclure :
+	●	Guide d’installation.
+	●	Guide de déploiement.
+	●	Guide d’administration.
+	●	Documentation des API (OpenAPI/Swagger).
+	●	Schéma de base de données (ERD).
+	●	Procédure de sauvegarde et de restauration.
+	●	Procédure de mise à jour.
+	●	Manuel d’exploitation.
+	●	Plan de sécurité.
+	●	Procédure de gestion des incidents.
+⸻
+Critères d’acceptation
+Le système sera considéré conforme si :
+	●	Toutes les communications sont chiffrées.
+	●	Les accès sont contrôlés par rôles et permissions.
+	●	Les données critiques sont protégées.
+	●	Les sauvegardes sont automatisées et testées.
+	●	Les API sont sécurisées.
+	●	Les déploiements sont reproductibles via Docker.
+	●	Les journaux d’audit permettent une traçabilité complète.
+	●	L’intégration avec Odoo et les partenaires logistiques peut être réalisée de manière sécurisée.
+	●	La plateforme est prête pour une exploitation professionnelle et une évolution vers un modèle SaaS multi-clients.

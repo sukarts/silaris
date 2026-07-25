@@ -1,0 +1,84 @@
+name: silaris-dev
+
+# Infrastructure de développement — l'API (Herd) et le front (pnpm) tournent
+# nativement ; profils "app" pour tout conteneuriser si besoin.
+services:
+  postgres:
+    image: postgres:16
+    container_name: silaris-postgres
+    environment:
+      POSTGRES_DB: silaris
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: silaris_dev
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    container_name: silaris-redis
+    command: redis-server --appendonly yes
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  meilisearch:
+    image: getmeili/meilisearch:v1.15
+    container_name: silaris-meilisearch
+    environment:
+      MEILI_MASTER_KEY: silaris_dev_meili_key
+      MEILI_ENV: development
+    ports:
+      - "7700:7700"
+    volumes:
+      - meili_data:/meili_data
+
+  minio:
+    image: minio/minio:latest
+    container_name: silaris-minio
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: silaris
+      MINIO_ROOT_PASSWORD: silaris_dev_minio
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - minio_data:/data
+
+  # Création automatique du bucket documents au démarrage.
+  minio-init:
+    image: minio/mc:latest
+    depends_on:
+      - minio
+    entrypoint: >
+      /bin/sh -c "
+      sleep 3;
+      mc alias set local http://minio:9000 silaris silaris_dev_minio;
+      mc mb --ignore-existing local/silaris-documents;
+      exit 0"
+
+  mailpit:
+    image: axllent/mailpit:latest
+    container_name: silaris-mailpit
+    ports:
+      - "1025:1025"
+      - "8025:8025"
+
+volumes:
+  postgres_data:
+  redis_data:
+  meili_data:
+  minio_data:

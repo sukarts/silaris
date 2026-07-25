@@ -1,0 +1,24 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: silaris-scheduler
+  labels: { app: silaris, component: scheduler }
+spec:
+  replicas: 1 # UN SEUL — schedule:work n'est pas multi-instance
+  strategy: { type: Recreate }
+  selector:
+    matchLabels: { app: silaris, component: scheduler }
+  template:
+    metadata:
+      labels: { app: silaris, component: scheduler }
+    spec:
+      containers:
+        - name: scheduler
+          image: ghcr.io/OWNER/silaris-api:latest
+          command: ["php", "artisan", "schedule:work"]
+          envFrom:
+            - configMapRef: { name: silaris-config }
+            - secretRef: { name: silaris-secrets }
+          resources:
+            requests: { cpu: 100m, memory: 192Mi }
+            limits: { cpu: 500m, memory: 384Mi }

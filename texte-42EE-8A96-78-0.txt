@@ -1,0 +1,333 @@
+CAHIER DES CHARGES
+Plateforme de Gestion de Transit International (TMS)
+Nom du projet : TransitFlow (nom provisoire) Version : 1.0 Date : Juillet 2026
+⸻
+Table des matières
+	1.	Présentation du projet
+	2.	Objectifs
+	3.	Périmètre du projet
+	4.	Utilisateurs
+	5.	Architecture générale
+	6.	Modules fonctionnels
+	7.	Gestion des dossiers de transit
+	8.	Module maritime
+	9.	Module aérien
+	10.	Module routier
+	11.	Gestion documentaire
+	12.	CRM
+	13.	Cotation et facturation
+	14.	Portail client
+	15.	Tracking intelligent
+	16.	Notifications
+	17.	Intégration avec les partenaires
+	18.	Intégration Odoo
+	19.	Tableau de bord
+	20.	Rapports
+	21.	Sécurité
+	22.	Architecture technique
+	23.	Base de données
+	24.	Déploiement
+	25.	Roadmap
+	26.	Livrables
+⸻
+1. Présentation du projet
+Contexte
+L’entreprise souhaite disposer d’une plateforme numérique permettant de gérer l’ensemble de ses opérations de transit international.
+Le logiciel couvrira :
+	●	Transit maritime
+	●	Transit aérien
+	●	Transit routier
+	●	Import
+	●	Export
+	●	FCL
+	●	LCL
+	●	Multimodal
+L’objectif est de remplacer les traitements manuels (Excel, emails, dossiers papier) par une plateforme centralisée.
+⸻
+2. Objectifs
+Le logiciel devra permettre de :
+	●	Gérer les dossiers de transit.
+	●	Gérer les clients et fournisseurs.
+	●	Automatiser les opérations.
+	●	Suivre les conteneurs.
+	●	Suivre les colis.
+	●	Gérer les documents.
+	●	Générer les devis.
+	●	Générer les factures (hors comptabilité).
+	●	Informer automatiquement les clients.
+	●	Offrir un portail client.
+	●	Centraliser les données.
+	●	Préparer les échanges avec Odoo.
+⸻
+3. Périmètre
+Inclus
+	●	CRM
+	●	Gestion des dossiers
+	●	Maritime
+	●	Aérien
+	●	Routier
+	●	Tracking
+	●	Portail client
+	●	Documents
+	●	Devis
+	●	Facturation
+	●	API
+	●	Notifications
+Exclus
+Le logiciel ne doit pas gérer :
+	●	Comptabilité générale
+	●	TVA
+	●	Journal comptable
+	●	Balance
+	●	Grand Livre
+	●	Déclarations fiscales
+Ces éléments seront gérés par Odoo.
+⸻
+4. Utilisateurs
+Administrateur
+Gestion complète.
+Direction
+Vision globale.
+Exploitation
+Gestion des dossiers.
+Transit
+Gestion des opérations.
+Commercial
+Clients et devis.
+Chauffeur
+Livraisons.
+Client
+Suivi des dossiers.
+⸻
+5. Architecture générale
+Architecture 3 couches :
+Frontend
+↓
+API REST
+↓
+Base PostgreSQL
+Architecture modulaire.
+Prête pour le SaaS.
+⸻
+6. Modules
+Administration
+	●	Utilisateurs
+	●	Permissions
+	●	Agences
+	●	Paramètres
+	●	Devises
+	●	Pays
+	●	Ports
+	●	Aéroports
+	●	Incoterms
+⸻
+CRM
+Clients
+	●	Coordonnées
+	●	Contacts
+	●	Historique
+	●	Documents
+Fournisseurs
+	●	Compagnies maritimes
+	●	Compagnies aériennes
+	●	Transporteurs
+	●	Douane
+⸻
+7. Gestion des dossiers
+Chaque dossier possède :
+	●	Référence
+	●	Client
+	●	Responsable
+	●	Agence
+	●	Type
+	●	Mode
+	●	Statut
+	●	ETA
+	●	ETD
+	●	Incoterm
+	●	Origine
+	●	Destination
+Workflow :
+Création
+↓
+Booking
+↓
+Départ
+↓
+Transit
+↓
+Arrivée
+↓
+Dédouanement
+↓
+Livraison
+↓
+Clôture
+⸻
+8. Module maritime
+FCL
+Gestion :
+	●	Conteneurs
+	●	Numéro
+	●	Taille
+	●	Type
+	●	Scellé
+	●	Navire
+	●	Voyage
+	●	ETA
+	●	ETD
+	●	ATA
+Tracking :
+	●	Départ
+	●	Escales
+	●	Arrivée
+	●	Douane
+	●	Livraison
+⸻
+LCL
+Gestion :
+	●	Master BL
+	●	House BL
+	●	Consolidation
+	●	Déconsolidation
+Plusieurs clients peuvent partager un même conteneur.
+Chaque client visualise uniquement ses marchandises.
+⸻
+9. Module aérien
+Gestion :
+	●	MAWB
+	●	HAWB
+	●	Vol
+	●	Compagnie
+	●	Poids
+	●	Volume
+	●	Nombre colis
+Tracking complet.
+⸻
+10. Module routier
+Gestion :
+	●	Camions
+	●	Remorques
+	●	Chauffeurs
+	●	Missions
+	●	Livraisons
+Prévoir intégration GPS.
+⸻
+11. Gestion documentaire
+Documents :
+	●	BL
+	●	HBL
+	●	MBL
+	●	AWB
+	●	Facture commerciale
+	●	Packing List
+	●	Certificat d’origine
+	●	Assurance
+	●	Douane
+Fonctions :
+	●	Upload
+	●	Versioning
+	●	Archivage
+	●	Recherche
+⸻
+12. CRM
+Historique :
+	●	Dossiers
+	●	Emails
+	●	Téléphone
+	●	Devis
+	●	Factures
+	●	Réclamations
+⸻
+13. Cotations
+Calculateur :
+	●	Fret
+	●	Douane
+	●	Manutention
+	●	Assurance
+	●	Livraison
+Création automatique :
+	●	Devis
+	●	Proforma
+	●	Facture
+⸻
+14. Portail client
+Le client peut :
+	●	Voir ses dossiers
+	●	Télécharger ses documents
+	●	Consulter ses factures
+	●	Voir ses devis
+	●	Suivre ses expéditions
+⸻
+15. Tracking intelligent
+Le logiciel devra pouvoir se connecter aux API des compagnies maritimes et aériennes.
+Exemples :
+	●	MSC
+	●	CMA CGM
+	●	Maersk
+	●	Hapag-Lloyd
+	●	COSCO
+	●	Evergreen
+	●	ONE
+	●	OOCL
+	●	Air France KLM Cargo
+	●	Emirates SkyCargo
+	●	Ethiopian Cargo
+	●	Turkish Cargo
+	●	Qatar Airways Cargo
+Le système devra récupérer :
+	●	ETA
+	●	ETD
+	●	ATA
+	●	Position du navire
+	●	Position du conteneur
+	●	Escales
+	●	Événements
+⸻
+16. Notifications
+Canaux :
+	●	Email
+	●	SMS
+	●	WhatsApp Business
+	●	Notifications internes
+Déclencheurs :
+	●	Départ
+	●	Arrivée
+	●	Livraison
+	●	Douane
+	●	Documents manquants
+	●	Retard
+	●	Facture disponible
+Le client choisit les notifications qu’il souhaite recevoir.
+⸻
+17. Connecteurs
+Architecture basée sur des connecteurs indépendants.
+Chaque connecteur gère :
+	●	Authentification
+	●	API
+	●	Synchronisation
+	●	Logs
+	●	Cache
+	●	Gestion erreurs
+Connecteurs prévus :
+	●	Compagnies maritimes
+	●	Compagnies aériennes
+	●	Odoo
+	●	WhatsApp
+	●	SMS
+	●	Email
+	●	Google Maps
+⸻
+18. Intégration Odoo
+Synchronisation :
+	●	Clients
+	●	Fournisseurs
+	●	Produits
+	●	Services
+	●	Devis
+	●	Factures
+	●	Paiements (statut)
+	●	Taxes
+Communication :
+	●	API REST
+	●	Webhooks

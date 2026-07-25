@@ -1,0 +1,46 @@
+name: Deploy
+
+on:
+  workflow_run:
+    workflows: ["Build & Push Images"]
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      environment:
+        type: choice
+        options: [staging, production]
+        required: true
+
+jobs:
+  staging:
+    if: github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    environment: staging  # secrets + URL par environnement GitHub
+    steps:
+      - uses: actions/checkout@v4
+      - uses: azure/setup-kubectl@v4
+      - name: Déploiement staging (kustomize, image = SHA du commit)
+        env:
+          KUBECONFIG_DATA: ${{ secrets.KUBECONFIG }}
+        run: |
+          echo "$KUBECONFIG_DATA" | base64 -d > kubeconfig && export KUBECONFIG=./kubeconfig
+          cd docker/k8s/overlays/staging
+          kubectl kustomize . | sed "s|:latest|:${GITHUB_SHA::7}|g" | kubectl apply -f -
+          kubectl -n silaris-staging rollout status deploy/silaris-api --timeout=180s
+
+  production:
+    if: github.event_name == 'workflow_dispatch' && inputs.environment == 'production'
+    runs-on: ubuntu-latest
+    environment: production  # approbation manuelle exigée (protection d'environnement GitHub)
+    steps:
+      - uses: actions/checkout@v4
+      - uses: azure/setup-kubectl@v4
+      - name: Déploiement production
+        env:
+          KUBECONFIG_DATA: ${{ secrets.KUBECONFIG_PROD }}
+        run: |
+          echo "$KUBECONFIG_DATA" | base64 -d > kubeconfig && export KUBECONFIG=./kubeconfig
+          cd docker/k8s/overlays/production
+          kubectl kustomize . | sed "s|:latest|:${GITHUB_SHA::7}|g" | kubectl apply -f -
+          kubectl -n silaris-production rollout status deploy/silaris-api --timeout=300s

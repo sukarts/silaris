@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: silaris-api
+spec:
+  selector: { app: silaris, component: api }
+  ports: [{ port: 8080, targetPort: 8080 }]
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: silaris-web
+spec:
+  selector: { app: silaris, component: web }
+  ports: [{ port: 3000, targetPort: 3000 }]

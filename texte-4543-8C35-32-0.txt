@@ -1,0 +1,118 @@
+19. Tableau de bord
+KPIs :
+	●	Dossiers actifs
+	●	Import
+	●	Export
+	●	Conteneurs
+	●	Vols
+	●	Camions
+	●	Retards
+	●	Performance agents
+	●	Chiffre d’affaires opérationnel
+	●	Satisfaction client
+Graphiques interactifs.
+⸻
+20. Rapports
+Exports :
+	●	PDF
+	●	Excel
+Rapports :
+	●	Journalier
+	●	Hebdomadaire
+	●	Mensuel
+	●	Annuel
+⸻
+21. Sécurité
+	●	HTTPS
+	●	JWT
+	●	MFA (2FA)
+	●	Gestion des rôles (RBAC)
+	●	Journal d’audit
+	●	Chiffrement
+	●	Sauvegardes automatiques
+	●	Protection contre les attaques courantes (XSS, CSRF, injections SQL, etc.)
+⸻
+22. Architecture technique
+Frontend
+	●	Next.js
+	●	React
+	●	TypeScript
+	●	Tailwind CSS
+Backend
+	●	Laravel
+	●	API REST
+	●	Architecture modulaire
+Base de données
+	●	PostgreSQL
+Infrastructure
+	●	Docker
+	●	Redis
+	●	Stockage compatible S3
+⸻
+23. Base de données
+Environ 60 tables couvrant :
+	●	Administration
+	●	CRM
+	●	Dossiers
+	●	Maritime
+	●	Aérien
+	●	Routier
+	●	Documents
+	●	Notifications
+	●	Intégrations
+	●	Audit
+	●	Portail client
+	●	Facturation
+⸻
+24. Déploiement
+Environnements :
+	●	Développement
+	●	Test
+	●	Préproduction
+	●	Production
+Pipeline CI/CD :
+	●	Tests automatiques
+	●	Construction des images Docker
+	●	Déploiement
+	●	Rollback
+⸻
+25. Roadmap
+Phase 1
+	●	Administration
+	●	CRM
+	●	Dossiers
+	●	Maritime
+	●	Documents
+Phase 2
+	●	Aérien
+	●	Routier
+	●	Portail client
+	●	Notifications
+Phase 3
+	●	Connecteurs compagnies maritimes
+	●	Tracking automatique
+	●	API publiques
+Phase 4
+	●	Intégration Odoo
+	●	Tableau de bord avancé
+	●	Application mobile (PWA puis Android/iOS)
+	●	Fonctionnalités IA (assistant, prévision des retards, génération de réponses)
+⸻
+26. Livrables
+À la fin du projet, les éléments suivants devront être fournis :
+	●	Cahier des charges final
+	●	Maquettes UI/UX (Figma)
+	●	Diagramme d’architecture
+	●	Diagramme ERD complet
+	●	Base de données PostgreSQL
+	●	API REST documentées (OpenAPI/Swagger)
+	●	Backend Laravel
+	●	Frontend Next.js
+	●	Jeux de tests
+	●	Documentation technique
+	●	Documentation utilisateur
+	●	Scripts Docker
+	●	Guide d’installation
+	●	Guide de déploiement
+	●	Plan de sauvegarde et de reprise
+	●	Plan d’intégration avec Odoo et les partenaires logistiques

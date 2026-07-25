@@ -1,0 +1,583 @@
+parameters:
+	ignoreErrors:
+		-
+			message: '#^Instanceof between Silaris\\Modules\\Identity\\Infrastructure\\Persistence\\Model\\UserModel\|null and Silaris\\Modules\\Crm\\Infrastructure\\Persistence\\Model\\PortalAccountModel will always evaluate to false\.$#'
+			identifier: instanceof.alwaysFalse
+			count: 1
+			path: app/Http/Middleware/EnsurePortalUser.php
+
+		-
+			message: '#^Unreachable statement \- code above always terminates\.$#'
+			identifier: deadCode.unreachable
+			count: 1
+			path: app/Http/Middleware/EnsurePortalUser.php
+
+		-
+			message: '#^Access to an undefined property Silaris\\Modules\\Identity\\Infrastructure\\Persistence\\Model\\UserModel\:\:\$party_id\.$#'
+			identifier: property.notFound
+			count: 1
+			path: src/Modules/Billing/Interface/Http/Controller/PortalInvoiceController.php
+
+		-
+			message: '#^Access to an undefined property Silaris\\Modules\\Identity\\Infrastructure\\Persistence\\Model\\UserModel\:\:\$name\.$#'
+			identifier: property.notFound
+			count: 1
+			path: src/Modules/Crm/Interface/Http/Controller/PortalAuthController.php
+
+		-
+			message: '#^Access to an undefined property Silaris\\Modules\\Identity\\Infrastructure\\Persistence\\Model\\UserModel\:\:\$notification_prefs\.$#'
+			identifier: property.notFound
+			count: 1
+			path: src/Modules/Crm/Interface/Http/Controller/PortalAuthController.php
+
+		-
+			message: '#^Access to an undefined property Silaris\\Modules\\Identity\\Infrastructure\\Persistence\\Model\\UserModel\:\:\$party\.$#'
+			identifier: property.notFound
+			count: 1
+			path: src/Modules/Crm/Interface/Http/Controller/PortalAuthController.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$id\.$#'
+			identifier: property.notFound
+			count: 1
+			path: src/Modules/Documents/Interface/Http/Controller/DocumentController.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$original_filename\.$#'
+			identifier: property.notFound
+			count: 1
+			path: src/Modules/Documents/Interface/Http/Controller/DocumentController.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$id\.$#'
+			identifier: property.notFound
+			count: 1
+			path: src/Modules/Documents/Interface/Http/Controller/PortalDocumentController.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$original_filename\.$#'
+			identifier: property.notFound
+			count: 1
+			path: src/Modules/Documents/Interface/Http/Controller/PortalDocumentController.php
+
+		-
+			message: '#^Access to an undefined property Silaris\\Modules\\Identity\\Infrastructure\\Persistence\\Model\\UserModel\:\:\$party_id\.$#'
+			identifier: property.notFound
+			count: 2
+			path: src/Modules/Documents/Interface/Http/Controller/PortalDocumentController.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$permissions\.$#'
+			identifier: property.notFound
+			count: 1
+			path: src/Modules/Identity/Infrastructure/Persistence/Model/UserModel.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$key\.$#'
+			identifier: property.notFound
+			count: 1
+			path: src/Modules/Identity/Interface/Http/Controller/AuthController.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$name\.$#'
+			identifier: property.notFound
+			count: 1
+			path: src/Modules/Identity/Interface/Http/Controller/AuthController.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$permissions\.$#'
+			identifier: property.notFound
+			count: 1
+			path: src/Modules/Identity/Interface/Http/Controller/AuthController.php
+
+		-
+			message: '#^Parameter \#1 \$callback of method Illuminate\\Database\\Eloquent\\Collection\<int,Illuminate\\Database\\Eloquent\\Model\>\:\:map\(\) contains unresolvable type\.$#'
+			identifier: argument.unresolvableType
+			count: 1
+			path: src/Modules/Identity/Interface/Http/Controller/AuthController.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$description\.$#'
+			identifier: property.notFound
+			count: 1
+			path: src/Modules/OdooSync/Application/Translator/InvoiceTranslator.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$quantity\.$#'
+			identifier: property.notFound
+			count: 1
+			path: src/Modules/OdooSync/Application/Translator/InvoiceTranslator.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$reference\.$#'
+			identifier: property.notFound
+			count: 1
+			path: src/Modules/OdooSync/Application/Translator/InvoiceTranslator.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$tax_rate_id\.$#'
+			identifier: property.notFound
+			count: 1
+			path: src/Modules/OdooSync/Application/Translator/InvoiceTranslator.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$unit_price\.$#'
+			identifier: property.notFound
+			count: 1
+			path: src/Modules/OdooSync/Application/Translator/InvoiceTranslator.php
+
+		-
+			message: '#^Parameter \#1 \$callback of method Illuminate\\Database\\Eloquent\\Collection\<int,Illuminate\\Database\\Eloquent\\Model\>\:\:map\(\) contains unresolvable type\.$#'
+			identifier: argument.unresolvableType
+			count: 1
+			path: src/Modules/OdooSync/Application/Translator/InvoiceTranslator.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$city\.$#'
+			identifier: property.notFound
+			count: 1
+			path: src/Modules/OdooSync/Application/Translator/PartyTranslator.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$email\.$#'
+			identifier: property.notFound
+			count: 1
+			path: src/Modules/OdooSync/Application/Translator/PartyTranslator.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$line1\.$#'
+			identifier: property.notFound
+			count: 1
+			path: src/Modules/OdooSync/Application/Translator/PartyTranslator.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$phone\.$#'
+			identifier: property.notFound
+			count: 1
+			path: src/Modules/OdooSync/Application/Translator/PartyTranslator.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$postal_code\.$#'
+			identifier: property.notFound
+			count: 1
+			path: src/Modules/OdooSync/Application/Translator/PartyTranslator.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$container_size_type\.$#'
+			identifier: property.notFound
+			count: 2
+			path: src/Modules/Pricing/Infrastructure/Persistence/EloquentTariffProvider.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$currency_code\.$#'
+			identifier: property.notFound
+			count: 1
+			path: src/Modules/Pricing/Infrastructure/Persistence/EloquentTariffProvider.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$description\.$#'
+			identifier: property.notFound
+			count: 1
+			path: src/Modules/Pricing/Infrastructure/Persistence/EloquentTariffProvider.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$minimum\.$#'
+			identifier: property.notFound
+			count: 1
+			path: src/Modules/Pricing/Infrastructure/Persistence/EloquentTariffProvider.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$service_code\.$#'
+			identifier: property.notFound
+			count: 2
+			path: src/Modules/Pricing/Infrastructure/Persistence/EloquentTariffProvider.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$unit\.$#'
+			identifier: property.notFound
+			count: 2
+			path: src/Modules/Pricing/Infrastructure/Persistence/EloquentTariffProvider.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$unit_price\.$#'
+			identifier: property.notFound
+			count: 1
+			path: src/Modules/Pricing/Infrastructure/Persistence/EloquentTariffProvider.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$weight_from_kg\.$#'
+			identifier: property.notFound
+			count: 1
+			path: src/Modules/Pricing/Infrastructure/Persistence/EloquentTariffProvider.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$weight_to_kg\.$#'
+			identifier: property.notFound
+			count: 1
+			path: src/Modules/Pricing/Infrastructure/Persistence/EloquentTariffProvider.php
+
+		-
+			message: '#^Access to an undefined property Silaris\\Modules\\Identity\\Infrastructure\\Persistence\\Model\\UserModel\:\:\$party_id\.$#'
+			identifier: property.notFound
+			count: 3
+			path: src/Modules/Pricing/Interface/Http/Controller/PortalQuoteController.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$code\.$#'
+			identifier: property.notFound
+			count: 1
+			path: src/Modules/Shipment/Infrastructure/Persistence/SequenceReferenceGenerator.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$key\.$#'
+			identifier: property.notFound
+			count: 2
+			path: src/Modules/Shipment/Infrastructure/Workflow/EloquentWorkflowDefinitionProvider.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$label\.$#'
+			identifier: property.notFound
+			count: 1
+			path: src/Modules/Shipment/Infrastructure/Workflow/EloquentWorkflowDefinitionProvider.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$position\.$#'
+			identifier: property.notFound
+			count: 1
+			path: src/Modules/Shipment/Infrastructure/Workflow/EloquentWorkflowDefinitionProvider.php
+
+		-
+			message: '#^Access to an undefined property Silaris\\Modules\\Identity\\Infrastructure\\Persistence\\Model\\UserModel\:\:\$party_id\.$#'
+			identifier: property.notFound
+			count: 2
+			path: src/Modules/Shipment/Interface/Http/Controller/PortalShipmentController.php
+
+		-
+			message: '#^Access to an undefined property Silaris\\Modules\\Shipment\\Interface\\Http\\Resource\\ShipmentListResource\:\:\$active_containers\.$#'
+			identifier: property.notFound
+			count: 1
+			path: src/Modules/Shipment/Interface/Http/Resource/ShipmentListResource.php
+
+		-
+			message: '#^Access to an undefined property Silaris\\Modules\\Shipment\\Interface\\Http\\Resource\\ShipmentListResource\:\:\$agent_id\.$#'
+			identifier: property.notFound
+			count: 1
+			path: src/Modules/Shipment/Interface/Http/Resource/ShipmentListResource.php
+
+		-
+			message: '#^Access to an undefined property Silaris\\Modules\\Shipment\\Interface\\Http\\Resource\\ShipmentListResource\:\:\$agent_name\.$#'
+			identifier: property.notFound
+			count: 1
+			path: src/Modules/Shipment/Interface/Http/Resource/ShipmentListResource.php
+
+		-
+			message: '#^Access to an undefined property Silaris\\Modules\\Shipment\\Interface\\Http\\Resource\\ShipmentListResource\:\:\$ata\.$#'
+			identifier: property.notFound
+			count: 1
+			path: src/Modules/Shipment/Interface/Http/Resource/ShipmentListResource.php
+
+		-
+			message: '#^Access to an undefined property Silaris\\Modules\\Shipment\\Interface\\Http\\Resource\\ShipmentListResource\:\:\$atd\.$#'
+			identifier: property.notFound
+			count: 1
+			path: src/Modules/Shipment/Interface/Http/Resource/ShipmentListResource.php
+
+		-
+			message: '#^Access to an undefined property Silaris\\Modules\\Shipment\\Interface\\Http\\Resource\\ShipmentListResource\:\:\$branch_code\.$#'
+			identifier: property.notFound
+			count: 1
+			path: src/Modules/Shipment/Interface/Http/Resource/ShipmentListResource.php
+
+		-
+			message: '#^Access to an undefined property Silaris\\Modules\\Shipment\\Interface\\Http\\Resource\\ShipmentListResource\:\:\$client_id\.$#'
+			identifier: property.notFound
+			count: 1
+			path: src/Modules/Shipment/Interface/Http/Resource/ShipmentListResource.php
+
+		-
+			message: '#^Access to an undefined property Silaris\\Modules\\Shipment\\Interface\\Http\\Resource\\ShipmentListResource\:\:\$client_name\.$#'
+			identifier: property.notFound
+			count: 1
+			path: src/Modules/Shipment/Interface/Http/Resource/ShipmentListResource.php
+
+		-
+			message: '#^Access to an undefined property Silaris\\Modules\\Shipment\\Interface\\Http\\Resource\\ShipmentListResource\:\:\$closed_at\.$#'
+			identifier: property.notFound
+			count: 1
+			path: src/Modules/Shipment/Interface/Http/Resource/ShipmentListResource.php
+
+		-
+			message: '#^Access to an undefined property Silaris\\Modules\\Shipment\\Interface\\Http\\Resource\\ShipmentListResource\:\:\$destination_locode\.$#'
+			identifier: property.notFound
+			count: 1
+			path: src/Modules/Shipment/Interface/Http/Resource/ShipmentListResource.php
+
+		-
+			message: '#^Access to an undefined property Silaris\\Modules\\Shipment\\Interface\\Http\\Resource\\ShipmentListResource\:\:\$direction\.$#'
+			identifier: property.notFound
+			count: 1
+			path: src/Modules/Shipment/Interface/Http/Resource/ShipmentListResource.php
+
+		-
+			message: '#^Access to an undefined property Silaris\\Modules\\Shipment\\Interface\\Http\\Resource\\ShipmentListResource\:\:\$eta\.$#'
+			identifier: property.notFound
+			count: 1
+			path: src/Modules/Shipment/Interface/Http/Resource/ShipmentListResource.php
+
+		-
+			message: '#^Access to an undefined property Silaris\\Modules\\Shipment\\Interface\\Http\\Resource\\ShipmentListResource\:\:\$etd\.$#'
+			identifier: property.notFound
+			count: 1
+			path: src/Modules/Shipment/Interface/Http/Resource/ShipmentListResource.php
+
+		-
+			message: '#^Access to an undefined property Silaris\\Modules\\Shipment\\Interface\\Http\\Resource\\ShipmentListResource\:\:\$id\.$#'
+			identifier: property.notFound
+			count: 1
+			path: src/Modules/Shipment/Interface/Http/Resource/ShipmentListResource.php
+
+		-
+			message: '#^Access to an undefined property Silaris\\Modules\\Shipment\\Interface\\Http\\Resource\\ShipmentListResource\:\:\$is_delayed\.$#'
+			identifier: property.notFound
+			count: 1
+			path: src/Modules/Shipment/Interface/Http/Resource/ShipmentListResource.php
+
+		-
+			message: '#^Access to an undefined property Silaris\\Modules\\Shipment\\Interface\\Http\\Resource\\ShipmentListResource\:\:\$missing_documents\.$#'
+			identifier: property.notFound
+			count: 1
+			path: src/Modules/Shipment/Interface/Http/Resource/ShipmentListResource.php
+
+		-
+			message: '#^Access to an undefined property Silaris\\Modules\\Shipment\\Interface\\Http\\Resource\\ShipmentListResource\:\:\$mode\.$#'
+			identifier: property.notFound
+			count: 1
+			path: src/Modules/Shipment/Interface/Http/Resource/ShipmentListResource.php
+
+		-
+			message: '#^Access to an undefined property Silaris\\Modules\\Shipment\\Interface\\Http\\Resource\\ShipmentListResource\:\:\$open_tasks\.$#'
+			identifier: property.notFound
+			count: 1
+			path: src/Modules/Shipment/Interface/Http/Resource/ShipmentListResource.php
+
+		-
+			message: '#^Access to an undefined property Silaris\\Modules\\Shipment\\Interface\\Http\\Resource\\ShipmentListResource\:\:\$origin_locode\.$#'
+			identifier: property.notFound
+			count: 1
+			path: src/Modules/Shipment/Interface/Http/Resource/ShipmentListResource.php
+
+		-
+			message: '#^Access to an undefined property Silaris\\Modules\\Shipment\\Interface\\Http\\Resource\\ShipmentListResource\:\:\$priority\.$#'
+			identifier: property.notFound
+			count: 1
+			path: src/Modules/Shipment/Interface/Http/Resource/ShipmentListResource.php
+
+		-
+			message: '#^Access to an undefined property Silaris\\Modules\\Shipment\\Interface\\Http\\Resource\\ShipmentListResource\:\:\$reference\.$#'
+			identifier: property.notFound
+			count: 1
+			path: src/Modules/Shipment/Interface/Http/Resource/ShipmentListResource.php
+
+		-
+			message: '#^Access to an undefined property Silaris\\Modules\\Shipment\\Interface\\Http\\Resource\\ShipmentListResource\:\:\$status\.$#'
+			identifier: property.notFound
+			count: 1
+			path: src/Modules/Shipment/Interface/Http/Resource/ShipmentListResource.php
+
+		-
+			message: '#^Access to an undefined property Silaris\\Modules\\Shipment\\Interface\\Http\\Resource\\ShipmentResource\:\:\$agent\.$#'
+			identifier: property.notFound
+			count: 2
+			path: src/Modules/Shipment/Interface/Http/Resource/ShipmentResource.php
+
+		-
+			message: '#^Access to an undefined property Silaris\\Modules\\Shipment\\Interface\\Http\\Resource\\ShipmentResource\:\:\$ata\.$#'
+			identifier: property.notFound
+			count: 1
+			path: src/Modules/Shipment/Interface/Http/Resource/ShipmentResource.php
+
+		-
+			message: '#^Access to an undefined property Silaris\\Modules\\Shipment\\Interface\\Http\\Resource\\ShipmentResource\:\:\$atd\.$#'
+			identifier: property.notFound
+			count: 1
+			path: src/Modules/Shipment/Interface/Http/Resource/ShipmentResource.php
+
+		-
+			message: '#^Access to an undefined property Silaris\\Modules\\Shipment\\Interface\\Http\\Resource\\ShipmentResource\:\:\$branch\.$#'
+			identifier: property.notFound
+			count: 3
+			path: src/Modules/Shipment/Interface/Http/Resource/ShipmentResource.php
+
+		-
+			message: '#^Access to an undefined property Silaris\\Modules\\Shipment\\Interface\\Http\\Resource\\ShipmentResource\:\:\$cargoItems\.$#'
+			identifier: property.notFound
+			count: 1
+			path: src/Modules/Shipment/Interface/Http/Resource/ShipmentResource.php
+
+		-
+			message: '#^Access to an undefined property Silaris\\Modules\\Shipment\\Interface\\Http\\Resource\\ShipmentResource\:\:\$client\.$#'
+			identifier: property.notFound
+			count: 3
+			path: src/Modules/Shipment/Interface/Http/Resource/ShipmentResource.php
+
+		-
+			message: '#^Access to an undefined property Silaris\\Modules\\Shipment\\Interface\\Http\\Resource\\ShipmentResource\:\:\$closed_at\.$#'
+			identifier: property.notFound
+			count: 1
+			path: src/Modules/Shipment/Interface/Http/Resource/ShipmentResource.php
+
+		-
+			message: '#^Access to an undefined property Silaris\\Modules\\Shipment\\Interface\\Http\\Resource\\ShipmentResource\:\:\$created_at\.$#'
+			identifier: property.notFound
+			count: 1
+			path: src/Modules/Shipment/Interface/Http/Resource/ShipmentResource.php
+
+		-
+			message: '#^Access to an undefined property Silaris\\Modules\\Shipment\\Interface\\Http\\Resource\\ShipmentResource\:\:\$currency_code\.$#'
+			identifier: property.notFound
+			count: 1
+			path: src/Modules/Shipment/Interface/Http/Resource/ShipmentResource.php
+
+		-
+			message: '#^Access to an undefined property Silaris\\Modules\\Shipment\\Interface\\Http\\Resource\\ShipmentResource\:\:\$destination_locode\.$#'
+			identifier: property.notFound
+			count: 1
+			path: src/Modules/Shipment/Interface/Http/Resource/ShipmentResource.php
+
+		-
+			message: '#^Access to an undefined property Silaris\\Modules\\Shipment\\Interface\\Http\\Resource\\ShipmentResource\:\:\$direction\.$#'
+			identifier: property.notFound
+			count: 1
+			path: src/Modules/Shipment/Interface/Http/Resource/ShipmentResource.php
+
+		-
+			message: '#^Access to an undefined property Silaris\\Modules\\Shipment\\Interface\\Http\\Resource\\ShipmentResource\:\:\$estimated_cost\.$#'
+			identifier: property.notFound
+			count: 1
+			path: src/Modules/Shipment/Interface/Http/Resource/ShipmentResource.php
+
+		-
+			message: '#^Access to an undefined property Silaris\\Modules\\Shipment\\Interface\\Http\\Resource\\ShipmentResource\:\:\$estimated_revenue\.$#'
+			identifier: property.notFound
+			count: 1
+			path: src/Modules/Shipment/Interface/Http/Resource/ShipmentResource.php
+
+		-
+			message: '#^Access to an undefined property Silaris\\Modules\\Shipment\\Interface\\Http\\Resource\\ShipmentResource\:\:\$eta\.$#'
+			identifier: property.notFound
+			count: 1
+			path: src/Modules/Shipment/Interface/Http/Resource/ShipmentResource.php
+
+		-
+			message: '#^Access to an undefined property Silaris\\Modules\\Shipment\\Interface\\Http\\Resource\\ShipmentResource\:\:\$eta_initial\.$#'
+			identifier: property.notFound
+			count: 1
+			path: src/Modules/Shipment/Interface/Http/Resource/ShipmentResource.php
+
+		-
+			message: '#^Access to an undefined property Silaris\\Modules\\Shipment\\Interface\\Http\\Resource\\ShipmentResource\:\:\$etd\.$#'
+			identifier: property.notFound
+			count: 1
+			path: src/Modules/Shipment/Interface/Http/Resource/ShipmentResource.php
+
+		-
+			message: '#^Access to an undefined property Silaris\\Modules\\Shipment\\Interface\\Http\\Resource\\ShipmentResource\:\:\$id\.$#'
+			identifier: property.notFound
+			count: 1
+			path: src/Modules/Shipment/Interface/Http/Resource/ShipmentResource.php
+
+		-
+			message: '#^Access to an undefined property Silaris\\Modules\\Shipment\\Interface\\Http\\Resource\\ShipmentResource\:\:\$incoterm_code\.$#'
+			identifier: property.notFound
+			count: 1
+			path: src/Modules/Shipment/Interface/Http/Resource/ShipmentResource.php
+
+		-
+			message: '#^Access to an undefined property Silaris\\Modules\\Shipment\\Interface\\Http\\Resource\\ShipmentResource\:\:\$mode\.$#'
+			identifier: property.notFound
+			count: 1
+			path: src/Modules/Shipment/Interface/Http/Resource/ShipmentResource.php
+
+		-
+			message: '#^Access to an undefined property Silaris\\Modules\\Shipment\\Interface\\Http\\Resource\\ShipmentResource\:\:\$notes\.$#'
+			identifier: property.notFound
+			count: 1
+			path: src/Modules/Shipment/Interface/Http/Resource/ShipmentResource.php
+
+		-
+			message: '#^Access to an undefined property Silaris\\Modules\\Shipment\\Interface\\Http\\Resource\\ShipmentResource\:\:\$origin_locode\.$#'
+			identifier: property.notFound
+			count: 1
+			path: src/Modules/Shipment/Interface/Http/Resource/ShipmentResource.php
+
+		-
+			message: '#^Access to an undefined property Silaris\\Modules\\Shipment\\Interface\\Http\\Resource\\ShipmentResource\:\:\$priority\.$#'
+			identifier: property.notFound
+			count: 1
+			path: src/Modules/Shipment/Interface/Http/Resource/ShipmentResource.php
+
+		-
+			message: '#^Access to an undefined property Silaris\\Modules\\Shipment\\Interface\\Http\\Resource\\ShipmentResource\:\:\$quote_id\.$#'
+			identifier: property.notFound
+			count: 1
+			path: src/Modules/Shipment/Interface/Http/Resource/ShipmentResource.php
+
+		-
+			message: '#^Access to an undefined property Silaris\\Modules\\Shipment\\Interface\\Http\\Resource\\ShipmentResource\:\:\$reference\.$#'
+			identifier: property.notFound
+			count: 1
+			path: src/Modules/Shipment/Interface/Http/Resource/ShipmentResource.php
+
+		-
+			message: '#^Access to an undefined property Silaris\\Modules\\Shipment\\Interface\\Http\\Resource\\ShipmentResource\:\:\$status\.$#'
+			identifier: property.notFound
+			count: 1
+			path: src/Modules/Shipment/Interface/Http/Resource/ShipmentResource.php
+
+		-
+			message: '#^Access to an undefined property Silaris\\Modules\\Shipment\\Interface\\Http\\Resource\\ShipmentResource\:\:\$updated_at\.$#'
+			identifier: property.notFound
+			count: 1
+			path: src/Modules/Shipment/Interface/Http/Resource/ShipmentResource.php
+
+		-
+			message: '#^Access to an undefined property Silaris\\Modules\\Shipment\\Interface\\Http\\Resource\\TimelineEventResource\:\:\$actor_id\.$#'
+			identifier: property.notFound
+			count: 1
+			path: src/Modules/Shipment/Interface/Http/Resource/TimelineEventResource.php
+
+		-
+			message: '#^Access to an undefined property Silaris\\Modules\\Shipment\\Interface\\Http\\Resource\\TimelineEventResource\:\:\$id\.$#'
+			identifier: property.notFound
+			count: 1
+			path: src/Modules/Shipment/Interface/Http/Resource/TimelineEventResource.php
+
+		-
+			message: '#^Access to an undefined property Silaris\\Modules\\Shipment\\Interface\\Http\\Resource\\TimelineEventResource\:\:\$occurred_at\.$#'
+			identifier: property.notFound
+			count: 1
+			path: src/Modules/Shipment/Interface/Http/Resource/TimelineEventResource.php
+
+		-
+			message: '#^Access to an undefined property Silaris\\Modules\\Shipment\\Interface\\Http\\Resource\\TimelineEventResource\:\:\$payload\.$#'
+			identifier: property.notFound
+			count: 1
+			path: src/Modules/Shipment/Interface/Http/Resource/TimelineEventResource.php
+
+		-
+			message: '#^Access to an undefined property Silaris\\Modules\\Shipment\\Interface\\Http\\Resource\\TimelineEventResource\:\:\$source\.$#'
+			identifier: property.notFound
+			count: 1
+			path: src/Modules/Shipment/Interface/Http/Resource/TimelineEventResource.php
+
+		-
+			message: '#^Access to an undefined property Silaris\\Modules\\Shipment\\Interface\\Http\\Resource\\TimelineEventResource\:\:\$title\.$#'
+			identifier: property.notFound
+			count: 1
+			path: src/Modules/Shipment/Interface/Http/Resource/TimelineEventResource.php
+
+		-
+			message: '#^Access to an undefined property Silaris\\Modules\\Shipment\\Interface\\Http\\Resource\\TimelineEventResource\:\:\$type\.$#'
+			identifier: property.notFound
+			count: 1
+			path: src/Modules/Shipment/Interface/Http/Resource/TimelineEventResource.php
