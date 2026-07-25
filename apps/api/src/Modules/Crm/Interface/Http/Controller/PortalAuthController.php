@@ -9,6 +9,9 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\ValidationException;
 use Silaris\Modules\Crm\Infrastructure\Persistence\Model\PortalAccountModel;
+use Silaris\Modules\Shared\Domain\Exception\AmbiguousAccount;
+use Silaris\Modules\Shared\Infrastructure\Tenancy\GuestTenantResolver;
+use Silaris\Modules\Shared\Infrastructure\Tenancy\TenantContext;
 
 class PortalAuthController
 {
@@ -20,10 +23,22 @@ class PortalAuthController
             'password' => ['required', 'string'],
         ]);
 
-        $account = PortalAccountModel::withoutGlobalScopes()
+        $tenantId = app(GuestTenantResolver::class)->resolve($request);
+        $matches = PortalAccountModel::on(config('database.system_connection'))->withoutGlobalScopes()
             ->where('email', strtolower($credentials['email']))
             ->where('is_active', true)
-            ->first();
+            ->when($tenantId !== null, fn ($q) => $q->where('tenant_id', $tenantId))
+            ->limit(2)
+            ->get();
+
+        if ($matches->count() > 1) {
+            throw AmbiguousAccount::make();
+        }
+        $account = $matches->first();
+        if ($account !== null) {
+            app(TenantContext::class)->set($account->tenant_id);
+            $account->setConnection(config('database.default'));
+        }
 
         if ($account === null || ! Hash::check($credentials['password'], $account->password_hash)) {
             throw ValidationException::withMessages(['email' => ['Identifiants invalides.']]);

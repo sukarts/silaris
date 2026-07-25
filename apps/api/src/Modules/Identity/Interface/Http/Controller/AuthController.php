@@ -14,6 +14,9 @@ use PragmaRX\Google2FA\Google2FA;
 use Silaris\Modules\Identity\Application\Service\PasswordPolicy;
 use Silaris\Modules\Identity\Application\Service\SessionLogger;
 use Silaris\Modules\Identity\Infrastructure\Persistence\Model\UserModel;
+use Silaris\Modules\Shared\Domain\Exception\AmbiguousAccount;
+use Silaris\Modules\Shared\Infrastructure\Tenancy\GuestTenantResolver;
+use Silaris\Modules\Shared\Infrastructure\Tenancy\TenantContext;
 
 class AuthController
 {
@@ -31,10 +34,25 @@ class AuthController
             'password' => ['required', 'string'],
         ]);
 
-        $user = UserModel::withoutGlobalScopes()
+        $tenantId = app(GuestTenantResolver::class)->resolve($request);
+        // Recherche pré-auth : cross-tenant délibéré → connexion système (échappe à la RLS).
+        $matches = UserModel::on(config('database.system_connection'))->withoutGlobalScopes()
             ->where('email', strtolower($credentials['email']))
             ->where('is_active', true)
-            ->first();
+            ->when($tenantId !== null, fn ($q) => $q->where('tenant_id', $tenantId))
+            ->limit(2)
+            ->get();
+
+        if ($matches->count() > 1) {
+            throw AmbiguousAccount::make();
+        }
+        $user = $matches->first();
+        // Compte identifié → contexte tenant posé : les écritures (login_failed, last_login,
+        // sessions_log, tokens) respectent désormais la RLS.
+        if ($user !== null) {
+            app(TenantContext::class)->set($user->tenant_id);
+            $user->setConnection(config('database.default'));
+        }
 
         if ($user === null || ! Hash::check($credentials['password'], $user->password_hash)) {
             if ($user !== null) {

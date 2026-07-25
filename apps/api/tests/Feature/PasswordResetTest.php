@@ -15,6 +15,7 @@ function seedResetToken(int $ageMinutes): array
     $email = 'admin@test.local';
     $plainToken = str_repeat('a', 64);
     DB::table('password_reset_tokens')->insert([
+        'tenant_id' => $ids['tenant'],
         'email' => $email,
         'token' => Hash::make($plainToken),
         'created_at' => now()->subMinutes($ageMinutes),

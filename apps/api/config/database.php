@@ -20,6 +20,10 @@ return [
 
     'default' => env('DB_CONNECTION', 'sqlite'),
 
+    // Connexion pour requêtes délibérément cross-tenant (login, tracking public, download).
+    // Prod : 'pgsql_system' (rôle BYPASSRLS). Test : 'pgsql' (même transaction que RefreshDatabase).
+    'system_connection' => env('DB_SYSTEM_CONNECTION', 'pgsql_system'),
+
     /*
     |--------------------------------------------------------------------------
     | Database Connections
@@ -82,6 +86,24 @@ return [
             'options' => extension_loaded('pdo_mysql') ? array_filter([
                 PDO::MYSQL_ATTR_SSL_CA => env('MYSQL_ATTR_SSL_CA'),
             ]) : [],
+        ],
+
+        'pgsql_system' => [
+            // Connexion à privilège BYPASSRLS pour les requêtes DÉLIBÉRÉMENT cross-tenant
+            // (résolution de login, suivi public, journal de téléchargement). En prod :
+            // rôle distinct DB_SYSTEM_USERNAME. En dev/test : retombe sur les creds standard.
+            'driver' => 'pgsql',
+            'url' => env('DB_URL'),
+            'host' => env('DB_HOST', '127.0.0.1'),
+            'port' => env('DB_PORT', '5432'),
+            'database' => env('DB_DATABASE', 'laravel'),
+            'username' => env('DB_SYSTEM_USERNAME', env('DB_USERNAME', 'root')),
+            'password' => env('DB_SYSTEM_PASSWORD', env('DB_PASSWORD', '')),
+            'charset' => env('DB_CHARSET', 'utf8'),
+            'prefix' => '',
+            'prefix_indexes' => true,
+            'search_path' => 'public',
+            'sslmode' => 'prefer',
         ],
 
         'pgsql' => [

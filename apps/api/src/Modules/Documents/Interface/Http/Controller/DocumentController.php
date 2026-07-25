@@ -123,9 +123,9 @@ class DocumentController
     {
         abort_unless($request->hasValidSignature(), 403);
 
-        $version = DocumentVersionModel::withoutGlobalScopes()->findOrFail($versionId);
+        $version = DocumentVersionModel::on(config('database.system_connection'))->withoutGlobalScopes()->findOrFail($versionId);
 
-        DB::table('document_downloads')->insert([
+        DB::connection(config('database.system_connection'))->table('document_downloads')->insert([
             'id' => (string) Str::uuid7(),
             'tenant_id' => $version->tenant_id,
             'document_version_id' => $version->id,

@@ -14,6 +14,8 @@ use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 use Silaris\Modules\Identity\Application\Service\PasswordPolicy;
 use Silaris\Modules\Identity\Infrastructure\Persistence\Model\UserModel;
+use Silaris\Modules\Shared\Infrastructure\Tenancy\GuestTenantResolver;
+use Silaris\Modules\Shared\Infrastructure\Tenancy\TenantContext;
 
 class PasswordResetController
 {
@@ -23,15 +25,22 @@ class PasswordResetController
         $data = $request->validate(['email' => ['required', 'email']]);
         $email = strtolower($data['email']);
 
-        $user = UserModel::withoutGlobalScopes()->where('email', $email)->where('is_active', true)->first();
-        if ($user !== null) {
+        $tenantId = app(GuestTenantResolver::class)->resolve($request);
+        $user = UserModel::on(config('database.system_connection'))->withoutGlobalScopes()
+            ->where('email', $email)
+            ->where('is_active', true)
+            ->when($tenantId !== null, fn ($q) => $q->where('tenant_id', $tenantId))
+            ->limit(2)->get();
+        // Silencieux si aucun ou plusieurs comptes (anti-énumération + jamais de ciblage arbitraire).
+        if ($user->count() === 1) {
+            $account = $user->first();
             $token = Str::random(64);
             DB::table('password_reset_tokens')->updateOrInsert(
-                ['email' => $email],
+                ['tenant_id' => $account->tenant_id, 'email' => $email],
                 ['token' => Hash::make($token), 'created_at' => now()],
             );
             // Envoi email réel : module Notifications (Étape 15). En dev : log.
-            Log::info("Password reset token for {$email}: {$token}");
+            Log::info("Password reset token for {$email} (tenant {$account->tenant_id}): {$token}");
         }
 
         return response()->json(['sent' => true]);
@@ -47,7 +56,19 @@ class PasswordResetController
         ]);
         $email = strtolower($data['email']);
 
-        $record = DB::table('password_reset_tokens')->where('email', $email)->first();
+        $tenantId = app(GuestTenantResolver::class)->resolve($request);
+        $candidates = UserModel::on(config('database.system_connection'))->withoutGlobalScopes()
+            ->where('email', $email)
+            ->when($tenantId !== null, fn ($q) => $q->where('tenant_id', $tenantId))
+            ->limit(2)->get();
+        if ($candidates->count() !== 1) {
+            throw ValidationException::withMessages(['token' => ['Lien invalide ou expiré.']]);
+        }
+        $resolvedTenantId = $candidates->first()->tenant_id;
+        app(TenantContext::class)->set($resolvedTenantId); // écritures RLS-compatibles
+
+        $record = DB::table('password_reset_tokens')
+            ->where('tenant_id', $resolvedTenantId)->where('email', $email)->first();
         // Carbon 3 : diffInMinutes() est signé par défaut ; created_at étant dans le passé,
         // l'expiration doit se mesurer en valeur absolue (sinon jamais déclenchée).
         $expired = $record !== null && Carbon::parse($record->created_at)->addMinutes(60)->isPast();
@@ -55,10 +76,11 @@ class PasswordResetController
             throw ValidationException::withMessages(['token' => ['Lien invalide ou expiré.']]);
         }
 
-        $user = UserModel::withoutGlobalScopes()->where('email', $email)->firstOrFail();
+        $user = $candidates->first();
+        $user->setConnection(config('database.default'));
         $user->update(['password_hash' => Hash::make($data['password']), 'password_changed_at' => now()]);
         $user->tokens()->delete(); // révocation totale
-        DB::table('password_reset_tokens')->where('email', $email)->delete();
+        DB::table('password_reset_tokens')->where('tenant_id', $resolvedTenantId)->where('email', $email)->delete();
 
         return response()->json(['reset' => true]);
     }

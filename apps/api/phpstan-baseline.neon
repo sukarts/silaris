@@ -97,6 +97,36 @@ parameters:
 			path: src/Modules/Identity/Interface/Http/Controller/AuthController.php
 
 		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$client_id\.$#'
+			identifier: property.notFound
+			count: 1
+			path: src/Modules/Ocean/Interface/Http/Controller/PackageController.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$code\.$#'
+			identifier: property.notFound
+			count: 1
+			path: src/Modules/Ocean/Interface/Http/Controller/PackageController.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$name\.$#'
+			identifier: property.notFound
+			count: 1
+			path: src/Modules/Ocean/Interface/Http/Controller/PackageController.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$reference\.$#'
+			identifier: property.notFound
+			count: 2
+			path: src/Modules/Ocean/Interface/Http/Controller/PackageController.php
+
+		-
+			message: '#^Parameter \#1 \$callback of method Illuminate\\Database\\Eloquent\\Collection\<int,Silaris\\Modules\\Ocean\\Infrastructure\\Persistence\\Model\\PackageModel\>\:\:map\(\) contains unresolvable type\.$#'
+			identifier: argument.unresolvableType
+			count: 1
+			path: src/Modules/Ocean/Interface/Http/Controller/PackageController.php
+
+		-
 			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$description\.$#'
 			identifier: property.notFound
 			count: 1
@@ -524,6 +554,12 @@ parameters:
 
 		-
 			message: '#^Access to an undefined property Silaris\\Modules\\Shipment\\Interface\\Http\\Resource\\ShipmentResource\:\:\$reference\.$#'
+			identifier: property.notFound
+			count: 1
+			path: src/Modules/Shipment/Interface/Http/Resource/ShipmentResource.php
+
+		-
+			message: '#^Access to an undefined property Silaris\\Modules\\Shipment\\Interface\\Http\\Resource\\ShipmentResource\:\:\$segments\.$#'
 			identifier: property.notFound
 			count: 1
 			path: src/Modules/Shipment/Interface/Http/Resource/ShipmentResource.php

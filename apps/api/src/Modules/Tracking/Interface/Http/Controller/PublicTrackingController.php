@@ -23,16 +23,16 @@ class PublicTrackingController
         }
 
         // Référence colis ? → réponse enrichie du statut individuel du colis.
-        $package = DB::table('packages')->where('reference', $query)->first();
+        $package = DB::connection(config('database.system_connection'))->table('packages')->where('reference', $query)->first();
 
-        $shipmentId = $package?->shipment_id ?? $this->resolve($query);
+        $shipmentId = $package !== null ? $package->shipment_id : $this->resolve($query);
         if ($shipmentId === null) {
             return problem(404, 'Aucune expédition trouvée pour ce numéro', 'https://silaris.app/errors/tracking-not-found');
         }
 
-        $shipment = DB::table('shipments')->where('id', $shipmentId)->first();
+        $shipment = DB::connection(config('database.system_connection'))->table('shipments')->where('id', $shipmentId)->first();
 
-        $events = DB::table('shipment_events')
+        $events = DB::connection(config('database.system_connection'))->table('shipment_events')
             ->where('shipment_id', $shipmentId)
             ->whereIn('type', ['status_change', 'tracking'])
             ->orderByDesc('occurred_at')
@@ -42,7 +42,7 @@ class PublicTrackingController
         $packagePayload = null;
         if ($package !== null) {
             $containerNumber = $package->container_id !== null
-                ? DB::table('containers')->where('id', $package->container_id)->value('number')
+                ? DB::connection(config('database.system_connection'))->table('containers')->where('id', $package->container_id)->value('number')
                 : null;
             $packageStatusLabels = [
                 'received' => 'Reçu à l\'entrepôt',
@@ -78,10 +78,10 @@ class PublicTrackingController
     /** Résolution multi-type — requêtes SANS scope tenant (recherche globale contrôlée). */
     private function resolve(string $query): ?string
     {
-        return DB::table('shipments')->where('reference', $query)->value('id')
-            ?? DB::table('bills_of_lading')->where('number', $query)->value('shipment_id')
-            ?? DB::table('air_waybills')->where('number', str_replace(['-', '/'], '', $query))->value('shipment_id')
-            ?? DB::table('container_assignments')
+        return DB::connection(config('database.system_connection'))->table('shipments')->where('reference', $query)->value('id')
+            ?? DB::connection(config('database.system_connection'))->table('bills_of_lading')->where('number', $query)->value('shipment_id')
+            ?? DB::connection(config('database.system_connection'))->table('air_waybills')->where('number', str_replace(['-', '/'], '', $query))->value('shipment_id')
+            ?? DB::connection(config('database.system_connection'))->table('container_assignments')
                 ->join('containers', 'containers.id', '=', 'container_assignments.container_id')
                 ->where('containers.number', str_replace([' ', '-'], '', $query))
                 ->orderByDesc('container_assignments.created_at')
