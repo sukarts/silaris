@@ -129,6 +129,12 @@ jobs:
         run: |
           pnpm --filter @silaris/web dev &
           npx wait-on http://localhost:3000/login http://localhost:8088/api/v1/health -t 90000
+          # Warmup : chauffe le boot Laravel + la route login (php artisan serve est froid
+          # au 1er hit) pour éviter que le cold-start ne dépasse les timeouts Playwright.
+          curl -s -o /dev/null -X POST http://localhost:8088/api/v1/auth/login \
+            -H 'Content-Type: application/json' \
+            -d '{"email":"admin@demo.silaris.app","password":"password"}' || true
+          curl -s -o /dev/null http://localhost:3000/dashboard || true
           pnpm --filter @silaris/web exec playwright test
       - uses: actions/upload-artifact@v4
         if: failure()
