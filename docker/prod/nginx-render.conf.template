@@ -1,0 +1,26 @@
+# Bloc serveur nginx pour Render (1 conteneur/service) : nginx écoute $PORT et
+# relaie le PHP à php-fpm local. Seul ${PORT} est substitué au runtime
+# (envsubst '${PORT}') — les variables nginx ($uri, $document_root…) sont préservées.
+server {
+    listen ${PORT};
+    server_name _;
+    root /var/www/public;
+    index index.php;
+    client_max_body_size 25m;
+
+    location / {
+        try_files $uri $uri/ /index.php?$query_string;
+    }
+
+    location ~ \.php$ {
+        fastcgi_pass 127.0.0.1:9000;
+        fastcgi_index index.php;
+        include fastcgi_params;
+        fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;
+        fastcgi_param DOCUMENT_ROOT $document_root;
+    }
+
+    location ~ /\.(?!well-known).* {
+        deny all;
+    }
+}
