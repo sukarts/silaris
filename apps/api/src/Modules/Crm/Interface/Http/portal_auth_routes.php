@@ -7,7 +7,7 @@ use Silaris\Modules\Crm\Interface\Http\Controller\PortalAuthController;
 
 Route::post('/login', [PortalAuthController::class, 'login']);
 
-Route::middleware(['auth:sanctum', 'portal-user'])->group(function (): void {
+Route::middleware(['auth:sanctum', 'portal-user', 'tenant'])->group(function (): void {
     Route::get('/me', [PortalAuthController::class, 'me']);
     Route::post('/logout', [PortalAuthController::class, 'logout']);
 });

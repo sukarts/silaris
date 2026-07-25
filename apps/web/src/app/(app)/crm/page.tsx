@@ -55,7 +55,7 @@ export default function CrmPage() {
     },
     onSuccess: () => {
       setShowForm(false);
-      setForm({ type: "client", code: "", name: "", currency_code: "XOF", payment_terms_days: "30" });
+      setForm({ type: "client", kind: "company", code: "", name: "", currency_code: "XOF", payment_terms_days: "30" });
       setError(null);
       queryClient.invalidateQueries({ queryKey: ["parties"] });
     },

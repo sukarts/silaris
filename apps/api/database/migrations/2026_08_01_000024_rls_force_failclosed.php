@@ -11,6 +11,10 @@ use Illuminate\Support\Facades\DB;
  *     renvoie NULL (missing_ok) → aucune ligne visible (au lieu d'une erreur 42704).
  *  2. FORCE ROW LEVEL SECURITY : la RLS s'applique même si l'app se connecte en
  *     propriétaire de table (défense en profondeur réellement effective).
+ *  3. Lignes globales partagées (tenant_id NULL) : référentiels transverses comme les
+ *     rôles système, visibles par tous les tenants en LECTURE (USING ... OR tenant_id IS NULL)
+ *     mais jamais inscriptibles par un tenant (WITH CHECK reste strict = tenant courant ;
+ *     le seed des lignes globales passe par le superutilisateur qui outrepasse la RLS).
  *
  * Les rares requêtes délibérément cross-tenant (résolution de login, suivi public,
  * journal de téléchargement) passent par la connexion `pgsql_system` (rôle bypass),
@@ -45,7 +49,7 @@ return new class extends Migration
             DB::unprepared(sprintf(<<<'SQL'
 DROP POLICY IF EXISTS tenant_isolation ON %1$s;
 CREATE POLICY tenant_isolation ON %1$s
-    USING (tenant_id = NULLIF(current_setting('app.tenant_id', true), '')::uuid)
+    USING (tenant_id = NULLIF(current_setting('app.tenant_id', true), '')::uuid OR tenant_id IS NULL)
     WITH CHECK (tenant_id = NULLIF(current_setting('app.tenant_id', true), '')::uuid);
 ALTER TABLE %1$s FORCE ROW LEVEL SECURITY;
 SQL, $table));

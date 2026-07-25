@@ -45,9 +45,11 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware) {
         $middleware->api(prepend: [
             ForceJsonResponse::class,
+            \App\Http\Middleware\ResolveTenantFromToken::class,
         ]);
         $middleware->alias([
             'tenant' => ResolveTenant::class,
+            'tenant-from-token' => \App\Http\Middleware\ResolveTenantFromToken::class,
             'internal' => EnsureInternalUser::class,
             'portal-user' => EnsurePortalUser::class,
         ]);

@@ -29,11 +29,13 @@ COPY apps/api/ ./
 COPY --from=vendor /app/vendor ./vendor
 COPY --from=vendor /usr/bin/composer /usr/bin/composer
 RUN composer dump-autoload --optimize --no-dev \
-    && php artisan config:cache --no-ansi || true \
     && chown -R www-data:www-data storage bootstrap/cache
 
+COPY docker/prod/api-entrypoint.sh /usr/local/bin/api-entrypoint
+RUN chmod +x /usr/local/bin/api-entrypoint
 USER www-data
 EXPOSE 9000
+ENTRYPOINT ["api-entrypoint"]
 CMD ["php-fpm"]
 
 # ── Étape 3 : worker (même image, entrypoint Horizon) ──────────────────────

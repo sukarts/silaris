@@ -14,7 +14,7 @@ Route::post('/forgot-password', [PasswordResetController::class, 'forgot']);
 Route::post('/reset-password', [PasswordResetController::class, 'reset']);
 
 // Authentifié interne
-Route::middleware(['auth:sanctum', 'internal'])->group(function (): void {
+Route::middleware(['auth:sanctum', 'internal', 'tenant'])->group(function (): void {
     Route::get('/me', [AuthController::class, 'me']);
     Route::post('/logout', [AuthController::class, 'logout']);
     Route::post('/logout-all', [AuthController::class, 'logoutAll']);
