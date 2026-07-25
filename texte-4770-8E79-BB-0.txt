@@ -1,0 +1,8 @@
+Recommandations
+Pour un logiciel de cette envergure, je recommande également d’intégrer dès la première version :
+	●	un moteur de workflow configurable (chaque entreprise peut adapter les étapes de traitement d’un dossier) ;
+	●	un système de tâches et d’approbations avec assignation et échéances ;
+	●	un centre de communication lié à chaque dossier (emails, commentaires, pièces jointes) ;
+	●	un module qualité et réclamations pour le suivi des incidents ;
+	●	un système d’événements et de webhooks pour faciliter les intégrations futures ;
+	●	une architecture multi-tenant si le logiciel est destiné à être commercialisé auprès de plusieurs transitaires sous forme de SaaS.

@@ -1,0 +1,21 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - deployment-api.yaml
+  - deployment-web.yaml
+  - deployment-worker.yaml
+  - deployment-scheduler.yaml
+  - services.yaml
+  - ingress.yaml
+  - hpa.yaml
+configMapGenerator:
+  - name: silaris-config
+    literals:
+      - APP_ENV=production
+      - LOG_CHANNEL=stderr
+      - QUEUE_CONNECTION=redis
+      - CACHE_STORE=redis
+      - SESSION_DRIVER=cookie
+      - SCOUT_DRIVER=meilisearch
+# Secrets attendus (créés par l'ops, JAMAIS committés) :
+#   silaris-secrets : APP_KEY, DB_*, REDIS_*, MEILISEARCH_KEY, AWS_*, MAIL_*

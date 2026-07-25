@@ -1,0 +1,11 @@
+node_modules/
+vendor/
+.env
+.env.*
+!.env.example
+.next/
+dist/
+storage/*.key
+.DS_Store
+.turbo/
+coverage/

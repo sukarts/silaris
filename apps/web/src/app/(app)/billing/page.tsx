@@ -1,0 +1,129 @@
+"use client";
+
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useState } from "react";
+import { problemMessage, rawApi } from "@/lib/api";
+import { useCan } from "@/stores/auth";
+
+interface Invoice {
+  id: string;
+  type: string;
+  number: string | null;
+  status: string;
+  payment_status: string;
+  currency_code: string;
+  total_excl_tax: string;
+  total_incl_tax: string;
+  issue_date: string | null;
+  due_date: string | null;
+  party: { name: string };
+  shipment: { reference: string } | null;
+}
+
+const TYPE_LABEL: Record<string, string> = { proforma: "Proforma", invoice: "Facture", credit_note: "Avoir" };
+const STATUS_TONE: Record<string, string> = {
+  draft: "bg-paper text-ink-3",
+  validated: "bg-sea-soft text-sea",
+  synced: "bg-ok-soft text-ok",
+  sync_failed: "bg-crit-soft text-crit",
+};
+const PAYMENT_LABEL: Record<string, [string, string]> = {
+  none: ["—", "text-ink-3"],
+  unpaid: ["Impayée", "text-warn"],
+  partial: ["Partielle", "text-warn"],
+  paid: ["Payée", "text-ok"],
+};
+
+export default function BillingPage() {
+  const queryClient = useQueryClient();
+  const canValidate = useCan("invoices.validate");
+  const [error, setError] = useState<string | null>(null);
+
+  const { data, isLoading } = useQuery({
+    queryKey: ["invoices"],
+    queryFn: async () => {
+      const { data: response } = await rawApi.GET("/v1/invoices");
+      return response as { data: Invoice[] };
+    },
+  });
+
+  const validate = useMutation({
+    mutationFn: async (invoiceId: string) => {
+      const { error: problem } = await rawApi.POST(`/v1/invoices/${invoiceId}/validate`);
+      if (problem) throw problem;
+    },
+    onSuccess: () => {
+      setError(null);
+      queryClient.invalidateQueries({ queryKey: ["invoices"] });
+    },
+    onError: (problem) => setError(problemMessage(problem)),
+  });
+
+  return (
+    <div className="flex flex-col gap-4">
+      <div>
+        <h1 className="text-xl font-bold">Facturation</h1>
+        <p className="text-[13px] text-ink-3">
+          Devis, proformas, factures, avoirs — la comptabilité reste dans Odoo.
+        </p>
+      </div>
+      {error && <p className="rounded-lg bg-crit-soft px-4 py-2.5 text-[13px] text-crit">{error}</p>}
+      <div className="overflow-x-auto rounded-xl border border-line bg-surface shadow-sm">
+        <table className="w-full text-[13px]">
+          <thead>
+            <tr className="border-b border-line text-left text-[10px] uppercase tracking-wider text-ink-3">
+              <th className="px-3 py-2.5">Numéro</th>
+              <th className="px-3 py-2.5">Type</th>
+              <th className="px-3 py-2.5">Client</th>
+              <th className="px-3 py-2.5">Dossier</th>
+              <th className="px-3 py-2.5">Statut</th>
+              <th className="px-3 py-2.5">Paiement</th>
+              <th className="px-3 py-2.5 text-right">HT</th>
+              <th className="px-3 py-2.5 text-right">TTC</th>
+              <th className="px-3 py-2.5">Échéance</th>
+              <th className="px-3 py-2.5" />
+            </tr>
+          </thead>
+          <tbody>
+            {isLoading && <tr><td colSpan={10} className="px-3 py-8 text-center text-ink-3">Chargement…</td></tr>}
+            {data?.data.map((invoice) => {
+              const [paymentLabel, paymentTone] = PAYMENT_LABEL[invoice.payment_status] ?? ["—", ""];
+              return (
+                <tr key={invoice.id} className="border-b border-line last:border-0 hover:bg-sea/5">
+                  <td className="mono px-3 py-2.5 font-semibold text-sea">{invoice.number ?? "(brouillon)"}</td>
+                  <td className="px-3 py-2.5 text-ink-2">{TYPE_LABEL[invoice.type]}</td>
+                  <td className="px-3 py-2.5">{invoice.party.name}</td>
+                  <td className="mono px-3 py-2.5 text-ink-2">{invoice.shipment?.reference ?? "—"}</td>
+                  <td className="px-3 py-2.5">
+                    <span className={`rounded-full px-2.5 py-0.5 text-[11px] font-semibold ${STATUS_TONE[invoice.status]}`}>
+                      {invoice.status === "draft" ? "Brouillon" : invoice.status === "validated" ? "Validée" : invoice.status === "synced" ? "Sync Odoo" : "Échec sync"}
+                    </span>
+                  </td>
+                  <td className={`px-3 py-2.5 text-xs font-semibold ${paymentTone}`}>{paymentLabel}</td>
+                  <td className="mono px-3 py-2.5 text-right">{Number(invoice.total_excl_tax).toLocaleString("fr-FR")}</td>
+                  <td className="mono px-3 py-2.5 text-right font-semibold">
+                    {Number(invoice.total_incl_tax).toLocaleString("fr-FR")} {invoice.currency_code}
+                  </td>
+                  <td className="mono px-3 py-2.5 text-ink-2">
+                    {invoice.due_date ? new Date(invoice.due_date).toLocaleDateString("fr-FR") : "—"}
+                  </td>
+                  <td className="px-3 py-2.5">
+                    {invoice.status === "draft" && canValidate && (
+                      <button
+                        onClick={() => validate.mutate(invoice.id)}
+                        disabled={validate.isPending}
+                        className="text-xs font-semibold text-sea hover:underline"
+                      >
+                        Valider →
+                      </button>
+                    )}
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}

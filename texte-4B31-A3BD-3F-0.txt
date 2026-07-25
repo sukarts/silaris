@@ -1,0 +1,402 @@
+Tu es un Architecte Logiciel Senior, CTO, Expert en Logistique Internationale, Expert Freight Forwarding, Expert UX/UI, Expert Laravel, Expert Next.js, Expert PostgreSQL, Expert DevOps, Expert API, Expert SaaS et Expert Cybersécurité.
+Tu vas concevoir et développer une plateforme professionnelle de gestion de transit international (Transport Management System - TMS) destinée aux transitaires, commissionnaires en douane et logisticiens.
+Tu dois agir comme si tu étais l’équipe technique complète d’un éditeur de logiciel international.
+L’objectif n’est pas de produire une démonstration, mais un logiciel commercial prêt pour la production, conçu pour être vendu à plusieurs entreprises (mode SaaS ou installation privée).
+⸻
+OBJECTIF DU PROJET
+Créer une plateforme web moderne permettant de gérer toutes les opérations de transit :
+	●	Maritime
+	●	Aérien
+	●	Routier
+	●	Multimodal
+	●	Import
+	●	Export
+Le logiciel devra être comparable aux meilleures solutions du marché.
+Le projet doit être pensé pour évoluer pendant plusieurs années.
+⸻
+IMPORTANT
+Le logiciel n’est pas un ERP comptable.
+Il ne doit PAS gérer :
+	●	Comptabilité générale
+	●	Grand Livre
+	●	Journal
+	●	TVA
+	●	Bilan
+	●	États financiers
+La comptabilité sera assurée par Odoo.
+Le logiciel doit cependant être entièrement compatible avec Odoo grâce à une architecture d’intégration API REST et Webhooks.
+⸻
+ARCHITECTURE
+Le logiciel doit respecter les principes suivants :
+	●	Clean Architecture
+	●	SOLID
+	●	Domain Driven Design
+	●	CQRS si pertinent
+	●	Repository Pattern
+	●	Services métier
+	●	Events
+	●	Jobs
+	●	Queues
+	●	API First
+	●	Multi-tenant
+	●	Multi-sociétés
+	●	Multi-agences
+	●	Haute disponibilité
+	●	Haute performance
+	●	Évolutivité
+⸻
+STACK TECHNIQUE
+Frontend
+	●	Next.js
+	●	React
+	●	TypeScript
+	●	Tailwind CSS
+	●	TanStack Query
+	●	React Hook Form
+	●	Zod
+Backend
+	●	Laravel
+	●	PHP 8+
+	●	API REST
+	●	Laravel Sanctum ou JWT
+	●	Queues
+	●	Scheduler
+Base de données
+	●	PostgreSQL
+Cache
+	●	Redis
+Stockage
+	●	Compatible S3
+Recherche
+	●	Meilisearch ou Elasticsearch
+Documentation
+	●	OpenAPI
+	●	Swagger
+Déploiement
+	●	Docker
+	●	Docker Compose
+	●	Kubernetes (prévoir la compatibilité)
+CI/CD
+	●	GitHub Actions
+⸻
+INTERFACE UTILISATEUR
+Créer une interface premium inspirée des meilleurs logiciels professionnels.
+Le design doit être :
+	●	Moderne
+	●	Élégant
+	●	Rapide
+	●	Responsive
+	●	Accessible
+Prévoir :
+	●	Mode clair
+	●	Mode sombre
+	●	Tableau de bord personnalisable
+	●	Navigation latérale
+	●	Recherche globale
+	●	Tableaux interactifs
+	●	Drag & Drop
+	●	Timeline
+	●	Cartes statistiques
+	●	Calendrier
+	●	Widgets configurables
+⸻
+MODULES
+Créer les modules suivants.
+Administration
+Gestion complète :
+	●	utilisateurs
+	●	rôles
+	●	permissions
+	●	agences
+	●	sociétés
+	●	devises
+	●	langues
+	●	pays
+	●	ports
+	●	aéroports
+	●	incoterms
+	●	types de marchandises
+	●	compagnies maritimes
+	●	compagnies aériennes
+	●	transporteurs
+	●	paramètres
+⸻
+CRM
+Clients
+Prospects
+Fournisseurs
+Contacts
+Historique
+Réclamations
+Opportunités commerciales
+⸻
+Gestion des dossiers
+Créer un moteur de workflow.
+Chaque dossier possède :
+	●	Référence
+	●	Client
+	●	Agent
+	●	Responsable
+	●	Import
+	●	Export
+	●	Mode
+	●	Statut
+	●	Incoterm
+	●	ETA
+	●	ETD
+	●	ATA
+	●	Priorité
+Le workflow doit être entièrement configurable.
+⸻
+MODULE MARITIME
+Gestion complète :
+FCL
+LCL
+Master BL
+House BL
+Bookings
+Consolidation
+Déconsolidation
+Containers
+Navires
+Voyages
+Scellés
+Escales
+ETA
+ETD
+ATA
+Historique complet.
+⸻
+TRACKING MARITIME
+Prévoir une architecture de connecteurs permettant l’intégration avec les API des principales compagnies maritimes.
+Chaque connecteur doit pouvoir :
+	●	Authentifier les requêtes.
+	●	Récupérer les statuts des conteneurs.
+	●	Récupérer les statuts des BL.
+	●	Obtenir les ETA, ETD, ATA.
+	●	Obtenir les escales.
+	●	Mettre à jour automatiquement les dossiers.
+	●	Journaliser les échanges.
+Prévoir des connecteurs pour :
+	●	MSC
+	●	CMA CGM
+	●	Maersk
+	●	Hapag-Lloyd
+	●	COSCO
+	●	Evergreen
+	●	ONE
+	●	OOCL
+	●	Yang Ming
+L’architecture doit permettre d’ajouter facilement d’autres compagnies.
+⸻
+MODULE AÉRIEN
+Gestion :
+AWB
+HAWB
+MAWB
+Compagnies aériennes
+Vols
+Poids
+Volumes
+Tracking
+⸻
+MODULE ROUTIER
+Gestion :
+Camions
+Remorques
+Chauffeurs
+Livraisons
+Missions
+Preuve de livraison
+Signature
+Photos
+Prévoir une future intégration GPS.
+⸻
+PORTAIL CLIENT
+Chaque client dispose d’un espace sécurisé.
+Il peut :
+	●	consulter ses dossiers ;
+	●	suivre ses expéditions ;
+	●	suivre ses conteneurs ;
+	●	suivre ses colis ;
+	●	télécharger ses documents ;
+	●	consulter ses devis ;
+	●	consulter ses factures ;
+	●	communiquer avec son gestionnaire.
+Créer également une page publique de suivi où un client ou un destinataire peut saisir un numéro de dossier, BL, HBL, MBL, AWB ou numéro de conteneur afin de consulter l’état de son expédition.
+⸻
+NOTIFICATIONS
+Le système doit envoyer automatiquement des notifications par :
+	●	Email
+	●	SMS
+	●	WhatsApp Business
+	●	Notifications internes
+Événements :
+	●	départ ;
+	●	arrivée ;
+	●	douane ;
+	●	retard ;
+	●	livraison ;
+	●	document manquant ;
+	●	facture disponible.
+Le client choisit les événements qu’il souhaite recevoir.
+⸻
+DOCUMENTS
+Gestion documentaire complète.
+Supporter :
+	●	BL
+	●	AWB
+	●	Facture commerciale
+	●	Packing List
+	●	Certificat
+	●	Assurance
+	●	Douane
+	●	Photos
+Fonctionnalités :
+	●	Versioning
+	●	Permissions
+	●	OCR (prévoir)
+	●	Archivage
+	●	Recherche
+⸻
+COTATIONS
+Créer un moteur de cotation.
+Le moteur doit calculer automatiquement :
+	●	fret ;
+	●	assurance ;
+	●	manutention ;
+	●	douane ;
+	●	transport ;
+	●	prestations.
+Le calcul doit être paramétrable.
+⸻
+FACTURATION
+Le logiciel peut :
+	●	générer des devis ;
+	●	générer des proformas ;
+	●	générer des factures ;
+	●	générer des avoirs.
+Le logiciel ne doit jamais créer d’écritures comptables.
+Préparer une synchronisation avec Odoo.
+⸻
+INTÉGRATION ODOO
+Créer une couche d’intégration complète.
+Synchroniser :
+	●	clients ;
+	●	fournisseurs ;
+	●	produits ;
+	●	services ;
+	●	devis ;
+	●	factures ;
+	●	statut des paiements ;
+	●	taxes ;
+	●	devises.
+Architecture :
+	●	REST API
+	●	Webhooks
+	●	Files d’attente
+	●	Gestion des conflits
+	●	Journal de synchronisation
+⸻
+TABLEAUX DE BORD
+Créer des tableaux de bord adaptés à chaque rôle.
+Indicateurs :
+	●	dossiers actifs ;
+	●	import/export ;
+	●	conteneurs en transit ;
+	●	livraisons ;
+	●	retards ;
+	●	documents manquants ;
+	●	performances ;
+	●	délais moyens ;
+	●	chiffre d’affaires opérationnel ;
+	●	satisfaction client.
+⸻
+RAPPORTS
+Créer des rapports :
+	●	journaliers ;
+	●	hebdomadaires ;
+	●	mensuels ;
+	●	annuels.
+Export :
+	●	PDF
+	●	Excel
+⸻
+BASE DE DONNÉES
+Créer un modèle PostgreSQL normalisé.
+Produire :
+	●	ERD
+	●	dictionnaire de données
+	●	migrations
+	●	index
+	●	contraintes
+	●	clés étrangères
+	●	vues utiles
+	●	stratégie d’archivage
+⸻
+API
+Créer une API REST complète.
+Documenter avec Swagger.
+Prévoir une version :
+/api/v1
+Prévoir une évolution future.
+⸻
+SÉCURITÉ
+Le logiciel doit respecter les meilleures pratiques :
+	●	JWT ou Sanctum
+	●	MFA (2FA)
+	●	RBAC
+	●	chiffrement
+	●	audit
+	●	logs
+	●	sauvegardes
+	●	protection contre les attaques OWASP Top 10
+	●	gestion sécurisée des secrets
+	●	limitation du débit
+	●	validation stricte des données
+⸻
+QUALITÉ
+Écrire :
+	●	un code propre ;
+	●	fortement typé lorsque possible ;
+	●	documenté ;
+	●	testé ;
+	●	maintenable ;
+	●	optimisé.
+⸻
+LIVRABLES ATTENDUS
+Tu dois générer le projet étape par étape.
+Ne saute jamais une étape.
+Ordre obligatoire :
+	1.	Analyse fonctionnelle.
+	2.	Architecture logicielle.
+	3.	Diagrammes (C4, ERD et flux métier).
+	4.	Maquettes UI/UX.
+	5.	Structure des dossiers.
+	6.	Base de données.
+	7.	Migrations.
+	8.	Seeders.
+	9.	Modèles.
+	10.	Services métier.
+	11.	API REST.
+	12.	Contrôleurs.
+	13.	Authentification.
+	14.	Gestion des rôles.
+	15.	Frontend Next.js.
+	16.	Tableau de bord.
+	17.	Tous les écrans CRUD.
+	18.	Portail client.
+	19.	Connecteurs compagnies maritimes.
+	20.	Intégration Odoo.
+	21.	Tests unitaires, d’intégration et E2E.
+	22.	Docker.
+	23.	CI/CD.
+	24.	Documentation développeur.
+	25.	Documentation utilisateur.
+	26.	Guide de déploiement.
+	27.	Guide d’exploitation.
+	28.	Plan de maintenance.
+À la fin de chaque étape :
+	●	résume les décisions prises ;
+	●	liste les tâches restantes ;
+	●	attends ma validation avant de passer à l’étape suivante, sauf si je demande explicitement de continuer

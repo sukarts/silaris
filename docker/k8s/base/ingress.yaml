@@ -1,0 +1,24 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: silaris
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt
+    nginx.ingress.kubernetes.io/proxy-body-size: 30m
+spec:
+  tls:
+    - hosts: [app.silaris.example, api.silaris.example]
+      secretName: silaris-tls
+  rules:
+    - host: api.silaris.example
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend: { service: { name: silaris-api, port: { number: 8080 } } }
+    - host: app.silaris.example
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend: { service: { name: silaris-web, port: { number: 3000 } } }

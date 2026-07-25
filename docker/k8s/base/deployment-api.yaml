@@ -1,0 +1,44 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: silaris-api
+  labels: { app: silaris, component: api }
+spec:
+  replicas: 2
+  selector:
+    matchLabels: { app: silaris, component: api }
+  template:
+    metadata:
+      labels: { app: silaris, component: api }
+    spec:
+      containers:
+        - name: php-fpm
+          image: ghcr.io/OWNER/silaris-api:latest # remplacé par le CD (tag SHA)
+          envFrom:
+            - configMapRef: { name: silaris-config }
+            - secretRef: { name: silaris-secrets }
+          resources:
+            requests: { cpu: 250m, memory: 256Mi }
+            limits: { cpu: "1", memory: 512Mi }
+          ports: [{ containerPort: 9000 }]
+        - name: nginx
+          image: nginx:1.27-alpine
+          ports: [{ containerPort: 8080 }]
+          volumeMounts:
+            - { name: nginx-conf, mountPath: /etc/nginx/conf.d }
+          readinessProbe:
+            httpGet: { path: /api/v1/ready, port: 8080 }
+            initialDelaySeconds: 5
+          livenessProbe:
+            httpGet: { path: /api/v1/health, port: 8080 }
+            periodSeconds: 15
+      volumes:
+        - name: nginx-conf
+          configMap: { name: silaris-nginx }
+      initContainers:
+        - name: migrate
+          image: ghcr.io/OWNER/silaris-api:latest
+          command: ["php", "artisan", "migrate", "--force"]
+          envFrom:
+            - configMapRef: { name: silaris-config }
+            - secretRef: { name: silaris-secrets }

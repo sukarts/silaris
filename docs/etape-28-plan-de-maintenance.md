@@ -1,0 +1,59 @@
+# Étape 28 — Plan de Maintenance
+
+**Statut :** Livré — clôt le cycle des 28 étapes.
+
+---
+
+## 1. Dette technique — inventaire honnête (issue du build, priorisée)
+
+### P0 — issues de revue de code (PR #1)
+| Issue | Statut | Détail |
+|---|---|---|
+| Expiration du token de reset inopérante (Carbon 3 `diffInMinutes` signé) | **CORRIGÉ** | `PasswordResetController::reset` → `Carbon::parse(...)->addMinutes(60)->isPast()` + 3 tests de non-régression (le test « token expiré » prouvé rouge sur l'ancien code) |
+| ~~Résolution du compte au login sans désambiguïsation de tenant~~ : `AuthController`/`PortalAuthController` (et `PasswordResetController`) résolvent l'email globalement (`->where('email')->first()`) alors que l'unicité est par tenant. Collision d'email inter-tenant → login/reset du compte « perdant » cassés, sélection arbitraire. Écarté du lot high-signal de la revue (dépendant des données) mais **réel** : angle mort multi-tenant à combler avant d'onboarder des tenants aux bases clients susceptibles de collisionner | **CORRIGÉ** | `GuestTenantResolver` (sous-domaine + X-Tenant-Slug) scope la recherche pré-auth ; garde anti-ambiguïté (exception `auth.ambiguous_account`, jamais de sélection arbitraire) sur login/portail/reset ; `password_reset_tokens` re-clé (tenant_id, email) ; tests LoginFlowTest + PasswordResetTest |
+| ~~RLS non effective en défense de profondeur~~ : `ENABLE` sans `FORCE ROW LEVEL SECURITY` et app connectée en propriétaire de tables → la RLS ne mord pas ; l'isolation repose entièrement sur `BelongsToTenant` + `party_id` (vérifiés corrects, pas d'IDOR). Cohérent avec le guide de déploiement (rôle `silaris_login` non-propriétaire) mais **le câblage réel du rôle applicatif conditionne le filet DB** | **CORRIGÉ** | Migration 000024 : policies fail-closed (`NULLIF(current_setting(...,true))` → 0 ligne sans contexte) + `FORCE ROW LEVEL SECURITY` ; connexion `pgsql_system` (BYPASSRLS) pour les 3 chemins cross-tenant légitimes (login-resolver, tracking public, download) ; test RlsIsolationTest sous le vrai rôle `silaris_app` (fail-closed + isolation lecture + écriture cross-tenant refusée). Prod : app via `silaris_login` non-propriétaire, `DB_SYSTEM_USERNAME` = rôle BYPASSRLS |
+
+### P1 — avant mise en production commerciale
+| Dette | Origine | Effort |
+|---|---|---|
+| **Écriture automatique du journal d'audit** : la table `audit_logs` (partitionnée, immuable) existe, l'API de lecture aussi — l'observer global qui y écrit chaque mutation reste à brancher | Étape 6/12 | 2-3 j |
+| **Envoi réel des notifications** sur événements (départ/arrivée/retard/facture) : templates + préférences + deliveries en base, `DelayDetected` publié dans l'outbox — le worker outbox→canaux (email d'abord, Twilio SMS/WhatsApp ensuite) reste à écrire ; l'OTP de retrait prouve déjà la chaîne email | Étape 15 backlog | 3-5 j |
+| Emails transactionnels reset/invitation (aujourd'hui : token loggé) | Étape 13 | 1 j |
+| Recherche globale ⌘K : Meilisearch opérationnel, indexation Scout à câbler sur les modèles + endpoint + palette front | Étape 17 | 2-3 j |
+| Onboarding tenant (procédure super-admin scriptée → écran plateforme) | Étape 26 | 2 j |
+
+### P2 — confort et complétude UI
+UI passe 2 : bookings/BL/conteneurs dédiés, documents (upload UI), admin (users/roles/workflows), moniteur Odoo, préférences notifications portail, formulaire devis persistant + **PDF devis/factures** (dompdf prêt — gabarits à faire), widgets dashboard configurables (table prête). Suppression de `rawApi` quand Scramble décrira les query params (annotations à poser).
+
+### P3 — dette outillée
+Baseline Larastan (110 propriétés magiques → annotations `@property`, objectif -20/mois) ; seuil de couverture en CI (pcov) ; scan images Trivy + SBOM ; E2E portail + création dossier.
+
+### Différés assumés (Étape 1 §2.3)
+OCR documents, GPS routier, connecteurs aériens (contrats prêts), PWA mobile, IA. Webhooks Odoo entrants (le pull horaire couvre), webhooks sortants tenants (outbox prête).
+
+## 2. Politique de dépendances
+- **Hebdo** : Dependabot/Renovate groupés (patch/minor auto si CI verte ; major = PR dédiée revue).
+- **Sécurité** : advisories Composer bloquantes en CI (déjà vécu : Laravel 11→12 imposé au build) ; `pnpm audit` en CI ; correctifs sécurité déployés sous 72 h (P1 : 24 h).
+- **Cadence framework** : Laravel majeur sous 3 mois après release ; Next majeur sous 6 mois ; PHP suivant le cycle officiel (8.3 → 8.4 après 1 mois de stabilité CI) ; PostgreSQL majeur annuel avec répétition sur staging.
+
+## 3. Cycle de release
+`main` toujours déployable · staging continu · production 1-2 releases/semaine (approbation) · hotfix : branche depuis main, fast-track CI, production le jour même · versions `vX.Y.Z` taguées (build.yml), changelog par release.
+
+## 4. Support (modèle SLA proposé aux tenants)
+| Niveau | Exemple | Prise en charge | Résolution cible |
+|---|---|---|---|
+| P1 — plateforme indisponible | API down, connexion impossible | 30 min (h. ouvrées étendues) | 4 h |
+| P2 — fonction majeure dégradée | sync Odoo en échec massif, tracking global HS | 2 h | 1 j ouvré |
+| P3 — anomalie contournable | écran défectueux, mapping statut manquant | 1 j | release suivante |
+| P4 — question/demande | usage, évolution | 2 j | backlog priorisé |
+
+Support opéré avec les outils livrés : `/v1/odoo/status`, `carrier_exchange_logs`, `sessions_log`, audit, Horizon.
+
+## 5. Gouvernance du code après livraison
+Les 28 documents d'étapes + ADR restent la référence ; toute décision structurante = nouvel ADR dans `docs/`. Tests d'architecture = gardiens permanents des frontières. Toute nouvelle règle métier suit le pattern éprouvé : exception typée `DomainException` + `error_code` + test.
+
+---
+
+## Clôture du cycle — état final
+
+**28/28 étapes livrées.** Produit fonctionnel démontré de bout en bout : multi-tenant RLS testée, workflow configurable actif, tracking DCSA idempotent, colis LCL étiquetés QR avec remise à double contrôle (règlement + OTP), portail client cloisonné, suivi public, intégration Odoo résiliente testée, RBAC 11 rôles vérifié, 41 tests + 6 tests d'architecture + 3 E2E, CI/CD complet, images production, K8s, 7 guides utilisateur, 4 guides développeur, 2 guides ops.
