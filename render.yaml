@@ -11,7 +11,7 @@
 
 databases:
   - name: silaris-postgres
-    plan: standard            # Postgres managé : sauvegardes quotidiennes + PITR
+    plan: basic-1gb           # Postgres managé (plan courant) : sauvegardes quotidiennes + PITR
     postgresMajorVersion: "16"
 
 services:
