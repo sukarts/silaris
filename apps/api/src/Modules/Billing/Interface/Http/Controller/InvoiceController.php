@@ -124,7 +124,7 @@ class InvoiceController
             app(DomainEventPublisher::class)->publish(new InvoiceValidated(
                 invoiceId: $invoice->id,
                 number: $number,
-                total: (string) $invoice->total,
+                total: (string) $invoice->total_incl_tax,
                 currency: (string) $invoice->currency_code,
                 clientId: (string) $invoice->party_id,
                 shipmentId: $invoice->shipment_id,
