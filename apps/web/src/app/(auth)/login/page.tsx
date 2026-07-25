@@ -91,6 +91,9 @@ export default function LoginPage() {
             >
               {loading ? "Connexion…" : "Se connecter"}
             </button>
+            <a href="/forgot-password" className="text-center text-xs text-ink-3 hover:text-ink">
+              Mot de passe oublié ?
+            </a>
           </form>
         ) : (
           <form onSubmit={submitMfa} className="flex flex-col gap-3">

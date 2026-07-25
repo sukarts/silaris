@@ -88,8 +88,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       return;
     }
     rawApi.GET("/v1/auth/me").then(({ data }) => {
-      const me = data as { permissions?: string[] } | undefined;
+      const me = data as { permissions?: string[]; must_change_password?: boolean } | undefined;
       if (me?.permissions) setPermissions(me.permissions);
+      // Mot de passe provisoire (invitation) : changement obligatoire avant toute navigation.
+      if (me?.must_change_password && !window.location.pathname.startsWith("/profile")) {
+        router.replace("/profile?required=1");
+      }
     });
   }, [hydrated, token, router, setPermissions]);
 
@@ -127,9 +131,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             className="w-full max-w-md rounded-lg border border-line bg-paper px-3 py-1.5 text-[13px] text-ink placeholder:text-ink-3 focus:outline-2 focus:outline-accent"
           />
           <div className="ml-auto flex items-center gap-3">
-            <span className="text-[13px] text-ink-2">
+            <Link href="/profile" className="text-[13px] text-ink-2 hover:text-ink" title="Mon profil">
               {user?.first_name} {user?.last_name}
-            </span>
+            </Link>
             <button
               onClick={logout}
               className="rounded-md border border-line-strong px-3 py-1 text-xs text-ink-2 hover:bg-paper"
