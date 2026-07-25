@@ -10,7 +10,7 @@ namespace Silaris\Modules\Notifications\Infrastructure\Mail;
  */
 class NotificationMail extends GenericMail
 {
-    public function __construct(string $subject, string $body, ?string $shipmentReference = null)
+    public function __construct(string $subject, string $body)
     {
         $frontend = rtrim((string) config('app.frontend_url'), '/');
 
