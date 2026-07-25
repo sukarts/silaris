@@ -131,4 +131,4 @@ services:
     healthCheckPath: /login
     envVars:
       - key: NEXT_PUBLIC_API_URL
-        sync: false                                # URL publique de silaris-api (+ /api/v1)
+        sync: false                                # URL publique de silaris-api + /api (SANS /v1 : le client l'ajoute)
