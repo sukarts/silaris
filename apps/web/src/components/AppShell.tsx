@@ -6,16 +6,19 @@ import { useEffect, useState } from "react";
 import { rawApi } from "@/lib/api";
 import { useAuth, useCan } from "@/stores/auth";
 
+// `soon: true` = écran dédié prévu en passe 2 UI (backlog P2) : entrée visible
+// mais désactivée — jamais de lien mort. Les données correspondantes restent
+// accessibles via le détail Dossier (segments, conteneurs, documents).
 const NAV = [
   { section: null, items: [{ href: "/dashboard", label: "Tableau de bord", perm: "dashboard.read" }] },
   {
     section: "Opérations",
     items: [
       { href: "/shipments", label: "Dossiers", perm: "shipments.read" },
-      { href: "/bookings", label: "Bookings", perm: "bookings.read" },
-      { href: "/containers", label: "Conteneurs", perm: "containers.read" },
-      { href: "/air", label: "Aérien", perm: "awb.read" },
-      { href: "/road", label: "Routier", perm: "road.read" },
+      { href: "/bookings", label: "Bookings", perm: "bookings.read", soon: true },
+      { href: "/containers", label: "Conteneurs", perm: "containers.read", soon: true },
+      { href: "/air", label: "Aérien", perm: "awb.read", soon: true },
+      { href: "/road", label: "Routier", perm: "road.read", soon: true },
     ],
   },
   {
@@ -29,16 +32,29 @@ const NAV = [
   {
     section: "Ressources",
     items: [
-      { href: "/documents", label: "Documents", perm: "documents.read" },
-      { href: "/admin", label: "Administration", perm: "users.read" },
+      { href: "/documents", label: "Documents", perm: "documents.read", soon: true },
+      { href: "/admin", label: "Administration", perm: "users.read", soon: true },
     ],
   },
 ];
 
-function NavLink({ href, label, perm }: { href: string; label: string; perm: string }) {
+function NavLink({ href, label, perm, soon }: { href: string; label: string; perm: string; soon?: boolean }) {
   const pathname = usePathname();
   const allowed = useCan(perm);
   if (!allowed) return null;
+  if (soon) {
+    return (
+      <span
+        title="Disponible prochainement"
+        className="block cursor-default rounded-md px-3 py-1.5 text-[13px] text-nav-ink/40"
+      >
+        {label}
+        <span className="ml-1.5 rounded border border-white/10 px-1 py-px text-[9px] uppercase tracking-wide text-nav-ink/50">
+          bientôt
+        </span>
+      </span>
+    );
+  }
   const active = pathname.startsWith(href);
   return (
     <Link
