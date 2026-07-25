@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Silaris\Modules\Pricing\Interface\Http\Controller;
 
+use Barryvdh\DomPDF\Facade\Pdf;
 use DateTimeImmutable;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -15,6 +16,8 @@ use Silaris\Modules\Pricing\Infrastructure\Persistence\Model\QuoteModel;
 use Silaris\Modules\Shared\Application\Bus\CommandBus;
 use Silaris\Modules\Shared\Infrastructure\Tenancy\TenantContext;
 use Silaris\Modules\Shipment\Application\Command\CreateShipment\CreateShipmentCommand;
+use Silaris\Modules\Tenancy\Infrastructure\Persistence\Model\CompanyModel;
+use Symfony\Component\HttpFoundation\Response;
 
 class QuoteController
 {
@@ -174,5 +177,15 @@ class QuoteController
         ]);
 
         return response()->json($quote->fresh());
+    }
+
+    /** GET /v1/quotes/{id}/pdf — cotation imprimable. */
+    public function pdf(string $quoteId): Response
+    {
+        $quote = QuoteModel::with(['lines', 'party'])->findOrFail($quoteId);
+        $company = CompanyModel::findOrFail($quote->company_id);
+
+        return Pdf::loadView('pdf.quote', ['quote' => $quote, 'company' => $company])
+            ->download('cotation-'.$quote->number.'.pdf');
     }
 }

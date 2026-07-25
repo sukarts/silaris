@@ -2,7 +2,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
-import { rawApi } from "@/lib/api";
+import { rawApi, downloadFile } from "@/lib/api";
 import { buttonPrimary } from "@/components/Field";
 import { useCan } from "@/stores/auth";
 
@@ -64,6 +64,7 @@ export default function QuotesPage() {
               <th className="px-3 py-2.5 text-right">Montant</th>
               <th className="px-3 py-2.5 text-right">Marge est.</th>
               <th className="px-3 py-2.5">Validité</th>
+              <th className="px-3 py-2.5" />
             </tr>
           </thead>
           <tbody>
@@ -89,6 +90,15 @@ export default function QuotesPage() {
                     {margin !== null ? `${margin.toLocaleString("fr-FR")}` : "—"}
                   </td>
                   <td className="mono px-3 py-2.5 text-ink-2">{new Date(quote.valid_until).toLocaleDateString("fr-FR")}</td>
+                  <td className="px-3 py-2.5">
+                    <button
+                      onClick={() => downloadFile(`/v1/quotes/${quote.id}/pdf`, "cotation.pdf").catch(() => undefined)}
+                      className="text-xs font-semibold text-ink-2 hover:text-ink hover:underline"
+                      title="Télécharger le PDF"
+                    >
+                      PDF
+                    </button>
+                  </td>
                 </tr>
               );
             })}
