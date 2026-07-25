@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Silaris\Modules\Identity\Interface\Http\Controller;
 
+use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -47,7 +48,10 @@ class PasswordResetController
         $email = strtolower($data['email']);
 
         $record = DB::table('password_reset_tokens')->where('email', $email)->first();
-        if ($record === null || now()->diffInMinutes($record->created_at) > 60 || ! Hash::check($data['token'], $record->token)) {
+        // Carbon 3 : diffInMinutes() est signé par défaut ; created_at étant dans le passé,
+        // l'expiration doit se mesurer en valeur absolue (sinon jamais déclenchée).
+        $expired = $record !== null && Carbon::parse($record->created_at)->addMinutes(60)->isPast();
+        if ($record === null || $expired || ! Hash::check($data['token'], $record->token)) {
             throw ValidationException::withMessages(['token' => ['Lien invalide ou expiré.']]);
         }
 

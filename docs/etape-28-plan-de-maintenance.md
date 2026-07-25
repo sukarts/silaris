@@ -6,6 +6,13 @@
 
 ## 1. Dette technique — inventaire honnête (issue du build, priorisée)
 
+### P0 — issues de revue de code (PR #1)
+| Issue | Statut | Détail |
+|---|---|---|
+| Expiration du token de reset inopérante (Carbon 3 `diffInMinutes` signé) | **CORRIGÉ** | `PasswordResetController::reset` → `Carbon::parse(...)->addMinutes(60)->isPast()` + 3 tests de non-régression (le test « token expiré » prouvé rouge sur l'ancien code) |
+| **Résolution du compte au login sans désambiguïsation de tenant** : `AuthController`/`PortalAuthController` (et `PasswordResetController`) résolvent l'email globalement (`->where('email')->first()`) alors que l'unicité est par tenant. Collision d'email inter-tenant → login/reset du compte « perdant » cassés, sélection arbitraire. Écarté du lot high-signal de la revue (dépendant des données) mais **réel** : angle mort multi-tenant à combler avant d'onboarder des tenants aux bases clients susceptibles de collisionner | **À FAIRE** | Résolution de tenant en amont du login (sous-domaine/slug/host) + `password_reset_tokens` à re-cléer sur (tenant_id, email). Effort 2-3 j |
+| **RLS non effective en défense de profondeur** : `ENABLE` sans `FORCE ROW LEVEL SECURITY` et app connectée en propriétaire de tables → la RLS ne mord pas ; l'isolation repose entièrement sur `BelongsToTenant` + `party_id` (vérifiés corrects, pas d'IDOR). Cohérent avec le guide de déploiement (rôle `silaris_login` non-propriétaire) mais **le câblage réel du rôle applicatif conditionne le filet DB** | **À FAIRE** | Déployer via rôle non-propriétaire + `FORCE ROW LEVEL SECURITY` (migration) ; test d'intégration : requête sans `app.tenant_id` → erreur. Effort 1-2 j |
+
 ### P1 — avant mise en production commerciale
 | Dette | Origine | Effort |
 |---|---|---|
