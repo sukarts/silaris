@@ -29,8 +29,10 @@ services:
       url: "ghcr.io/sukarts/silaris-api:latest"     # publié par build.yml
     plan: standard
     healthCheckPath: /api/v1/health
-    # Migrations + seed des référentiels (idempotent) avant la bascule de trafic.
-    preDeployCommand: "sh -c 'php artisan migrate --force && php artisan db:seed --force'"
+    # Render exécute preDeployCommand sans shell (pas de && ni sh -c fiable) :
+    # une seule commande. Le seed des référentiels se fait une fois via le Shell
+    # (php artisan db:seed --force) — voir guide-deploiement-mvp.md.
+    preDeployCommand: "php artisan migrate --force"
     envVars: &api-env
       - key: APP_ENV
         value: production
