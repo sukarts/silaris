@@ -106,6 +106,10 @@ jobs:
       - name: Base + démo + API
         working-directory: apps/api
         env: &laravel-env
+          # Sans APP_ENV, Laravel prend « production » par défaut → DemoTenantSeeder
+          # se bloque (garde-fou app()->environment('production')) et les données démo
+          # ne sont jamais créées → E2E rouge. On force un env non-prod.
+          APP_ENV: local
           DB_CONNECTION: pgsql
           DB_HOST: 127.0.0.1
           DB_PORT: "5432"
