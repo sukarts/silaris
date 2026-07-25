@@ -63,7 +63,7 @@ final class ProvisionTenant extends Command
             return self::INVALID;
         }
         if (! preg_match('/^[a-z0-9]([a-z0-9-]*[a-z0-9])?$/', $slug)) {
-            $this->error("Slug invalide : minuscules, chiffres et tirets uniquement (ex. acme-ci).");
+            $this->error('Slug invalide : minuscules, chiffres et tirets uniquement (ex. acme-ci).');
 
             return self::INVALID;
         }
@@ -115,7 +115,7 @@ final class ProvisionTenant extends Command
                     'id' => $companyId, 'tenant_id' => $tenantId,
                     'legal_name' => $company, 'code' => $code,
                     'tax_id' => null, 'currency_code' => $currency,
-                    'address' => json_encode(new \stdClass()),
+                    'address' => json_encode(new \stdClass),
                     'invoice_settings' => json_encode(['number_format' => 'F-{YEAR}-{SEQ:4}']),
                     'is_active' => true, 'created_at' => $now, 'updated_at' => $now,
                 ]);
@@ -123,7 +123,7 @@ final class ProvisionTenant extends Command
                 $conn->table('branches')->insert([
                     'id' => $branchId, 'tenant_id' => $tenantId, 'company_id' => $companyId,
                     'name' => $branchName, 'code' => $branchCode, 'timezone' => $timezone,
-                    'address' => json_encode(new \stdClass()),
+                    'address' => json_encode(new \stdClass),
                     'is_active' => true, 'created_at' => $now, 'updated_at' => $now,
                 ]);
 
@@ -146,7 +146,7 @@ final class ProvisionTenant extends Command
         }
 
         $this->newLine();
-        $this->info("Tenant provisionné.");
+        $this->info('Tenant provisionné.');
         $this->table(['Champ', 'Valeur'], [
             ['Tenant', "{$name} ({$slug})"],
             ['Tenant ID', $tenantId],

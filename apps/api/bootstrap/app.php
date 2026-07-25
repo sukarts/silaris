@@ -6,6 +6,7 @@ use App\Http\Middleware\EnsureInternalUser;
 use App\Http\Middleware\EnsurePortalUser;
 use App\Http\Middleware\ForceJsonResponse;
 use App\Http\Middleware\ResolveTenant;
+use App\Http\Middleware\ResolveTenantFromToken;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Auth\AuthenticationException;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
@@ -45,11 +46,11 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware) {
         $middleware->api(prepend: [
             ForceJsonResponse::class,
-            \App\Http\Middleware\ResolveTenantFromToken::class,
+            ResolveTenantFromToken::class,
         ]);
         $middleware->alias([
             'tenant' => ResolveTenant::class,
-            'tenant-from-token' => \App\Http\Middleware\ResolveTenantFromToken::class,
+            'tenant-from-token' => ResolveTenantFromToken::class,
             'internal' => EnsureInternalUser::class,
             'portal-user' => EnsurePortalUser::class,
         ]);
