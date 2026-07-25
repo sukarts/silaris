@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Silaris\Modules\Billing\Interface\Http\Controller;
 
+use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -15,6 +16,7 @@ use Silaris\Modules\OdooSync\Application\Job\PushInvoiceToOdoo;
 use Silaris\Modules\Shared\Infrastructure\Events\DomainEventPublisher;
 use Silaris\Modules\Shared\Infrastructure\Tenancy\TenantContext;
 use Silaris\Modules\Tenancy\Infrastructure\Persistence\Model\CompanyModel;
+use Symfony\Component\HttpFoundation\Response;
 
 class InvoiceController
 {
@@ -207,5 +209,21 @@ class InvoiceController
         }
 
         return ['total_excl_tax' => $excl, 'total_tax' => $tax, 'total_incl_tax' => $excl + $tax];
+    }
+
+    /** GET /v1/invoices/{id}/pdf — document imprimable (facture, proforma ou avoir). */
+    public function pdf(string $invoiceId): Response
+    {
+        $invoice = InvoiceModel::with(['lines', 'party', 'shipment'])->findOrFail($invoiceId);
+        $company = CompanyModel::findOrFail($invoice->company_id);
+
+        $prefix = match ($invoice->type) {
+            'credit_note' => 'avoir',
+            'proforma' => 'proforma',
+            default => 'facture',
+        };
+        $name = $prefix.'-'.($invoice->number ?? 'brouillon-'.substr($invoice->id, 0, 8)).'.pdf';
+
+        return Pdf::loadView('pdf.invoice', ['invoice' => $invoice, 'company' => $company])->download($name);
     }
 }

@@ -11,6 +11,7 @@ Route::prefix('quotes')->group(function (): void {
     Route::post('/', [QuoteController::class, 'store'])->can('quotes.create');
     Route::post('/calculate', [QuoteController::class, 'calculate'])->can('quotes.read');
     Route::get('/{quoteId}', [QuoteController::class, 'show'])->whereUuid('quoteId')->can('quotes.read');
+    Route::get('/{quoteId}/pdf', [QuoteController::class, 'pdf'])->whereUuid('quoteId')->can('quotes.read');
     Route::post('/{quoteId}/send', [QuoteController::class, 'send'])->whereUuid('quoteId')->can('quotes.send');
     Route::post('/{quoteId}/accept', [QuoteController::class, 'accept'])->whereUuid('quoteId')->can('quotes.accept');
     Route::post('/{quoteId}/reject', [QuoteController::class, 'reject'])->whereUuid('quoteId')->can('quotes.accept');

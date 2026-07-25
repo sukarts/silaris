@@ -2,7 +2,7 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
-import { problemMessage, rawApi } from "@/lib/api";
+import { downloadFile, problemMessage, rawApi } from "@/lib/api";
 import { useCan } from "@/stores/auth";
 
 interface Invoice {
@@ -108,15 +108,24 @@ export default function BillingPage() {
                     {invoice.due_date ? new Date(invoice.due_date).toLocaleDateString("fr-FR") : "—"}
                   </td>
                   <td className="px-3 py-2.5">
-                    {invoice.status === "draft" && canValidate && (
+                    <div className="flex items-center gap-3">
+                      {invoice.status === "draft" && canValidate && (
+                        <button
+                          onClick={() => validate.mutate(invoice.id)}
+                          disabled={validate.isPending}
+                          className="text-xs font-semibold text-sea hover:underline"
+                        >
+                          Valider →
+                        </button>
+                      )}
                       <button
-                        onClick={() => validate.mutate(invoice.id)}
-                        disabled={validate.isPending}
-                        className="text-xs font-semibold text-sea hover:underline"
+                        onClick={() => downloadFile(`/v1/invoices/${invoice.id}/pdf`, "facture.pdf").catch(() => undefined)}
+                        className="text-xs font-semibold text-ink-2 hover:text-ink hover:underline"
+                        title="Télécharger le PDF"
                       >
-                        Valider →
+                        PDF
                       </button>
-                    )}
+                    </div>
                   </td>
                 </tr>
               );

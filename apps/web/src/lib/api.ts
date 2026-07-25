@@ -40,3 +40,21 @@ export function problemMessage(problem: unknown): string {
   if (p.errors) return Object.values(p.errors).flat().join(" ");
   return p.detail ?? p.title ?? "Erreur inattendue.";
 }
+
+/** Télécharge un fichier authentifié (PDF…) : fetch avec Bearer puis déclenche le download. */
+export async function downloadFile(path: string, fallbackName: string): Promise<void> {
+  const base = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8088/api";
+  const response = await fetch(`${base}${path}`, {
+    headers: { Authorization: `Bearer ${useAuth.getState().token ?? ""}` },
+  });
+  if (!response.ok) throw new Error(`Téléchargement impossible (${response.status})`);
+  const disposition = response.headers.get("Content-Disposition") ?? "";
+  const match = /filename="?([^";]+)"?/.exec(disposition);
+  const blob = await response.blob();
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = match?.[1] ?? fallbackName;
+  link.click();
+  URL.revokeObjectURL(url);
+}
