@@ -6,19 +6,18 @@ import { useEffect, useState } from "react";
 import { rawApi } from "@/lib/api";
 import { useAuth, useCan } from "@/stores/auth";
 
-// `soon: true` = écran dédié prévu en passe 2 UI (backlog P2) : entrée visible
-// mais désactivée — jamais de lien mort. Les données correspondantes restent
-// accessibles via le détail Dossier (segments, conteneurs, documents).
+// `soon: true` = écran pas encore construit : entrée visible mais désactivée
+// (jamais de lien mort).
 const NAV = [
   { section: null, items: [{ href: "/dashboard", label: "Tableau de bord", perm: "dashboard.read" }] },
   {
     section: "Opérations",
     items: [
       { href: "/shipments", label: "Dossiers", perm: "shipments.read" },
-      { href: "/bookings", label: "Bookings", perm: "bookings.read", soon: true },
-      { href: "/containers", label: "Conteneurs", perm: "containers.read", soon: true },
-      { href: "/air", label: "Aérien", perm: "awb.read", soon: true },
-      { href: "/road", label: "Routier", perm: "road.read", soon: true },
+      { href: "/bookings", label: "Bookings", perm: "bookings.read" },
+      { href: "/containers", label: "Conteneurs", perm: "containers.read" },
+      { href: "/air", label: "Aérien", perm: "awb.read" },
+      { href: "/road", label: "Routier", perm: "road.read" },
     ],
   },
   {
@@ -32,8 +31,8 @@ const NAV = [
   {
     section: "Ressources",
     items: [
-      { href: "/documents", label: "Documents", perm: "documents.read", soon: true },
-      { href: "/admin", label: "Administration", perm: "users.read", soon: true },
+      { href: "/documents", label: "Documents", perm: "documents.read" },
+      { href: "/admin", label: "Administration", perm: "users.read" },
     ],
   },
 ];

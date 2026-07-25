@@ -1,0 +1,589 @@
+"use client";
+
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useState } from "react";
+import { problemMessage, rawApi } from "@/lib/api";
+import { Field, buttonPrimary, buttonSecondary, inputClass } from "@/components/Field";
+import { useCan } from "@/stores/auth";
+
+interface Truck {
+  id: string;
+  plate_number: string;
+  type: string | null;
+  capacity_kg: string | null;
+  inspection_due: string | null;
+  insurance_due: string | null;
+}
+
+interface Trailer {
+  id: string;
+  plate_number: string;
+  type: string | null;
+}
+
+interface Driver {
+  id: string;
+  name: string;
+  phone: string | null;
+  license_number: string | null;
+  license_categories: string | null;
+  license_expiry: string | null;
+}
+
+interface MissionStop {
+  id: string;
+  label: string;
+  planned_at: string | null;
+  position: number;
+}
+
+interface Mission {
+  id: string;
+  reference: string;
+  type: string;
+  status: string;
+  window_start: string | null;
+  window_end: string | null;
+  failure_reason: string | null;
+  driver: { id: string; name: string } | null;
+  truck: { id: string; plate_number: string } | null;
+  shipment: { id: string; reference: string } | null;
+  stops: MissionStop[];
+}
+
+const MISSION_TRANSITIONS: Record<string, string[]> = {
+  planned: ["in_progress", "cancelled"],
+  in_progress: ["delivered", "failed"],
+  delivered: [],
+  failed: ["planned"],
+  cancelled: [],
+};
+
+const STATUS_LABEL: Record<string, string> = {
+  planned: "Planifiée",
+  in_progress: "En cours",
+  delivered: "Livrée",
+  failed: "Échec",
+  cancelled: "Annulée",
+};
+
+const STATUS_TONE: Record<string, string> = {
+  planned: "bg-sea-soft text-sea",
+  in_progress: "bg-warn-soft text-warn",
+  delivered: "bg-ok-soft text-ok",
+  failed: "bg-crit-soft text-crit",
+  cancelled: "bg-paper text-ink-3",
+};
+
+const TRANSITION_LABEL: Record<string, string> = {
+  in_progress: "Démarrer",
+  delivered: "Livrer",
+  failed: "Échec",
+  cancelled: "Annuler",
+  planned: "Replanifier",
+};
+
+const TYPE_LABEL: Record<string, string> = { delivery: "Livraison", pickup: "Enlèvement", transfer: "Transfert" };
+
+const emptyMissionForm = {
+  shipment_id: "",
+  type: "delivery",
+  truck_id: "",
+  trailer_id: "",
+  driver_id: "",
+  window_start: "",
+  window_end: "",
+  origin_label: "",
+  destination_label: "",
+  notes: "",
+};
+
+export default function RoadPage() {
+  const queryClient = useQueryClient();
+  const canCreate = useCan("road.create");
+  const canUpdate = useCan("road.update");
+  const canPod = useCan("pod.create");
+  const [tab, setTab] = useState<"missions" | "fleet">("missions");
+  const [showForm, setShowForm] = useState(false);
+  const [form, setForm] = useState(emptyMissionForm);
+  const [podFor, setPodFor] = useState<Mission | null>(null);
+  const [podForm, setPodForm] = useState({ recipient_name: "", remarks: "" });
+  const [error, setError] = useState<string | null>(null);
+
+  const missions = useQuery({
+    queryKey: ["missions"],
+    queryFn: async () => {
+      const { data: response } = await rawApi.GET("/v1/missions");
+      return response as { data: Mission[] };
+    },
+  });
+
+  const trucks = useQuery({
+    queryKey: ["trucks"],
+    queryFn: async () => {
+      const { data: response } = await rawApi.GET("/v1/fleet/trucks");
+      return response as { data: Truck[] };
+    },
+  });
+
+  const trailers = useQuery({
+    queryKey: ["trailers"],
+    queryFn: async () => {
+      const { data: response } = await rawApi.GET("/v1/fleet/trailers");
+      return response as { data: Trailer[] };
+    },
+  });
+
+  const drivers = useQuery({
+    queryKey: ["drivers"],
+    queryFn: async () => {
+      const { data: response } = await rawApi.GET("/v1/fleet/drivers");
+      return response as { data: Driver[] };
+    },
+  });
+
+  const createMission = useMutation({
+    mutationFn: async () => {
+      const stops = [
+        ...(form.origin_label ? [{ label: form.origin_label }] : []),
+        ...(form.destination_label ? [{ label: form.destination_label }] : []),
+      ];
+      const { error: problem } = await rawApi.POST("/v1/missions", {
+        body: {
+          shipment_id: form.shipment_id || null,
+          type: form.type,
+          truck_id: form.truck_id || null,
+          trailer_id: form.trailer_id || null,
+          driver_id: form.driver_id || null,
+          window_start: form.window_start || null,
+          window_end: form.window_end || null,
+          notes: form.notes || null,
+          ...(stops.length > 0 ? { stops } : {}),
+        },
+      });
+      if (problem) throw problem;
+    },
+    onSuccess: () => {
+      setShowForm(false);
+      setForm(emptyMissionForm);
+      setError(null);
+      queryClient.invalidateQueries({ queryKey: ["missions"] });
+    },
+    onError: (problem) => setError(problemMessage(problem)),
+  });
+
+  const transition = useMutation({
+    mutationFn: async ({ missionId, status, failure_reason }: { missionId: string; status: string; failure_reason?: string }) => {
+      const { error: problem } = await rawApi.POST(`/v1/missions/${missionId}/transition`, {
+        body: { status, ...(failure_reason ? { failure_reason } : {}) },
+      });
+      if (problem) throw problem;
+    },
+    onSuccess: () => {
+      setError(null);
+      queryClient.invalidateQueries({ queryKey: ["missions"] });
+    },
+    onError: (problem) => setError(problemMessage(problem)),
+  });
+
+  const submitPod = useMutation({
+    mutationFn: async () => {
+      if (!podFor) return;
+      const { error: problem } = await rawApi.POST(`/v1/missions/${podFor.id}/pod`, {
+        body: { recipient_name: podForm.recipient_name, remarks: podForm.remarks || null },
+      });
+      if (problem) throw problem;
+    },
+    onSuccess: () => {
+      setPodFor(null);
+      setPodForm({ recipient_name: "", remarks: "" });
+      setError(null);
+      queryClient.invalidateQueries({ queryKey: ["missions"] });
+    },
+    onError: (problem) => setError(problemMessage(problem)),
+  });
+
+  const onTransition = (mission: Mission, status: string) => {
+    if (status === "failed") {
+      const reason = window.prompt("Motif de l'échec ?");
+      if (!reason) return;
+      transition.mutate({ missionId: mission.id, status, failure_reason: reason });
+      return;
+    }
+    transition.mutate({ missionId: mission.id, status });
+  };
+
+  return (
+    <div className="flex flex-col gap-4">
+      <div className="flex items-start">
+        <div>
+          <h1 className="text-xl font-bold">Routier</h1>
+          <p className="text-[13px] text-ink-3">Missions de transport et gestion de la flotte</p>
+        </div>
+        {canCreate && tab === "missions" && (
+          <button onClick={() => setShowForm((value) => !value)} className={`ml-auto ${buttonPrimary}`}>
+            + Nouvelle mission
+          </button>
+        )}
+      </div>
+
+      <div className="flex gap-2">
+        {(["missions", "fleet"] as const).map((key) => (
+          <button
+            key={key}
+            onClick={() => setTab(key)}
+            className={`rounded-full border px-3.5 py-1 text-xs font-semibold ${
+              tab === key ? "border-ink bg-ink text-paper" : "border-line-strong text-ink-2 hover:bg-surface"
+            }`}
+          >
+            {key === "missions" ? "Missions" : "Flotte"}
+          </button>
+        ))}
+      </div>
+
+      {error && <p className="rounded-lg bg-crit-soft px-4 py-2.5 text-[13px] text-crit">{error}</p>}
+
+      {tab === "missions" && (
+        <>
+          {showForm && (
+            <form
+              onSubmit={(event) => { event.preventDefault(); createMission.mutate(); }}
+              className="grid gap-4 rounded-xl border border-line bg-surface p-5 shadow-sm md:grid-cols-6"
+            >
+              <Field label="Type">
+                <select value={form.type} onChange={(e) => setForm({ ...form, type: e.target.value })} className={inputClass}>
+                  <option value="delivery">Livraison</option>
+                  <option value="pickup">Enlèvement</option>
+                  <option value="transfer">Transfert</option>
+                </select>
+              </Field>
+              <Field label="Camion">
+                <select value={form.truck_id} onChange={(e) => setForm({ ...form, truck_id: e.target.value })} className={inputClass}>
+                  <option value="">—</option>
+                  {trucks.data?.data.map((truck) => (
+                    <option key={truck.id} value={truck.id}>{truck.plate_number}</option>
+                  ))}
+                </select>
+              </Field>
+              <Field label="Remorque">
+                <select value={form.trailer_id} onChange={(e) => setForm({ ...form, trailer_id: e.target.value })} className={inputClass}>
+                  <option value="">—</option>
+                  {trailers.data?.data.map((trailer) => (
+                    <option key={trailer.id} value={trailer.id}>{trailer.plate_number}</option>
+                  ))}
+                </select>
+              </Field>
+              <Field label="Chauffeur">
+                <select value={form.driver_id} onChange={(e) => setForm({ ...form, driver_id: e.target.value })} className={inputClass}>
+                  <option value="">—</option>
+                  {drivers.data?.data.map((driver) => (
+                    <option key={driver.id} value={driver.id}>{driver.name}</option>
+                  ))}
+                </select>
+              </Field>
+              <Field label="Début de créneau">
+                <input type="datetime-local" value={form.window_start} onChange={(e) => setForm({ ...form, window_start: e.target.value })} className={inputClass} />
+              </Field>
+              <Field label="Fin de créneau">
+                <input type="datetime-local" value={form.window_end} onChange={(e) => setForm({ ...form, window_end: e.target.value })} className={inputClass} />
+              </Field>
+              <Field label="Origine (étape 1)" className="md:col-span-2">
+                <input value={form.origin_label} onChange={(e) => setForm({ ...form, origin_label: e.target.value })} className={inputClass} placeholder="Port d'Abidjan" />
+              </Field>
+              <Field label="Destination (étape 2)" className="md:col-span-2">
+                <input value={form.destination_label} onChange={(e) => setForm({ ...form, destination_label: e.target.value })} className={inputClass} placeholder="Entrepôt client" />
+              </Field>
+              <Field label="Dossier (ID)" className="md:col-span-2">
+                <input value={form.shipment_id} onChange={(e) => setForm({ ...form, shipment_id: e.target.value })} className={`${inputClass} mono`} placeholder="UUID du dossier (optionnel)" />
+              </Field>
+              <Field label="Notes" className="md:col-span-6">
+                <input value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} className={inputClass} />
+              </Field>
+              <div className="flex gap-2 md:col-span-6">
+                <button type="submit" disabled={createMission.isPending} className={buttonPrimary}>Créer</button>
+                <button type="button" onClick={() => setShowForm(false)} className={buttonSecondary}>Annuler</button>
+              </div>
+            </form>
+          )}
+
+          {podFor && (
+            <form
+              onSubmit={(event) => { event.preventDefault(); submitPod.mutate(); }}
+              className="grid gap-4 rounded-xl border border-line bg-surface p-5 shadow-sm md:grid-cols-6"
+            >
+              <p className="text-[13px] font-semibold md:col-span-6">
+                Preuve de livraison — <span className="mono text-sea">{podFor.reference}</span>
+              </p>
+              <Field label="Nom du destinataire" className="md:col-span-2">
+                <input required value={podForm.recipient_name} onChange={(e) => setPodForm({ ...podForm, recipient_name: e.target.value })} className={inputClass} />
+              </Field>
+              <Field label="Remarques" className="md:col-span-4">
+                <input value={podForm.remarks} onChange={(e) => setPodForm({ ...podForm, remarks: e.target.value })} className={inputClass} />
+              </Field>
+              <div className="flex gap-2 md:col-span-6">
+                <button type="submit" disabled={submitPod.isPending} className={buttonPrimary}>Enregistrer le POD</button>
+                <button type="button" onClick={() => setPodFor(null)} className={buttonSecondary}>Annuler</button>
+              </div>
+            </form>
+          )}
+
+          <div className="overflow-x-auto rounded-xl border border-line bg-surface shadow-sm">
+            <table className="w-full text-[13px]">
+              <thead>
+                <tr className="border-b border-line text-left text-[10px] uppercase tracking-wider text-ink-3">
+                  <th className="px-3 py-2.5">Référence</th>
+                  <th className="px-3 py-2.5">Type</th>
+                  <th className="px-3 py-2.5">Camion</th>
+                  <th className="px-3 py-2.5">Chauffeur</th>
+                  <th className="px-3 py-2.5">Trajet</th>
+                  <th className="px-3 py-2.5">Dossier</th>
+                  <th className="px-3 py-2.5">Créneau</th>
+                  <th className="px-3 py-2.5">Statut</th>
+                  <th className="px-3 py-2.5" />
+                </tr>
+              </thead>
+              <tbody>
+                {missions.isLoading && (
+                  <tr><td colSpan={9} className="px-3 py-8 text-center text-ink-3">Chargement…</td></tr>
+                )}
+                {missions.data?.data.map((mission) => {
+                  const stops = mission.stops ?? [];
+                  const firstStop = stops[0];
+                  const lastStop = stops[stops.length - 1];
+                  const targets = MISSION_TRANSITIONS[mission.status] ?? [];
+                  return (
+                    <tr key={mission.id} className="border-b border-line last:border-0 hover:bg-sea/5">
+                      <td className="mono px-3 py-2.5 font-semibold text-sea">{mission.reference}</td>
+                      <td className="px-3 py-2.5 text-ink-2">{TYPE_LABEL[mission.type] ?? mission.type}</td>
+                      <td className="mono px-3 py-2.5">{mission.truck?.plate_number ?? "—"}</td>
+                      <td className="px-3 py-2.5">{mission.driver?.name ?? "—"}</td>
+                      <td className="px-3 py-2.5 text-ink-2">
+                        {firstStop ? `${firstStop.label}${lastStop && lastStop.id !== firstStop.id ? ` → ${lastStop.label}` : ""}` : "—"}
+                      </td>
+                      <td className="mono px-3 py-2.5 text-ink-2">{mission.shipment?.reference ?? "—"}</td>
+                      <td className="mono px-3 py-2.5 text-ink-2">
+                        {mission.window_start ? new Date(mission.window_start).toLocaleString("fr-FR", { dateStyle: "short", timeStyle: "short" }) : "—"}
+                      </td>
+                      <td className="px-3 py-2.5">
+                        <span
+                          className={`rounded-full px-2.5 py-0.5 text-[11px] font-semibold ${STATUS_TONE[mission.status] ?? "bg-paper text-ink-3"}`}
+                          title={mission.failure_reason ?? undefined}
+                        >
+                          {STATUS_LABEL[mission.status] ?? mission.status}
+                        </span>
+                      </td>
+                      <td className="px-3 py-2.5">
+                        <div className="flex gap-2.5">
+                          {canUpdate && targets.map((target) => (
+                            <button
+                              key={target}
+                              onClick={() => onTransition(mission, target)}
+                              disabled={transition.isPending}
+                              className={`text-xs font-semibold hover:underline ${target === "failed" || target === "cancelled" ? "text-crit" : "text-sea"}`}
+                            >
+                              {TRANSITION_LABEL[target] ?? target}
+                            </button>
+                          ))}
+                          {canPod && mission.status === "in_progress" && (
+                            <button
+                              onClick={() => setPodFor(mission)}
+                              className="text-xs font-semibold text-ok hover:underline"
+                            >
+                              POD →
+                            </button>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </>
+      )}
+
+      {tab === "fleet" && (
+        <div className="grid gap-4 xl:grid-cols-3">
+          <TruckPanel trucks={trucks.data?.data ?? []} isLoading={trucks.isLoading} canCreate={canCreate} />
+          <TrailerPanel trailers={trailers.data?.data ?? []} isLoading={trailers.isLoading} canCreate={canCreate} />
+          <DriverPanel drivers={drivers.data?.data ?? []} isLoading={drivers.isLoading} canCreate={canCreate} />
+        </div>
+      )}
+    </div>
+  );
+}
+
+function TruckPanel({ trucks, isLoading, canCreate }: { trucks: Truck[]; isLoading: boolean; canCreate: boolean }) {
+  const queryClient = useQueryClient();
+  const [form, setForm] = useState({ plate_number: "", type: "", capacity_kg: "" });
+  const [error, setError] = useState<string | null>(null);
+
+  const create = useMutation({
+    mutationFn: async () => {
+      const { error: problem } = await rawApi.POST("/v1/fleet/trucks", {
+        body: {
+          plate_number: form.plate_number,
+          type: form.type || null,
+          capacity_kg: form.capacity_kg ? Number(form.capacity_kg) : null,
+        },
+      });
+      if (problem) throw problem;
+    },
+    onSuccess: () => {
+      setForm({ plate_number: "", type: "", capacity_kg: "" });
+      setError(null);
+      queryClient.invalidateQueries({ queryKey: ["trucks"] });
+    },
+    onError: (problem) => setError(problemMessage(problem)),
+  });
+
+  return (
+    <div className="flex flex-col gap-3 rounded-xl border border-line bg-surface p-4 shadow-sm">
+      <h2 className="text-sm font-bold">Camions</h2>
+      {canCreate && (
+        <form onSubmit={(event) => { event.preventDefault(); create.mutate(); }} className="flex flex-wrap gap-2">
+          <input required maxLength={16} value={form.plate_number} onChange={(e) => setForm({ ...form, plate_number: e.target.value.toUpperCase() })} placeholder="Immatriculation" className={`${inputClass} mono w-36 flex-none`} />
+          <input maxLength={32} value={form.type} onChange={(e) => setForm({ ...form, type: e.target.value })} placeholder="Type" className={`${inputClass} w-28 flex-none`} />
+          <input type="number" min={0} value={form.capacity_kg} onChange={(e) => setForm({ ...form, capacity_kg: e.target.value })} placeholder="Cap. (kg)" className={`${inputClass} w-24 flex-none`} />
+          <button type="submit" disabled={create.isPending} className={buttonSecondary}>Ajouter</button>
+        </form>
+      )}
+      {error && <p className="rounded-lg bg-crit-soft px-3 py-2 text-xs text-crit">{error}</p>}
+      <table className="w-full text-[13px]">
+        <thead>
+          <tr className="border-b border-line text-left text-[10px] uppercase tracking-wider text-ink-3">
+            <th className="px-2 py-2">Immat.</th>
+            <th className="px-2 py-2">Type</th>
+            <th className="px-2 py-2 text-right">Cap. (kg)</th>
+            <th className="px-2 py-2">Visite tech.</th>
+          </tr>
+        </thead>
+        <tbody>
+          {isLoading && <tr><td colSpan={4} className="px-2 py-6 text-center text-ink-3">Chargement…</td></tr>}
+          {trucks.map((truck) => (
+            <tr key={truck.id} className="border-b border-line last:border-0">
+              <td className="mono px-2 py-2 font-semibold">{truck.plate_number}</td>
+              <td className="px-2 py-2 text-ink-2">{truck.type ?? "—"}</td>
+              <td className="mono px-2 py-2 text-right">{truck.capacity_kg != null ? Number(truck.capacity_kg).toLocaleString("fr-FR") : "—"}</td>
+              <td className="mono px-2 py-2 text-ink-2">{truck.inspection_due ? new Date(truck.inspection_due).toLocaleDateString("fr-FR") : "—"}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+function TrailerPanel({ trailers, isLoading, canCreate }: { trailers: Trailer[]; isLoading: boolean; canCreate: boolean }) {
+  const queryClient = useQueryClient();
+  const [form, setForm] = useState({ plate_number: "", type: "" });
+  const [error, setError] = useState<string | null>(null);
+
+  const create = useMutation({
+    mutationFn: async () => {
+      const { error: problem } = await rawApi.POST("/v1/fleet/trailers", {
+        body: { plate_number: form.plate_number, type: form.type || null },
+      });
+      if (problem) throw problem;
+    },
+    onSuccess: () => {
+      setForm({ plate_number: "", type: "" });
+      setError(null);
+      queryClient.invalidateQueries({ queryKey: ["trailers"] });
+    },
+    onError: (problem) => setError(problemMessage(problem)),
+  });
+
+  return (
+    <div className="flex flex-col gap-3 rounded-xl border border-line bg-surface p-4 shadow-sm">
+      <h2 className="text-sm font-bold">Remorques</h2>
+      {canCreate && (
+        <form onSubmit={(event) => { event.preventDefault(); create.mutate(); }} className="flex flex-wrap gap-2">
+          <input required maxLength={16} value={form.plate_number} onChange={(e) => setForm({ ...form, plate_number: e.target.value.toUpperCase() })} placeholder="Immatriculation" className={`${inputClass} mono w-36 flex-none`} />
+          <input maxLength={32} value={form.type} onChange={(e) => setForm({ ...form, type: e.target.value })} placeholder="Type" className={`${inputClass} w-28 flex-none`} />
+          <button type="submit" disabled={create.isPending} className={buttonSecondary}>Ajouter</button>
+        </form>
+      )}
+      {error && <p className="rounded-lg bg-crit-soft px-3 py-2 text-xs text-crit">{error}</p>}
+      <table className="w-full text-[13px]">
+        <thead>
+          <tr className="border-b border-line text-left text-[10px] uppercase tracking-wider text-ink-3">
+            <th className="px-2 py-2">Immat.</th>
+            <th className="px-2 py-2">Type</th>
+          </tr>
+        </thead>
+        <tbody>
+          {isLoading && <tr><td colSpan={2} className="px-2 py-6 text-center text-ink-3">Chargement…</td></tr>}
+          {trailers.map((trailer) => (
+            <tr key={trailer.id} className="border-b border-line last:border-0">
+              <td className="mono px-2 py-2 font-semibold">{trailer.plate_number}</td>
+              <td className="px-2 py-2 text-ink-2">{trailer.type ?? "—"}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+function DriverPanel({ drivers, isLoading, canCreate }: { drivers: Driver[]; isLoading: boolean; canCreate: boolean }) {
+  const queryClient = useQueryClient();
+  const [form, setForm] = useState({ name: "", phone: "", license_number: "" });
+  const [error, setError] = useState<string | null>(null);
+
+  const create = useMutation({
+    mutationFn: async () => {
+      const { error: problem } = await rawApi.POST("/v1/fleet/drivers", {
+        body: {
+          name: form.name,
+          phone: form.phone || null,
+          license_number: form.license_number || null,
+        },
+      });
+      if (problem) throw problem;
+    },
+    onSuccess: () => {
+      setForm({ name: "", phone: "", license_number: "" });
+      setError(null);
+      queryClient.invalidateQueries({ queryKey: ["drivers"] });
+    },
+    onError: (problem) => setError(problemMessage(problem)),
+  });
+
+  return (
+    <div className="flex flex-col gap-3 rounded-xl border border-line bg-surface p-4 shadow-sm">
+      <h2 className="text-sm font-bold">Chauffeurs</h2>
+      {canCreate && (
+        <form onSubmit={(event) => { event.preventDefault(); create.mutate(); }} className="flex flex-wrap gap-2">
+          <input required value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Nom" className={`${inputClass} w-36 flex-none`} />
+          <input maxLength={32} value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} placeholder="Téléphone" className={`${inputClass} w-32 flex-none`} />
+          <input maxLength={32} value={form.license_number} onChange={(e) => setForm({ ...form, license_number: e.target.value })} placeholder="N° permis" className={`${inputClass} mono w-28 flex-none`} />
+          <button type="submit" disabled={create.isPending} className={buttonSecondary}>Ajouter</button>
+        </form>
+      )}
+      {error && <p className="rounded-lg bg-crit-soft px-3 py-2 text-xs text-crit">{error}</p>}
+      <table className="w-full text-[13px]">
+        <thead>
+          <tr className="border-b border-line text-left text-[10px] uppercase tracking-wider text-ink-3">
+            <th className="px-2 py-2">Nom</th>
+            <th className="px-2 py-2">Téléphone</th>
+            <th className="px-2 py-2">Permis</th>
+            <th className="px-2 py-2">Expiration</th>
+          </tr>
+        </thead>
+        <tbody>
+          {isLoading && <tr><td colSpan={4} className="px-2 py-6 text-center text-ink-3">Chargement…</td></tr>}
+          {drivers.map((driver) => (
+            <tr key={driver.id} className="border-b border-line last:border-0">
+              <td className="px-2 py-2 font-semibold">{driver.name}</td>
+              <td className="mono px-2 py-2 text-ink-2">{driver.phone ?? "—"}</td>
+              <td className="mono px-2 py-2 text-ink-2">{driver.license_number ?? "—"}</td>
+              <td className="mono px-2 py-2 text-ink-2">{driver.license_expiry ? new Date(driver.license_expiry).toLocaleDateString("fr-FR") : "—"}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
