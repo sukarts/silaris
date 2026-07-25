@@ -8,9 +8,11 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
+use Silaris\Modules\Billing\Domain\Event\InvoiceValidated;
 use Silaris\Modules\Billing\Infrastructure\Persistence\Model\InvoiceModel;
 use Silaris\Modules\Billing\Infrastructure\Persistence\Model\TaxRateModel;
 use Silaris\Modules\OdooSync\Application\Job\PushInvoiceToOdoo;
+use Silaris\Modules\Shared\Infrastructure\Events\DomainEventPublisher;
 use Silaris\Modules\Shared\Infrastructure\Tenancy\TenantContext;
 use Silaris\Modules\Tenancy\Infrastructure\Persistence\Model\CompanyModel;
 
@@ -117,6 +119,17 @@ class InvoiceController
                 'validated_at' => now(),
                 'validated_by' => $request->user()?->id,
             ]);
+
+            // Notification client « facture disponible » via l'outbox (même transaction).
+            app(DomainEventPublisher::class)->publish(new InvoiceValidated(
+                invoiceId: $invoice->id,
+                number: $number,
+                total: (string) $invoice->total,
+                currency: (string) $invoice->currency_code,
+                clientId: (string) $invoice->party_id,
+                shipmentId: $invoice->shipment_id,
+                at: new \DateTimeImmutable,
+            ));
         });
 
         // Sync Odoo asynchrone après commit — mode dégradé géré par le job (backoff).

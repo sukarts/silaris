@@ -5,6 +5,9 @@ declare(strict_types=1);
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schedule;
 
+// Worker outbox → notifications email (départ/arrivée/retard/facture…).
+Schedule::command('outbox:process')->everyMinute()->withoutOverlapping();
+
 // Tracking automatique — fréquence fine gérée par tenant (tracking_refresh_minutes).
 Schedule::command('tracking:refresh')->everyThirtyMinutes()->withoutOverlapping();
 

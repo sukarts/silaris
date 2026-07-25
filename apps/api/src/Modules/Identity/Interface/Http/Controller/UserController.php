@@ -8,8 +8,11 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
 use Silaris\Modules\Identity\Infrastructure\Persistence\Model\UserModel;
+use Silaris\Modules\Notifications\Infrastructure\Mail\UserInvitationMail;
+use Throwable;
 
 class UserController
 {
@@ -46,7 +49,8 @@ class UserController
             'branch_ids.*' => ['uuid', 'exists:branches,id'],
         ]);
 
-        $temporaryPassword = Str::password(16);
+        // Alphabet sans caractères ambigus : le mot de passe est recopié/transmis.
+        $temporaryPassword = self::unambiguousPassword();
 
         $user = DB::transaction(function () use ($data, $temporaryPassword) {
             $user = UserModel::create([
@@ -64,10 +68,32 @@ class UserController
             return $user;
         });
 
+        $tenantName = (string) (DB::table('tenants')->where('id', $user->tenant_id)->value('name') ?? 'SILARIS');
+        $invitationSent = true;
+        try {
+            Mail::to($user->email)->send(new UserInvitationMail($user->first_name, $user->email, $temporaryPassword, $tenantName));
+        } catch (Throwable $e) {
+            $invitationSent = false;
+            Log::error("Échec envoi invitation à {$user->email} : {$e->getMessage()}");
+        }
+
         return response()->json([
             'user' => $user->fresh(['roles:id,key,name', 'branches:id,code']),
-            'temporary_password' => $temporaryPassword, // remplacé par une invitation email (Étape 13/15)
+            // Filet : affiché à l'admin si l'email n'est pas parti (SMTP down, adresse invalide…).
+            'temporary_password' => $invitationSent ? null : $temporaryPassword,
+            'invitation_sent' => $invitationSent,
         ], 201);
+    }
+
+    private static function unambiguousPassword(int $length = 16): string
+    {
+        $chars = 'abcdefghjkmnpqrstuvwxyzABCDEFGHJKMNPQRSTUVWXYZ23456789';
+        $password = '';
+        for ($i = 0; $i < $length; $i++) {
+            $password .= $chars[random_int(0, strlen($chars) - 1)];
+        }
+
+        return $password;
     }
 
     public function update(Request $request, string $userId): JsonResponse

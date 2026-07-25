@@ -56,6 +56,9 @@ return [
 
     'url' => env('APP_URL', 'http://localhost'),
 
+    // URL publique de l'app web (liens dans les emails : reset, invitation, portail).
+    'frontend_url' => env('FRONTEND_URL', ''),
+
     /*
     |--------------------------------------------------------------------------
     | Application Timezone
