@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { rawApi } from "@/lib/api";
+import { SearchPalette } from "@/components/SearchPalette";
 import { useAuth, useCan } from "@/stores/auth";
 
 // `soon: true` = écran pas encore construit : entrée visible mais désactivée
@@ -74,6 +75,19 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const { token, user, clear, setPermissions } = useAuth();
   // Attend la réhydratation du store persisté avant toute décision d'auth (client uniquement).
   const [hydrated, setHydrated] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
+
+  // Palette de recherche globale : ⌘K / Ctrl+K.
+  useEffect(() => {
+    function onKey(event: KeyboardEvent) {
+      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
+        event.preventDefault();
+        setSearchOpen((value) => !value);
+      }
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
 
   useEffect(() => {
     if (useAuth.persist.hasHydrated()) setHydrated(true);
@@ -126,10 +140,14 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       </nav>
       <div className="flex min-w-0 flex-col">
         <header className="flex items-center gap-4 border-b border-line bg-surface px-6 py-2.5">
-          <input
-            placeholder="Rechercher dossier, BL, conteneur, client…"
-            className="w-full max-w-md rounded-lg border border-line bg-paper px-3 py-1.5 text-[13px] text-ink placeholder:text-ink-3 focus:outline-2 focus:outline-accent"
-          />
+          <button
+            onClick={() => setSearchOpen(true)}
+            className="flex w-full max-w-md items-center justify-between rounded-lg border border-line bg-paper px-3 py-1.5 text-[13px] text-ink-3 hover:border-line-strong"
+          >
+            <span>Rechercher dossier, client, conteneur…</span>
+            <kbd className="rounded border border-line px-1.5 py-px text-[10px]">⌘K</kbd>
+          </button>
+          <SearchPalette open={searchOpen} onClose={() => setSearchOpen(false)} />
           <div className="ml-auto flex items-center gap-3">
             <Link href="/profile" className="text-[13px] text-ink-2 hover:text-ink" title="Mon profil">
               {user?.first_name} {user?.last_name}
