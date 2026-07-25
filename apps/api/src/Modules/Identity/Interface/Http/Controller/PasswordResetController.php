@@ -10,12 +10,15 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 use Silaris\Modules\Identity\Application\Service\PasswordPolicy;
 use Silaris\Modules\Identity\Infrastructure\Persistence\Model\UserModel;
+use Silaris\Modules\Notifications\Infrastructure\Mail\PasswordResetMail;
 use Silaris\Modules\Shared\Infrastructure\Tenancy\GuestTenantResolver;
 use Silaris\Modules\Shared\Infrastructure\Tenancy\TenantContext;
+use Throwable;
 
 class PasswordResetController
 {
@@ -39,8 +42,12 @@ class PasswordResetController
                 ['tenant_id' => $account->tenant_id, 'email' => $email],
                 ['token' => Hash::make($token), 'created_at' => now()],
             );
-            // Envoi email réel : module Notifications (Étape 15). En dev : log.
-            Log::info("Password reset token for {$email} (tenant {$account->tenant_id}): {$token}");
+            try {
+                Mail::to($email)->send(new PasswordResetMail($email, $token));
+            } catch (Throwable $e) {
+                // Réponse inchangée (anti-énumération) — l'échec d'envoi est tracé côté ops.
+                Log::error("Échec envoi email de reset pour {$email} : {$e->getMessage()}");
+            }
         }
 
         return response()->json(['sent' => true]);
