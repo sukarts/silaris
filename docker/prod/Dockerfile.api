@@ -9,7 +9,8 @@ RUN composer install --no-dev --no-scripts --no-autoloader --prefer-dist --ignor
 FROM php:8.3-fpm-alpine AS runtime
 
 # Libs runtime conservées ; seuls les paquets -dev sont retirés après compilation.
-RUN apk add --no-cache libpq libzip icu-libs libpng freetype libjpeg-turbo \
+# nginx + gettext (envsubst) : le service web sert le HTTP dans le même conteneur.
+RUN apk add --no-cache nginx gettext libpq libzip icu-libs libpng freetype libjpeg-turbo \
     && apk add --no-cache --virtual .build-deps postgresql-dev libzip-dev icu-dev libpng-dev freetype-dev libjpeg-turbo-dev \
     && docker-php-ext-configure gd --with-freetype --with-jpeg \
     && docker-php-ext-install -j$(nproc) pdo_pgsql zip intl gd bcmath opcache pcntl \
@@ -32,11 +33,15 @@ RUN composer dump-autoload --optimize --no-dev \
     && chown -R www-data:www-data storage bootstrap/cache
 
 COPY docker/prod/api-entrypoint.sh /usr/local/bin/api-entrypoint
-RUN chmod +x /usr/local/bin/api-entrypoint
+COPY docker/prod/api-serve.sh /usr/local/bin/api-serve
+COPY docker/prod/nginx-render-main.conf /etc/nginx/nginx-render-main.conf
+COPY docker/prod/nginx-render.conf.template /etc/nginx/nginx-render.conf.template
+RUN chmod +x /usr/local/bin/api-entrypoint /usr/local/bin/api-serve
 USER www-data
-EXPOSE 9000
+EXPOSE 10000
 ENTRYPOINT ["api-entrypoint"]
-CMD ["php-fpm"]
+# Service web : nginx (HTTP) + php-fpm. worker/scheduler surchargent ce CMD.
+CMD ["api-serve"]
 
 # ── Étape 3 : worker (même image, entrypoint Horizon) ──────────────────────
 FROM runtime AS worker
