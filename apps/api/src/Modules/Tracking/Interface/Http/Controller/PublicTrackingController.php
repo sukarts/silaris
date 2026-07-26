@@ -62,6 +62,20 @@ class PublicTrackingController
             ];
         }
 
+        $system = DB::connection(config('database.system_connection'));
+        $portNames = $system->table('ports')
+            ->whereIn('locode', [$shipment->origin_locode, $shipment->destination_locode])
+            ->pluck('name', 'locode');
+        // Navire courant : dernier événement de tracking portant une info navire.
+        $vesselName = $system->table('tracking_events')
+            ->where('shipment_id', $shipmentId)
+            ->orderByDesc('occurred_at')
+            ->limit(20)
+            ->get(['raw_payload'])
+            ->map(fn ($e) => json_decode((string) $e->raw_payload, true)['current_vessel_name'] ?? null)
+            ->first(fn ($name) => is_string($name) && $name !== '');
+        $tenantName = $system->table('tenants')->where('id', $shipment->tenant_id)->value('name');
+
         return response()->json([
             'package' => $packagePayload,
             'reference' => $shipment->reference,
@@ -69,6 +83,10 @@ class PublicTrackingController
             'mode' => $shipment->mode,
             'origin_locode' => $shipment->origin_locode,
             'destination_locode' => $shipment->destination_locode,
+            'origin_name' => $portNames[$shipment->origin_locode] ?? null,
+            'destination_name' => $portNames[$shipment->destination_locode] ?? null,
+            'vessel_name' => $vesselName,
+            'tenant_name' => $tenantName,
             'eta' => $shipment->eta,
             'ata' => $shipment->ata,
             'events' => $events,
