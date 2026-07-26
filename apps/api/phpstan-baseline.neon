@@ -103,27 +103,9 @@ parameters:
 			path: src/Modules/Ocean/Interface/Http/Controller/PackageController.php
 
 		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$code\.$#'
-			identifier: property.notFound
-			count: 1
-			path: src/Modules/Ocean/Interface/Http/Controller/PackageController.php
-
-		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$name\.$#'
-			identifier: property.notFound
-			count: 1
-			path: src/Modules/Ocean/Interface/Http/Controller/PackageController.php
-
-		-
 			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$reference\.$#'
 			identifier: property.notFound
 			count: 2
-			path: src/Modules/Ocean/Interface/Http/Controller/PackageController.php
-
-		-
-			message: '#^Parameter \#1 \$callback of method Illuminate\\Database\\Eloquent\\Collection\<int,Silaris\\Modules\\Ocean\\Infrastructure\\Persistence\\Model\\PackageModel\>\:\:map\(\) contains unresolvable type\.$#'
-			identifier: argument.unresolvableType
-			count: 1
 			path: src/Modules/Ocean/Interface/Http/Controller/PackageController.php
 
 		-
@@ -253,10 +235,10 @@ parameters:
 			path: src/Modules/Pricing/Interface/Http/Controller/PortalQuoteController.php
 
 		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$code\.$#'
+			message: '#^Access to an undefined property Silaris\\Modules\\Identity\\Infrastructure\\Persistence\\Model\\UserModel\:\:\$party_id\.$#'
 			identifier: property.notFound
-			count: 1
-			path: src/Modules/Shipment/Infrastructure/Persistence/SequenceReferenceGenerator.php
+			count: 2
+			path: src/Modules/Road/Interface/Http/Controller/PortalDeliveryNoteController.php
 
 		-
 			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$key\.$#'

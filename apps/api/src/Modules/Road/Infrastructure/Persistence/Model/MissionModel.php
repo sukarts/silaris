@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Silaris\Modules\Road\Infrastructure\Persistence\Model;
 
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
@@ -12,6 +13,15 @@ use Silaris\Modules\Shared\Infrastructure\Persistence\BaseModel;
 use Silaris\Modules\Shared\Infrastructure\Persistence\Concerns\BelongsToTenant;
 use Silaris\Modules\Shipment\Infrastructure\Persistence\Model\ShipmentModel;
 
+/**
+ * @property string $id
+ * @property string $reference
+ * @property string $status
+ * @property string|null $carrier_party_id
+ * @property ShipmentModel|null $shipment
+ * @property ProofOfDeliveryModel|null $pod
+ * @property Collection<int, MissionStopModel> $stops
+ */
 class MissionModel extends BaseModel
 {
     use BelongsToTenant;

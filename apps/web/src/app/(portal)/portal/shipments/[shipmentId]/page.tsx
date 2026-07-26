@@ -3,7 +3,7 @@
 import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
 import { use } from "react";
-import { rawApi } from "@/lib/api";
+import { downloadFile, rawApi } from "@/lib/api";
 import { PortalShell } from "@/components/PortalShell";
 
 interface PortalShipmentDetail {
@@ -17,8 +17,24 @@ interface PortalShipmentDetail {
   events: { id: string; title: string; type: string; occurred_at: string }[];
 }
 
+interface DeliveryNote {
+  mission_id: string;
+  reference: string;
+  recipient_name: string;
+  delivered_at: string;
+}
+
 export default function PortalShipmentPage({ params }: { params: Promise<{ shipmentId: string }> }) {
   const { shipmentId } = use(params);
+  // Bons de livraison signés : le client récupère lui-même la preuve de
+  // remise, sans avoir à la redemander à son transitaire.
+  const notes = useQuery({
+    queryKey: ["portal", "delivery-notes", shipmentId],
+    queryFn: async () => {
+      const { data } = await rawApi.GET(`/v1/portal/shipments/${shipmentId}/delivery-notes`);
+      return ((data as { data: DeliveryNote[] } | undefined)?.data ?? []);
+    },
+  });
   const { data } = useQuery({
     queryKey: ["portal", "shipment", shipmentId],
     queryFn: async () => {
@@ -61,6 +77,28 @@ export default function PortalShipmentPage({ params }: { params: Promise<{ shipm
               </div>
             </div>
           </div>
+
+          {(notes.data?.length ?? 0) > 0 && (
+            <div className="rounded-xl border border-line bg-surface p-5 shadow-sm">
+              <h2 className="pb-3 text-[13px] font-bold">Bons de livraison</h2>
+              <ul className="flex flex-col gap-2">
+                {notes.data?.map((note) => (
+                  <li key={note.mission_id} className="flex flex-wrap items-center gap-3 text-[13px]">
+                    <span className="text-ink-2">
+                      Reçu par <strong>{note.recipient_name}</strong> le{" "}
+                      {new Date(note.delivered_at).toLocaleDateString("fr-FR", { dateStyle: "long" })}
+                    </span>
+                    <button
+                      onClick={() => downloadFile(`/v1/portal/missions/${note.mission_id}/delivery-note`, "bon-livraison.pdf").catch(() => undefined)}
+                      className="ml-auto text-[13px] font-semibold text-sea hover:underline"
+                    >
+                      Télécharger le PDF
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
 
           <div className="rounded-xl border border-line bg-surface p-5 shadow-sm">
             <h2 className="pb-3 text-[13px] font-bold">Historique</h2>
