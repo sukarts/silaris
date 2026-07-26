@@ -7,6 +7,7 @@ use Silaris\Modules\Crm\Interface\Http\Controller\ComplaintController;
 use Silaris\Modules\Crm\Interface\Http\Controller\OpportunityController;
 use Silaris\Modules\Crm\Interface\Http\Controller\PartyContactController;
 use Silaris\Modules\Crm\Interface\Http\Controller\PartyController;
+use Silaris\Modules\Crm\Interface\Http\Controller\PortalAccountController;
 
 Route::prefix('parties')->group(function (): void {
     Route::get('/', [PartyController::class, 'index'])->can('crm.read');
@@ -15,6 +16,7 @@ Route::prefix('parties')->group(function (): void {
     Route::patch('/{partyId}', [PartyController::class, 'update'])->whereUuid('partyId')->can('crm.update');
     Route::delete('/{partyId}', [PartyController::class, 'destroy'])->whereUuid('partyId')->can('crm.delete');
     Route::post('/{partyId}/convert', [PartyController::class, 'convert'])->whereUuid('partyId')->can('crm.convert');
+    Route::post('/{partyId}/portal-account', [PortalAccountController::class, 'invite'])->whereUuid('partyId')->can('crm.update');
     Route::post('/{partyId}/contacts', [PartyContactController::class, 'store'])->whereUuid('partyId')->can('crm.update');
     Route::patch('/{partyId}/contacts/{contactId}', [PartyContactController::class, 'update'])->can('crm.update');
     Route::delete('/{partyId}/contacts/{contactId}', [PartyContactController::class, 'destroy'])->can('crm.update');

@@ -15,7 +15,7 @@ parameters:
 		-
 			message: '#^Access to an undefined property Silaris\\Modules\\Identity\\Infrastructure\\Persistence\\Model\\UserModel\:\:\$party_id\.$#'
 			identifier: property.notFound
-			count: 1
+			count: 2
 			path: src/Modules/Billing/Interface/Http/Controller/PortalInvoiceController.php
 
 		-
@@ -249,7 +249,7 @@ parameters:
 		-
 			message: '#^Access to an undefined property Silaris\\Modules\\Identity\\Infrastructure\\Persistence\\Model\\UserModel\:\:\$party_id\.$#'
 			identifier: property.notFound
-			count: 3
+			count: 4
 			path: src/Modules/Pricing/Interface/Http/Controller/PortalQuoteController.php
 
 		-

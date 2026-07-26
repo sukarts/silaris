@@ -4,9 +4,12 @@ declare(strict_types=1);
 
 namespace Silaris\Modules\Pricing\Interface\Http\Controller;
 
+use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Silaris\Modules\Pricing\Infrastructure\Persistence\Model\QuoteModel;
+use Silaris\Modules\Tenancy\Infrastructure\Persistence\Model\CompanyModel;
+use Symfony\Component\HttpFoundation\Response;
 
 /** Portail — devis envoyés ; acceptation/refus en ligne. */
 class PortalQuoteController
@@ -49,5 +52,18 @@ class PortalQuoteController
         ]);
 
         return response()->json($quote->fresh());
+    }
+
+    /** GET /portal/quotes/{id}/pdf — cotation du client connecté uniquement. */
+    public function pdf(Request $request, string $quoteId): Response
+    {
+        $quote = QuoteModel::with(['lines', 'party'])
+            ->where('party_id', $request->user()->party_id)
+            ->whereIn('status', ['sent', 'accepted', 'rejected', 'expired'])
+            ->findOrFail($quoteId);
+        $company = CompanyModel::findOrFail($quote->company_id);
+
+        return Pdf::loadView('pdf.quote', ['quote' => $quote, 'company' => $company])
+            ->download('cotation-'.$quote->number.'.pdf');
     }
 }

@@ -8,6 +8,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 use Silaris\Modules\Crm\Infrastructure\Persistence\Model\PartyModel;
+use Silaris\Modules\Crm\Infrastructure\Persistence\Model\PortalAccountModel;
 
 class PartyController
 {
@@ -22,6 +23,9 @@ class PartyController
         ]);
 
         $parties = PartyModel::query()
+            ->addSelect(['portal_email' => PortalAccountModel::query()
+                ->select('email')->whereColumn('party_id', 'parties.id')->where('is_active', true)->limit(1),
+            ])
             ->when($validated['type'] ?? null, fn ($q, $t) => $q->where('type', $t))
             ->when($validated['supplier_kind'] ?? null, fn ($q, $k) => $q->where('supplier_kind', $k))
             ->when($validated['search'] ?? null, fn ($q, $s) => $q->where(

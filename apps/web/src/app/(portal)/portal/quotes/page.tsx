@@ -1,7 +1,7 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { rawApi } from "@/lib/api";
+import { downloadFile, rawApi } from "@/lib/api";
 import { PortalShell } from "@/components/PortalShell";
 import { buttonPrimary, buttonSecondary } from "@/components/Field";
 
@@ -51,6 +51,12 @@ export default function PortalQuotesPage() {
               <span className="ml-auto mono text-sm font-bold">
                 {Number(quote.total_amount).toLocaleString("fr-FR")} {quote.currency_code}
               </span>
+              <button
+                onClick={() => downloadFile(`/v1/portal/quotes/${quote.id}/pdf`, "cotation.pdf").catch(() => undefined)}
+                className="text-xs font-semibold text-sea hover:underline"
+              >
+                PDF
+              </button>
             </div>
             <ul className="px-4 py-2 text-[13px]">
               {quote.lines.map((line) => (
