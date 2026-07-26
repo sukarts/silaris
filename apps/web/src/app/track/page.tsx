@@ -10,6 +10,10 @@ interface TrackingResult {
   mode: string;
   origin_locode: string;
   destination_locode: string;
+  origin_name: string | null;
+  destination_name: string | null;
+  vessel_name: string | null;
+  tenant_name: string | null;
   eta: string | null;
   ata: string | null;
   events: { title: string; type: string; occurred_at: string }[];
@@ -49,20 +53,24 @@ export default function TrackPage() {
     setResult(data as TrackingResult);
   }
 
+  const modeIcon = (mode: string) => (mode.startsWith("sea") ? "🚢" : mode === "air" ? "✈" : "🚛");
+
   return (
     <main className="mx-auto w-full max-w-2xl px-5 py-12">
       <div className="text-center">
         <div className="text-lg font-bold tracking-[0.18em]">
           SILA<span className="text-accent">RIS</span>
         </div>
-        <p className="pb-7 text-[13px] text-ink-3">Suivi d'expédition</p>
+        <p className="pb-7 text-[13px] text-ink-3">
+          Suivi d&apos;expédition{result?.tenant_name ? ` — ${result.tenant_name}` : ""}
+        </p>
       </div>
 
       <form onSubmit={track} className="flex gap-2">
         <input
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          placeholder="N° de dossier, BL, AWB ou conteneur"
+          placeholder="N° de dossier, BL, HBL, MBL, AWB ou conteneur"
           className="mono w-full rounded-lg border border-line-strong bg-surface px-4 py-3 text-sm uppercase focus:outline-2 focus:outline-accent"
         />
         <button disabled={loading || query.trim().length < 6} className={buttonPrimary}>
@@ -70,33 +78,51 @@ export default function TrackPage() {
         </button>
       </form>
       <p className="pt-2 text-center text-[11px] text-ink-3">
-        Exemple : TAL-2026-00128, MEDUJ2260417 ou MSKU8842016
+        N° de dossier, BL, HBL, MBL, AWB ou conteneur
       </p>
 
       {error && <p className="mt-6 rounded-lg bg-crit-soft px-4 py-3 text-center text-[13px] text-crit">{error}</p>}
 
       {result && (
         <div className="mt-8 flex flex-col gap-4">
-          <div className="flex flex-wrap items-center gap-4 rounded-xl bg-sea-soft p-5">
-            <div>
-              <div className="text-base font-bold">
-                {result.mode.startsWith("sea") ? "🚢" : result.mode === "air" ? "✈" : "🚛"}{" "}
-                {STATUS_LABEL[result.status] ?? result.status}
+          <div className="rounded-xl bg-sea-soft p-5">
+            <div className="flex flex-wrap items-center gap-4">
+              <div>
+                <div className="text-base font-bold">
+                  {modeIcon(result.mode)} {STATUS_LABEL[result.status] ?? result.status}
+                  {result.vessel_name ? ` — à bord du ${result.vessel_name}` : ""}
+                </div>
+                <div className="mono text-xs text-ink-2">
+                  {result.reference}
+                </div>
               </div>
-              <div className="mono text-xs text-ink-2">
-                {result.reference} · {result.origin_locode} → {result.destination_locode}
+              <div className="ml-auto text-right">
+                <div className="text-[10px] uppercase tracking-wider text-ink-3">
+                  {result.ata ? "Arrivée" : "Arrivée estimée"}
+                </div>
+                <div className="text-lg font-bold">
+                  {result.ata
+                    ? new Date(result.ata).toLocaleDateString("fr-FR")
+                    : result.eta
+                      ? new Date(result.eta).toLocaleDateString("fr-FR")
+                      : "—"}
+                </div>
               </div>
             </div>
-            <div className="ml-auto text-right">
-              <div className="text-[10px] uppercase tracking-wider text-ink-3">
-                {result.ata ? "Arrivée" : "Arrivée estimée"}
+
+            <div className="mt-4 flex items-center gap-3">
+              <div className="text-right">
+                <div className="text-sm font-bold">{result.origin_name ?? result.origin_locode}</div>
+                <div className="mono text-[10px] text-ink-3">{result.origin_locode}</div>
               </div>
-              <div className="text-lg font-bold">
-                {result.ata
-                  ? new Date(result.ata).toLocaleDateString("fr-FR")
-                  : result.eta
-                    ? new Date(result.eta).toLocaleDateString("fr-FR")
-                    : "—"}
+              <div className="relative flex-1 border-t-2 border-dashed border-sea/50">
+                <span className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 text-sm">
+                  {modeIcon(result.mode)}
+                </span>
+              </div>
+              <div>
+                <div className="text-sm font-bold">{result.destination_name ?? result.destination_locode}</div>
+                <div className="mono text-[10px] text-ink-3">{result.destination_locode}</div>
               </div>
             </div>
           </div>
@@ -105,7 +131,7 @@ export default function TrackPage() {
             <ul>
               {result.events.map((event, index) => (
                 <li key={index} className={`relative ml-1.5 pl-6 ${index < result.events.length - 1 ? "border-l-2 border-line pb-4" : ""}`}>
-                  <span className={`absolute -left-[7px] top-0.5 size-3 rounded-full border-[3px] bg-surface ${index === 0 ? "border-accent" : "border-sea"}`} />
+                  <span className={`absolute -left-[7px] top-0.5 size-3 rounded-full border-[3px] bg-surface ${index === 0 ? "border-accent" : event.type === "status_change" ? "border-ok" : "border-sea"}`} />
                   <div className="text-[13px] font-semibold">{event.title}</div>
                   <div className="text-[11px] text-ink-3">
                     {new Date(event.occurred_at).toLocaleDateString("fr-FR", { day: "2-digit", month: "long", hour: "2-digit", minute: "2-digit" })}
