@@ -37,4 +37,9 @@ return [
         ],
     ],
 
+    'jsoncargo' => [
+        'api_key' => env('JSONCARGO_API_KEY'),
+        'base_url' => env('JSONCARGO_BASE_URL', 'https://api.jsoncargo.com/api/v1'),
+    ],
+
 ];
