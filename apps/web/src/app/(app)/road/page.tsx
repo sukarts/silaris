@@ -4,6 +4,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { problemMessage, rawApi } from "@/lib/api";
 import { Field, buttonPrimary, buttonSecondary, inputClass } from "@/components/Field";
+import { SignaturePad } from "@/components/SignaturePad";
 import { TrackMap } from "@/components/TrackMap";
 import { useCan } from "@/stores/auth";
 
@@ -167,7 +168,10 @@ export default function RoadPage() {
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState(emptyMissionForm);
   const [podFor, setPodFor] = useState<Mission | null>(null);
-  const [podForm, setPodForm] = useState({ recipient_name: "", remarks: "" });
+  const [podForm, setPodForm] = useState({ recipient_name: "", remarks: "", signature_data: null as string | null });
+  // Le POD se saisit sur le lieu de livraison : la position du téléphone de
+  // l'exploitant atteste de l'endroit où la signature a été recueillie.
+  const [podPosition, setPodPosition] = useState<{ latitude: number; longitude: number } | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const missions = useQuery({
@@ -252,18 +256,35 @@ export default function RoadPage() {
     mutationFn: async () => {
       if (!podFor) return;
       const { error: problem } = await rawApi.POST(`/v1/missions/${podFor.id}/pod`, {
-        body: { recipient_name: podForm.recipient_name, remarks: podForm.remarks || null },
+        body: {
+          recipient_name: podForm.recipient_name,
+          remarks: podForm.remarks || null,
+          signature_data: podForm.signature_data,
+          ...(podPosition ?? {}),
+        },
       });
       if (problem) throw problem;
     },
     onSuccess: () => {
       setPodFor(null);
-      setPodForm({ recipient_name: "", remarks: "" });
+      setPodForm({ recipient_name: "", remarks: "", signature_data: null });
+      setPodPosition(null);
       setError(null);
       queryClient.invalidateQueries({ queryKey: ["missions"] });
     },
     onError: (problem) => setError(problemMessage(problem)),
   });
+
+  const openPod = (mission: Mission) => {
+    setPodFor(mission);
+    setPodPosition(null);
+    navigator.geolocation?.getCurrentPosition(
+      (position) => setPodPosition({ latitude: position.coords.latitude, longitude: position.coords.longitude }),
+      // Refus ou GPS indisponible : la preuve reste valable sans coordonnées.
+      () => setPodPosition(null),
+      { enableHighAccuracy: true, timeout: 8000 },
+    );
+  };
 
   const onTransition = (mission: Mission, status: string) => {
     if (status === "failed") {
@@ -394,6 +415,16 @@ export default function RoadPage() {
               <Field label="Remarques" className="md:col-span-4">
                 <input value={podForm.remarks} onChange={(e) => setPodForm({ ...podForm, remarks: e.target.value })} className={inputClass} />
               </Field>
+              <Field label="Signature du destinataire" className="md:col-span-4">
+                <SignaturePad value={podForm.signature_data} onChange={(data) => setPodForm({ ...podForm, signature_data: data })} />
+              </Field>
+              <Field label="Lieu de la signature" className="md:col-span-2">
+                <p className="mono rounded-xl border border-line bg-paper px-3 py-2 text-[12px] text-ink-2">
+                  {podPosition
+                    ? `${podPosition.latitude.toFixed(5)}, ${podPosition.longitude.toFixed(5)}`
+                    : "Position indisponible"}
+                </p>
+              </Field>
               <div className="flex gap-2 md:col-span-6">
                 <button type="submit" disabled={submitPod.isPending} className={buttonPrimary}>Enregistrer le POD</button>
                 <button type="button" onClick={() => setPodFor(null)} className={buttonSecondary}>Annuler</button>
@@ -467,7 +498,7 @@ export default function RoadPage() {
                           ))}
                           {canPod && mission.status === "in_progress" && (
                             <button
-                              onClick={() => setPodFor(mission)}
+                              onClick={() => openPod(mission)}
                               className="text-xs font-semibold text-ok hover:underline"
                             >
                               POD →

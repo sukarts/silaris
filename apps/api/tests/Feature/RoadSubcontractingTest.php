@@ -134,3 +134,39 @@ it('ne montre jamais le sous-traitant au client', function (): void {
         ->and($portal)->not->toContain('OT-2026-014')
         ->and($portal)->not->toContain('carrier');
 });
+
+it('conserve la signature et le lieu recueillis par l\'exploitant', function (): void {
+    $ids = seedCore();
+    $carrierId = seedCarrier($ids);
+    $token = tokenFor($ids['user_admin']);
+    $truckId = $this->withToken($token)->postJson('/api/v1/fleet/trucks', [
+        'plate_number' => '1234AB01', 'carrier_party_id' => $carrierId,
+    ])->json('id');
+    $missionId = $this->withToken($token)->postJson('/api/v1/missions', [
+        'type' => 'delivery', 'carrier_party_id' => $carrierId, 'truck_id' => $truckId,
+    ])->json('id');
+    $this->withToken($token)->postJson("/api/v1/missions/{$missionId}/transition", ['status' => 'in_progress']);
+
+    // Le POD est saisi sur place par l'exploitant : le destinataire signe sur
+    // son écran, et la position atteste du lieu de la remise.
+    $signature = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUg==';
+    $pod = $this->withToken($token)->postJson("/api/v1/missions/{$missionId}/pod", [
+        'recipient_name' => 'Konan Aya',
+        'signature_data' => $signature,
+        'latitude' => 5.3364, 'longitude' => -4.0267,
+        'remarks' => 'Livré au magasin, 2 palettes',
+    ])->assertCreated()->json();
+
+    expect($pod['signature_data'])->toBe($signature)
+        ->and((float) $pod['latitude'])->toBe(5.3364)
+        ->and(DB::table('missions')->where('id', $missionId)->value('status'))->toBe('delivered');
+});
+
+it('refuse une preuve de livraison sur une mission qui ne roule pas', function (): void {
+    $ids = seedCore();
+    $token = tokenFor($ids['user_admin']);
+    $missionId = $this->withToken($token)->postJson('/api/v1/missions', ['type' => 'delivery'])->json('id');
+
+    $this->withToken($token)->postJson("/api/v1/missions/{$missionId}/pod", ['recipient_name' => 'Konan Aya'])
+        ->assertNotFound();
+});
