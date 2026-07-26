@@ -6,10 +6,9 @@ namespace App\Console\Commands;
 
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
-use Silaris\Modules\CarrierConnect\Infrastructure\CarrierRegistry;
 use Silaris\Modules\CarrierConnect\Infrastructure\Support\CircuitBreaker;
 use Silaris\Modules\Shared\Infrastructure\Tenancy\TenantContext;
-use Silaris\Modules\Tracking\Application\Service\TrackingIngestionService;
+use Silaris\Modules\Tracking\Application\Service\TrackingPoller;
 use Silaris\Modules\Tracking\Domain\Contract\CarrierUnavailable;
 use Throwable;
 
@@ -27,7 +26,7 @@ class RefreshTracking extends Command
 
         foreach ($tenants as $tenant) {
             $tenantContext->set($tenant->id);
-            $refreshMinutes = (int) (json_decode((string) $tenant->settings, true)['tracking_refresh_minutes'] ?? 120);
+            $refreshMinutes = (int) (json_decode((string) $tenant->settings, true)['tracking_refresh_minutes'] ?? 1440);
 
             $subscriptions = DB::table('tracking_subscriptions')
                 ->where('tenant_id', $tenant->id)
@@ -41,9 +40,8 @@ class RefreshTracking extends Command
                 ->limit(200)
                 ->get();
 
-            $registry = app(CarrierRegistry::class);
             $breaker = app(CircuitBreaker::class);
-            $ingestion = app(TrackingIngestionService::class);
+            $poller = app(TrackingPoller::class);
 
             foreach ($subscriptions as $subscription) {
                 if ($breaker->isOpen($subscription->carrier_scac)) {
@@ -53,24 +51,11 @@ class RefreshTracking extends Command
                 }
 
                 try {
-                    $connector = $registry->resolve($subscription->carrier_scac);
-                    $result = $subscription->subject_type === 'bl'
-                        ? $connector->trackBillOfLading($subscription->subject_number)
-                        : $connector->trackContainer($subscription->subject_number);
-
-                    $inserted = $ingestion->ingest($subscription, $result);
-
-                    DB::table('tracking_subscriptions')->where('id', $subscription->id)
-                        ->update(['last_polled_at' => now(), 'consecutive_failures' => 0, 'updated_at' => now()]);
-                    $breaker->recordSuccess($subscription->carrier_scac);
+                    $inserted = $poller->poll($subscription);
 
                     $this->info("  [{$tenant->slug}] {$subscription->subject_number}: {$inserted} nouvel(s) événement(s)");
                 } catch (CarrierUnavailable $e) {
-                    $failures = $subscription->consecutive_failures + 1;
-                    DB::table('tracking_subscriptions')->where('id', $subscription->id)
-                        ->update(['last_polled_at' => now(), 'consecutive_failures' => $failures, 'updated_at' => now()]);
-                    $breaker->recordFailure($subscription->carrier_scac, $failures);
-                    $this->error("  [{$tenant->slug}] {$subscription->subject_number}: {$e->getMessage()} (échec n°{$failures})");
+                    $this->error("  [{$tenant->slug}] {$subscription->subject_number}: {$e->getMessage()}");
                 } catch (Throwable $e) {
                     report($e);
                     $this->error("  [{$tenant->slug}] {$subscription->subject_number}: erreur interne — {$e->getMessage()}");
