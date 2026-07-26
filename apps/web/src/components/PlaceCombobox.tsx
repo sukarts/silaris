@@ -30,6 +30,11 @@ interface CarrierRow {
   name: string;
 }
 
+interface CountryRow {
+  code2: string;
+  name_fr: string;
+}
+
 /**
  * Combobox référentiels (ports, aéroports, compagnies) : suggestions dès
  * 2 caractères (code ou nom), navigation clavier. Saisie libre conservée pour
@@ -44,7 +49,7 @@ export function PlaceCombobox({
   required,
   maxLength,
 }: {
-  referential: "ports" | "airports" | "carriers";
+  referential: "ports" | "airports" | "carriers" | "countries";
   value: string;
   onChange: (code: string) => void;
   onPick?: (suggestion: { code: string; label: string; id?: string }) => void;
@@ -77,10 +82,11 @@ export function PlaceCombobox({
       const { data } = await rawApi.GET(`/v1/referentials/${referential}`, {
         params: { query: { search: term.trim(), per_page: 8 } },
       });
-      const rows = (data as { data: (PortRow | AirportRow | CarrierRow)[] } | undefined)?.data ?? [];
+      const rows = (data as { data: (PortRow | AirportRow | CarrierRow | CountryRow)[] } | undefined)?.data ?? [];
       const mapped = rows.map((row): Suggestion => {
-        if (referential === "ports") return { code: (row as PortRow).locode, label: row.name, sub: (row as PortRow).country_code };
-        if (referential === "airports") return { code: (row as AirportRow).iata, label: row.name, sub: (row as AirportRow).country_code };
+        if (referential === "ports") return { code: (row as PortRow).locode, label: (row as PortRow).name, sub: (row as PortRow).country_code };
+        if (referential === "airports") return { code: (row as AirportRow).iata, label: (row as AirportRow).name, sub: (row as AirportRow).country_code };
+        if (referential === "countries") return { code: (row as CountryRow).code2, label: (row as CountryRow).name_fr, sub: "" };
         const carrier = row as CarrierRow;
         return { code: carrier.scac, label: carrier.name, sub: "", id: carrier.id };
       });
