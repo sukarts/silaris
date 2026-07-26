@@ -17,6 +17,7 @@ interface Party {
   payment_terms_days: number | null;
   credit_limit: string | null;
   contacts_count: number;
+  portal_email: string | null;
 }
 
 const TYPE_LABEL: Record<string, string> = { client: "Client", prospect: "Prospect", supplier: "Fournisseur" };
@@ -30,6 +31,8 @@ export default function CrmPage() {
   const queryClient = useQueryClient();
   const canCreate = useCan("crm.create");
   const canConvert = useCan("crm.convert");
+  const canUpdate = useCan("crm.update");
+  const [inviteInfo, setInviteInfo] = useState<string | null>(null);
   const [typeFilter, setTypeFilter] = useState<string>("");
   const [search, setSearch] = useState("");
   const [showForm, setShowForm] = useState(false);
@@ -60,6 +63,23 @@ export default function CrmPage() {
       queryClient.invalidateQueries({ queryKey: ["parties"] });
     },
     onError: (problem) => setError(problemMessage(problem)),
+  });
+
+  const invitePortal = useMutation({
+    mutationFn: async (partyId: string) => {
+      const { data: response, error: problem } = await rawApi.POST(`/v1/parties/${partyId}/portal-account`);
+      if (problem) throw problem;
+      return response as { portal_account: { email: string }; invitation_sent: boolean; temporary_password: string | null };
+    },
+    onSuccess: (result) => {
+      setInviteInfo(
+        result.invitation_sent
+          ? `Invitation envoyée à ${result.portal_account.email}.`
+          : `Email non envoyé — mot de passe provisoire à transmettre : ${result.temporary_password}`,
+      );
+      queryClient.invalidateQueries({ queryKey: ["parties"] });
+    },
+    onError: (problem) => setInviteInfo(problemMessage(problem)),
   });
 
   const convert = useMutation({
@@ -118,6 +138,8 @@ export default function CrmPage() {
         </form>
       )}
 
+      {inviteInfo && <p className="rounded-lg bg-sea-soft px-3 py-2 text-xs text-ink-2">{inviteInfo}</p>}
+
       <div className="flex flex-wrap gap-2">
         {["", "client", "prospect", "supplier"].map((type) => (
           <button
@@ -174,11 +196,33 @@ export default function CrmPage() {
                 <td className="px-3 py-2.5 text-ink-2">{party.payment_terms_days ? `${party.payment_terms_days} j` : "—"}</td>
                 <td className="mono px-3 py-2.5">{party.contacts_count}</td>
                 <td className="px-3 py-2.5">
-                  {party.type === "prospect" && canConvert && (
-                    <button onClick={() => convert.mutate(party.id)} className="text-xs font-semibold text-sea hover:underline">
-                      Convertir en client →
-                    </button>
-                  )}
+                  <div className="flex items-center gap-3">
+                    {party.type === "prospect" && canConvert && (
+                      <button onClick={() => convert.mutate(party.id)} className="text-xs font-semibold text-sea hover:underline">
+                        Convertir en client →
+                      </button>
+                    )}
+                    {party.type === "client" && canUpdate && (
+                      party.portal_email ? (
+                        <button
+                          onClick={() => invitePortal.mutate(party.id)}
+                          disabled={invitePortal.isPending}
+                          title={`Portail actif : ${party.portal_email} — régénère le mot de passe`}
+                          className="text-xs font-semibold text-ok hover:underline"
+                        >
+                          Portail ✓ · Réinviter
+                        </button>
+                      ) : (
+                        <button
+                          onClick={() => invitePortal.mutate(party.id)}
+                          disabled={invitePortal.isPending}
+                          className="text-xs font-semibold text-sea hover:underline"
+                        >
+                          Inviter au portail
+                        </button>
+                      )
+                    )}
+                  </div>
                 </td>
               </tr>
             ))}
