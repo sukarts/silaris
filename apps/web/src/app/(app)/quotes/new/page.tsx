@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { problemMessage, rawApi } from "@/lib/api";
 import { Field, buttonPrimary, buttonSecondary, inputClass } from "@/components/Field";
+import { PlaceCombobox } from "@/components/PlaceCombobox";
 
 interface CalculatedLine {
   serviceCode: string;
@@ -79,10 +80,10 @@ export default function NewQuotePage() {
           </select>
         </Field>
         <Field label="Origine">
-          <input value={form.origin_locode} onChange={(e) => set("origin_locode", e.target.value)} maxLength={5} className={`${inputClass} mono uppercase`} />
+          <PlaceCombobox referential="ports" value={form.origin_locode} onChange={(v) => set("origin_locode", v)} placeholder="Port ou LOCODE" maxLength={5} />
         </Field>
         <Field label="Destination">
-          <input value={form.destination_locode} onChange={(e) => set("destination_locode", e.target.value)} maxLength={5} className={`${inputClass} mono uppercase`} />
+          <PlaceCombobox referential="ports" value={form.destination_locode} onChange={(v) => set("destination_locode", v)} placeholder="Port ou LOCODE" maxLength={5} />
         </Field>
         <Field label="Conteneurs">
           <div className="flex gap-1.5">

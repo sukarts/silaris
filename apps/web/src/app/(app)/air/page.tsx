@@ -4,6 +4,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { problemMessage, rawApi } from "@/lib/api";
 import { Field, buttonPrimary, buttonSecondary, inputClass } from "@/components/Field";
+import { PlaceCombobox } from "@/components/PlaceCombobox";
 import { useCan } from "@/stores/auth";
 
 interface AwbLeg {
@@ -160,10 +161,10 @@ export default function AirPage() {
             <input maxLength={8} value={form.flight_number} onChange={(e) => setForm({ ...form, flight_number: e.target.value.toUpperCase() })} className={`${inputClass} mono`} placeholder="AF718" />
           </Field>
           <Field label="Origine (IATA)">
-            <input maxLength={3} value={form.origin_iata} onChange={(e) => setForm({ ...form, origin_iata: e.target.value.toUpperCase() })} className={`${inputClass} mono`} placeholder="CDG" />
+            <PlaceCombobox referential="airports" maxLength={3} value={form.origin_iata} onChange={(v) => setForm({ ...form, origin_iata: v })} placeholder="Aéroport ou IATA (ex. CDG)" />
           </Field>
           <Field label="Destination (IATA)">
-            <input maxLength={3} value={form.destination_iata} onChange={(e) => setForm({ ...form, destination_iata: e.target.value.toUpperCase() })} className={`${inputClass} mono`} placeholder="ABJ" />
+            <PlaceCombobox referential="airports" maxLength={3} value={form.destination_iata} onChange={(v) => setForm({ ...form, destination_iata: v })} placeholder="Aéroport ou IATA (ex. ABJ)" />
           </Field>
           <Field label="Description marchandise" className="md:col-span-2">
             <input value={form.goods_description} onChange={(e) => setForm({ ...form, goods_description: e.target.value })} className={inputClass} />
