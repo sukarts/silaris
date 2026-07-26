@@ -61,3 +61,25 @@ it('enregistre les informations légales et crée une agence', function (): void
         'name' => 'Agence San-Pédro', 'code' => 'SPY', 'timezone' => 'Africa/Abidjan',
     ])->assertCreated()->assertJsonPath('code', 'SPY');
 });
+
+it('appose la marque du transitaire sur les PDF, jamais celle de la solution', function (): void {
+    $ids = seedCore();
+    DB::table('companies')->where('id', $ids['company'])->update(['legal_name' => 'SAHA TRANSIT SA']);
+    $invoiceId = seedInvoiceWithLine($ids);
+
+    $pdf = $this->withToken(tokenFor($ids['user_admin']))
+        ->get("/api/v1/invoices/{$invoiceId}/pdf")->assertOk()->getContent();
+
+    expect($pdf)->toStartWith('%PDF')->not->toContain('SILARIS');
+});
+
+it('expose la marque du transitaire au suivi public', function (): void {
+    $ids = seedCore();
+    DB::table('companies')->where('id', $ids['company'])->update(['legal_name' => 'SAHA TRANSIT SA']);
+    seedShipmentFor($ids, $ids['client'], 'BRD-2026-00001');
+
+    $this->getJson('/api/v1/public/tracking?q=BRD-2026-00001')
+        ->assertOk()
+        ->assertJsonPath('tenant_name', 'SAHA TRANSIT SA')
+        ->assertJsonStructure(['logo_url']);
+});

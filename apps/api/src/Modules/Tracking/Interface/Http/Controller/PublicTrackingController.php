@@ -7,6 +7,7 @@ namespace Silaris\Modules\Tracking\Interface\Http\Controller;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Silaris\Modules\Tenancy\Application\Service\BrandingResolver;
 
 /**
  * Suivi public — sans authentification, rate-limité (throttle:public-tracking).
@@ -75,6 +76,9 @@ class PublicTrackingController
             ->map(fn ($e) => json_decode((string) $e->raw_payload, true)['current_vessel_name'] ?? null)
             ->first(fn ($name) => is_string($name) && $name !== '');
         $tenantName = $system->table('tenants')->where('id', $shipment->tenant_id)->value('name');
+        // Marque visible = celle du transitaire (SILARIS fournit la solution, pas l'enseigne).
+        $branding = $system->table('companies')->where('id', $shipment->company_id)
+            ->first(['legal_name', 'logo_document_id']);
 
         return response()->json([
             'package' => $packagePayload,
@@ -86,7 +90,8 @@ class PublicTrackingController
             'origin_name' => $portNames[$shipment->origin_locode] ?? null,
             'destination_name' => $portNames[$shipment->destination_locode] ?? null,
             'vessel_name' => $vesselName,
-            'tenant_name' => $tenantName,
+            'tenant_name' => $branding->legal_name ?? $tenantName,
+            'logo_url' => app(BrandingResolver::class)->logoUrl($branding->logo_document_id ?? null),
             'eta' => $shipment->eta,
             'ata' => $shipment->ata,
             'events' => $events,

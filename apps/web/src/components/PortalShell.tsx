@@ -18,6 +18,14 @@ export function PortalShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const { token, kind, user, clear } = useAuth();
   const [hydrated, setHydrated] = useState(false);
+  const [branding, setBranding] = useState<{ name: string | null; logo_url: string | null } | null>(null);
+
+  // Marque blanche : le client voit son transitaire, pas l'éditeur de la solution.
+  useEffect(() => {
+    rawApi.GET("/v1/portal/auth/me").then(({ data }) => {
+      setBranding((data as { branding?: { name: string | null; logo_url: string | null } } | undefined)?.branding ?? null);
+    });
+  }, []);
 
   useEffect(() => {
     if (useAuth.persist.hasHydrated()) setHydrated(true);
@@ -41,9 +49,14 @@ export function PortalShell({ children }: { children: React.ReactNode }) {
   return (
     <div className="min-h-dvh bg-paper">
       <header className="flex items-center gap-5 border-b border-line bg-surface px-6 py-3">
-        <span className="text-sm font-bold tracking-[0.14em]">
-          SILA<span className="text-accent">RIS</span>
-          <span className="ml-2 font-normal tracking-normal text-ink-3">· Espace client</span>
+        <span className="flex items-center gap-2 text-sm font-bold">
+          {branding?.logo_url ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={branding.logo_url} alt={branding.name ?? ""} className="h-7 max-w-40 object-contain" />
+          ) : (
+            <span className="tracking-[0.14em]">{branding?.name ?? "Espace client"}</span>
+          )}
+          <span className="font-normal text-ink-3">· Espace client</span>
         </span>
         <nav className="flex gap-4 text-[13px]">
           {NAV.map((item) => {

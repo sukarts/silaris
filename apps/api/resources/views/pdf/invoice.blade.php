@@ -31,7 +31,11 @@
     <table class="row">
         <tr>
             <td style="width: 55%;">
-                <div class="brand">SILA<span>RIS</span></div>
+                @if (!empty($logo))
+                    <img src="{{ $logo }}" alt="" style="max-height:46px;max-width:190px;margin-bottom:6px;">
+                @else
+                    <div class="brand">{{ $company->legal_name }}</div>
+                @endif
                 <div style="margin-top: 8px; font-weight: bold;">{{ $company->legal_name }}</div>
                 <div class="muted">
                     {{ $address['line1'] ?? '' }}<br>

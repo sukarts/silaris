@@ -15,6 +15,7 @@ use Silaris\Modules\Billing\Infrastructure\Persistence\Model\TaxRateModel;
 use Silaris\Modules\OdooSync\Application\Job\PushInvoiceToOdoo;
 use Silaris\Modules\Shared\Infrastructure\Events\DomainEventPublisher;
 use Silaris\Modules\Shared\Infrastructure\Tenancy\TenantContext;
+use Silaris\Modules\Tenancy\Application\Service\BrandingResolver;
 use Silaris\Modules\Tenancy\Infrastructure\Persistence\Model\CompanyModel;
 use Symfony\Component\HttpFoundation\Response;
 
@@ -224,6 +225,6 @@ class InvoiceController
         };
         $name = $prefix.'-'.($invoice->number ?? 'brouillon-'.substr($invoice->id, 0, 8)).'.pdf';
 
-        return Pdf::loadView('pdf.invoice', ['invoice' => $invoice, 'company' => $company])->download($name);
+        return Pdf::loadView('pdf.invoice', ['invoice' => $invoice, 'company' => $company, 'logo' => app(BrandingResolver::class)->logoDataUri($company)])->download($name);
     }
 }

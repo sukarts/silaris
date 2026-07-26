@@ -8,6 +8,7 @@ use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Silaris\Modules\Billing\Infrastructure\Persistence\Model\InvoiceModel;
+use Silaris\Modules\Tenancy\Application\Service\BrandingResolver;
 use Silaris\Modules\Tenancy\Infrastructure\Persistence\Model\CompanyModel;
 use Symfony\Component\HttpFoundation\Response;
 
@@ -42,7 +43,7 @@ class PortalInvoiceController
             default => 'facture',
         };
 
-        return Pdf::loadView('pdf.invoice', ['invoice' => $invoice, 'company' => $company])
+        return Pdf::loadView('pdf.invoice', ['invoice' => $invoice, 'company' => $company, 'logo' => app(BrandingResolver::class)->logoDataUri($company)])
             ->download($prefix.'-'.($invoice->number ?? substr($invoice->id, 0, 8)).'.pdf');
     }
 }
