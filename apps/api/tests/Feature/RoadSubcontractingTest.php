@@ -170,3 +170,79 @@ it('refuse une preuve de livraison sur une mission qui ne roule pas', function (
     $this->withToken($token)->postJson("/api/v1/missions/{$missionId}/pod", ['recipient_name' => 'Konan Aya'])
         ->assertNotFound();
 });
+
+/** Mission livrée et signée, rattachée à un dossier — socle des tests de bon de livraison. */
+function seedDeliveredMission(array $ids, string $shipmentId, string $carrierId): string
+{
+    $token = tokenFor($ids['user_admin']);
+    $truckId = test()->withToken($token)->postJson('/api/v1/fleet/trucks', [
+        'plate_number' => '1234AB01', 'carrier_party_id' => $carrierId,
+    ])->json('id');
+    $missionId = test()->withToken($token)->postJson('/api/v1/missions', [
+        'shipment_id' => $shipmentId, 'type' => 'delivery', 'carrier_party_id' => $carrierId,
+        'truck_id' => $truckId, 'stops' => [['label' => "Port d'Abidjan"], ['label' => 'Entrepôt Yopougon']],
+    ])->json('id');
+    test()->withToken($token)->postJson("/api/v1/missions/{$missionId}/transition", ['status' => 'in_progress']);
+    test()->withToken($token)->postJson("/api/v1/missions/{$missionId}/pod", [
+        'recipient_name' => 'Konan Aya',
+        'signature_data' => 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUg==',
+        'latitude' => 5.3364, 'longitude' => -4.0267,
+    ]);
+
+    return $missionId;
+}
+
+it('édite un bon de livraison signé une fois la mission livrée', function (): void {
+    $ids = seedCore();
+    $shipmentId = seedShipmentFor($ids, $ids['client'], 'IMP-2026-00001');
+    $missionId = seedDeliveredMission($ids, $shipmentId, seedCarrier($ids));
+
+    $response = $this->withToken(tokenFor($ids['user_admin']))
+        ->get("/api/v1/missions/{$missionId}/delivery-note")->assertOk();
+
+    expect($response->headers->get('content-type'))->toContain('application/pdf')
+        ->and($response->headers->get('content-disposition'))->toContain('bon-livraison-mis-');
+});
+
+it('refuse le bon de livraison tant que rien n\'a été signé', function (): void {
+    $ids = seedCore();
+    $token = tokenFor($ids['user_admin']);
+    $missionId = $this->withToken($token)->postJson('/api/v1/missions', ['type' => 'delivery'])->json('id');
+
+    $this->withToken($token)->getJson("/api/v1/missions/{$missionId}/delivery-note")
+        ->assertStatus(422)->assertJsonPath('error_code', 'mission.pod_missing');
+});
+
+it('laisse le client télécharger le bon de livraison de son dossier', function (): void {
+    $ids = seedCore();
+    $shipmentId = seedShipmentFor($ids, $ids['client'], 'IMP-2026-00001');
+    $missionId = seedDeliveredMission($ids, $shipmentId, seedCarrier($ids));
+
+    $portalToken = portalTokenFor($ids['portal']);
+    freshAuth();
+    $listed = $this->withToken($portalToken)
+        ->getJson("/api/v1/portal/shipments/{$shipmentId}/delivery-notes")->assertOk()->json('data');
+    $pdf = $this->withToken($portalToken)->get("/api/v1/portal/missions/{$missionId}/delivery-note")->assertOk();
+
+    expect($listed)->toHaveCount(1)
+        ->and($listed[0]['recipient_name'])->toBe('Konan Aya')
+        ->and($pdf->headers->get('content-type'))->toContain('application/pdf');
+});
+
+it('cache le bon de livraison d\'un autre client', function (): void {
+    $ids = seedCore();
+    $otherClient = (string) Str::uuid7();
+    DB::table('parties')->insert([
+        'id' => $otherClient, 'tenant_id' => $ids['tenant'], 'type' => 'client', 'code' => 'CLI9',
+        'name' => 'Client Neuf', 'payment_terms_days' => 30, 'notification_prefs' => '{}', 'tags' => '[]',
+        'created_at' => now(), 'updated_at' => now(),
+    ]);
+    $shipmentId = seedShipmentFor($ids, $otherClient, 'IMP-2026-00009');
+    $missionId = seedDeliveredMission($ids, $shipmentId, seedCarrier($ids));
+
+    $portalToken = portalTokenFor($ids['portal']);
+    freshAuth();
+    $this->withToken($portalToken)->getJson("/api/v1/portal/missions/{$missionId}/delivery-note")->assertNotFound();
+    expect($this->withToken($portalToken)->getJson("/api/v1/portal/shipments/{$shipmentId}/delivery-notes")->json('data'))
+        ->toBeEmpty();
+});

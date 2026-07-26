@@ -2,7 +2,7 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
-import { problemMessage, rawApi } from "@/lib/api";
+import { downloadFile, problemMessage, rawApi } from "@/lib/api";
 import { Field, buttonPrimary, buttonSecondary, inputClass } from "@/components/Field";
 import { SignaturePad } from "@/components/SignaturePad";
 import { TrackMap } from "@/components/TrackMap";
@@ -496,6 +496,14 @@ export default function RoadPage() {
                               {TRANSITION_LABEL[target] ?? target}
                             </button>
                           ))}
+                          {mission.status === "delivered" && (
+                            <button
+                              onClick={() => downloadFile(`/v1/missions/${mission.id}/delivery-note`, "bon-livraison.pdf").catch(() => setError("Bon de livraison indisponible — aucune preuve de livraison enregistrée."))}
+                              className="text-xs font-semibold text-sea hover:underline"
+                            >
+                              Bon de livraison
+                            </button>
+                          )}
                           {canPod && mission.status === "in_progress" && (
                             <button
                               onClick={() => openPod(mission)}

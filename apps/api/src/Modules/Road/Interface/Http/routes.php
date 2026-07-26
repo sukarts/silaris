@@ -22,6 +22,7 @@ Route::prefix('missions')->group(function (): void {
     Route::post('/{missionId}/transition', [MissionController::class, 'transition'])->whereUuid('missionId')->can('road.update');
     Route::post('/{missionId}/pod', [MissionController::class, 'submitPod'])->whereUuid('missionId')->can('pod.create');
     Route::get('/{missionId}/positions', [TelematicsController::class, 'missionTrack'])->whereUuid('missionId')->can('road.read');
+    Route::get('/{missionId}/delivery-note', [MissionController::class, 'deliveryNote'])->whereUuid('missionId')->can('pod.read');
 });
 
 // Balises véhicule (télématique) — parc et enrôlement.

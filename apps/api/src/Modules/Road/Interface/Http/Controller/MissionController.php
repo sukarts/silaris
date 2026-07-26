@@ -4,14 +4,19 @@ declare(strict_types=1);
 
 namespace Silaris\Modules\Road\Interface\Http\Controller;
 
+use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
+use Silaris\Modules\Road\Application\Service\DeliveryNoteBuilder;
 use Silaris\Modules\Road\Infrastructure\Persistence\Model\MissionModel;
 use Silaris\Modules\Shared\Domain\Exception\DomainException;
 use Silaris\Modules\Shared\Infrastructure\Tenancy\TenantContext;
+use Silaris\Modules\Tenancy\Application\Service\BrandingResolver;
+use Silaris\Modules\Tenancy\Infrastructure\Persistence\Model\CompanyModel;
 
 final class MissionTransitionForbidden extends DomainException
 {
@@ -23,6 +28,20 @@ final class MissionTransitionForbidden extends DomainException
     public function errorCode(): string
     {
         return 'mission.invalid_transition';
+    }
+}
+
+/** Le bon de livraison atteste d'une remise : sans preuve, il n'a rien à attester. */
+final class ProofOfDeliveryMissing extends DomainException
+{
+    public static function make(string $reference): self
+    {
+        return new self("Aucune preuve de livraison pour la mission {$reference}");
+    }
+
+    public function errorCode(): string
+    {
+        return 'mission.pod_missing';
     }
 }
 
@@ -162,5 +181,26 @@ class MissionController
         });
 
         return response()->json($pod, 201);
+    }
+
+    /**
+     * GET /v1/missions/{id}/delivery-note — bon de livraison signé, à remettre
+     * au destinataire et à joindre au dossier.
+     */
+    public function deliveryNote(string $missionId, DeliveryNoteBuilder $builder): Response
+    {
+        $mission = MissionModel::with('pod')->findOrFail($missionId);
+        if ($mission->pod === null) {
+            throw ProofOfDeliveryMissing::make($mission->reference);
+        }
+
+        $data = $builder->build($mission);
+        $company = CompanyModel::findOrFail($data['company_id']);
+
+        return Pdf::loadView('pdf.delivery-note', [
+            ...$data,
+            'company' => $company,
+            'logo' => app(BrandingResolver::class)->logoDataUri($company),
+        ])->download(DeliveryNoteBuilder::fileName($mission));
     }
 }
