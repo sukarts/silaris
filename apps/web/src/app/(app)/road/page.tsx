@@ -103,7 +103,7 @@ export default function RoadPage() {
   const canCreate = useCan("road.create");
   const canUpdate = useCan("road.update");
   const canPod = useCan("pod.create");
-  const [tab, setTab] = useState<"missions" | "fleet">("missions");
+  const [tab, setTab] = useState<"missions" | "fleet" | "devices">("missions");
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState(emptyMissionForm);
   const [podFor, setPodFor] = useState<Mission | null>(null);
@@ -228,7 +228,7 @@ export default function RoadPage() {
       </div>
 
       <div className="flex gap-2">
-        {(["missions", "fleet"] as const).map((key) => (
+        {(["missions", "fleet", "devices"] as const).map((key) => (
           <button
             key={key}
             onClick={() => setTab(key)}
@@ -236,7 +236,7 @@ export default function RoadPage() {
               tab === key ? "border-ink bg-ink text-paper" : "border-line-strong text-ink-2 hover:bg-surface"
             }`}
           >
-            {key === "missions" ? "Missions" : "Flotte"}
+            {key === "missions" ? "Missions" : key === "fleet" ? "Flotte" : "Balises"}
           </button>
         ))}
       </div>
@@ -401,6 +401,10 @@ export default function RoadPage() {
             </table>
           </div>
         </>
+      )}
+
+      {tab === "devices" && (
+        <DevicesPanel trucks={trucks.data?.data ?? []} canCreate={canCreate} />
       )}
 
       {tab === "fleet" && (
@@ -584,6 +588,162 @@ function DriverPanel({ drivers, isLoading, canCreate }: { drivers: Driver[]; isL
           ))}
         </tbody>
       </table>
+    </div>
+  );
+}
+
+interface TrackingDevice {
+  id: string;
+  identifier: string;
+  label: string;
+  kind: string;
+  key_prefix: string;
+  truck_id: string | null;
+  plate_number: string | null;
+  is_active: boolean;
+  last_seen_at: string | null;
+}
+
+function DevicesPanel({ trucks, canCreate }: { trucks: Truck[]; canCreate: boolean }) {
+  const queryClient = useQueryClient();
+  const [showForm, setShowForm] = useState(false);
+  const [form, setForm] = useState({ identifier: "", label: "", truck_id: "" });
+  const [newKey, setNewKey] = useState<{ key: string; url: string } | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  const { data } = useQuery({
+    queryKey: ["devices"],
+    queryFn: async () => {
+      const { data: response } = await rawApi.GET("/v1/road/devices");
+      return (response as { data: TrackingDevice[] }).data;
+    },
+  });
+
+  const create = useMutation({
+    mutationFn: async () => {
+      const { data: response, error: problem } = await rawApi.POST("/v1/road/devices", {
+        body: { ...form, truck_id: form.truck_id || null },
+      });
+      if (problem) throw problem;
+      return response as { api_key: string; ingest_url: string };
+    },
+    onSuccess: (result) => {
+      setNewKey({ key: result.api_key, url: result.ingest_url });
+      setShowForm(false);
+      setForm({ identifier: "", label: "", truck_id: "" });
+      setError(null);
+      queryClient.invalidateQueries({ queryKey: ["devices"] });
+    },
+    onError: (problem) => setError(problemMessage(problem)),
+  });
+
+  const assign = useMutation({
+    mutationFn: async ({ id, truckId }: { id: string; truckId: string }) => {
+      const { error: problem } = await rawApi.PATCH(`/v1/road/devices/${id}`, { body: { truck_id: truckId || null } });
+      if (problem) throw problem;
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["devices"] }),
+  });
+
+  return (
+    <div className="flex flex-col gap-4">
+      <div className="flex items-start">
+        <p className="text-[13px] text-ink-3">
+          Une balise posée sur le véhicule suit la marchandise du port jusqu&apos;à la livraison. Toute balise GPS,
+          plateforme télématique ou application mobile capable d&apos;un envoi HTTP fonctionne.
+        </p>
+        {canCreate && (
+          <button onClick={() => { setShowForm((v) => !v); setNewKey(null); }} className={`ml-auto ${buttonPrimary}`}>
+            + Enrôler une balise
+          </button>
+        )}
+      </div>
+
+      {newKey && (
+        <div className="rounded-xl border border-line bg-surface p-5 shadow-sm">
+          <p className="text-xs font-semibold text-ok">Balise enrôlée. Clé affichée une seule fois — copiez-la maintenant.</p>
+          <div className="mono mt-3 select-all break-all rounded-lg bg-paper px-3 py-2 text-[13px]">{newKey.key}</div>
+          <p className="pt-3 text-xs text-ink-3">
+            À configurer dans la balise — envoi HTTP POST vers <span className="mono">{newKey.url}</span>, en-tête{" "}
+            <span className="mono">X-Device-Key</span>, corps{" "}
+            <span className="mono">{`{"positions":[{"latitude":…,"longitude":…,"recorded_at":"…"}]}`}</span>
+          </p>
+          <button onClick={() => navigator.clipboard.writeText(newKey.key)} className={`mt-3 ${buttonSecondary}`}>
+            Copier la clé
+          </button>
+        </div>
+      )}
+
+      {showForm && (
+        <form onSubmit={(e) => { e.preventDefault(); create.mutate(); }} className="grid gap-4 rounded-xl border border-line bg-surface p-5 shadow-sm md:grid-cols-3">
+          <Field label="Identifiant (IMEI / n° de série)">
+            <input required maxLength={64} value={form.identifier} onChange={(e) => setForm({ ...form, identifier: e.target.value })} placeholder="864893820001234" className={`${inputClass} mono`} />
+          </Field>
+          <Field label="Libellé">
+            <input required value={form.label} onChange={(e) => setForm({ ...form, label: e.target.value })} placeholder="Balise camion CI-1234-AB" className={inputClass} />
+          </Field>
+          <Field label="Véhicule porteur">
+            <select value={form.truck_id} onChange={(e) => setForm({ ...form, truck_id: e.target.value })} className={inputClass}>
+              <option value="">— Non affectée —</option>
+              {trucks.map((truck) => <option key={truck.id} value={truck.id}>{truck.plate_number}</option>)}
+            </select>
+          </Field>
+          {error && <p className="rounded-lg bg-crit-soft px-3 py-2 text-xs text-crit md:col-span-3">{error}</p>}
+          <div className="flex gap-2 md:col-span-3">
+            <button type="submit" disabled={create.isPending} className={buttonPrimary}>Enrôler</button>
+            <button type="button" onClick={() => setShowForm(false)} className={buttonSecondary}>Annuler</button>
+          </div>
+        </form>
+      )}
+
+      <div className="overflow-x-auto rounded-xl border border-line bg-surface shadow-sm">
+        <table className="w-full text-[13px]">
+          <thead>
+            <tr className="border-b border-line text-left text-[10px] uppercase tracking-wider text-ink-3">
+              <th className="px-3 py-2.5">Libellé</th>
+              <th className="px-3 py-2.5">Identifiant</th>
+              <th className="px-3 py-2.5">Véhicule</th>
+              <th className="px-3 py-2.5">Dernier contact</th>
+              <th className="px-3 py-2.5">Statut</th>
+            </tr>
+          </thead>
+          <tbody>
+            {(data ?? []).map((device) => {
+              const seen = device.last_seen_at ? new Date(device.last_seen_at) : null;
+              const stale = seen ? Date.now() - seen.getTime() > 6 * 3600 * 1000 : true;
+              return (
+                <tr key={device.id} className="border-b border-line last:border-0">
+                  <td className="px-3 py-2.5 font-semibold">{device.label}</td>
+                  <td className="mono px-3 py-2.5 text-ink-2">{device.identifier}</td>
+                  <td className="px-3 py-2.5">
+                    <select
+                      value={device.truck_id ?? ""}
+                      onChange={(e) => assign.mutate({ id: device.id, truckId: e.target.value })}
+                      className={`${inputClass} py-1 text-xs`}
+                    >
+                      <option value="">— Non affectée —</option>
+                      {trucks.map((truck) => <option key={truck.id} value={truck.id}>{truck.plate_number}</option>)}
+                    </select>
+                  </td>
+                  <td className="mono px-3 py-2.5 text-ink-2">
+                    {seen ? seen.toLocaleString("fr-FR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" }) : "—"}
+                  </td>
+                  <td className="px-3 py-2.5">
+                    <span className={`rounded-full px-2.5 py-0.5 text-[11px] font-semibold ${
+                      !device.is_active ? "bg-warn-soft text-warn" : stale ? "bg-crit-soft text-crit" : "bg-ok-soft text-ok"
+                    }`}>
+                      {!device.is_active ? "Inactive" : stale ? "Sans signal" : "En ligne"}
+                    </span>
+                  </td>
+                </tr>
+              );
+            })}
+            {(data ?? []).length === 0 && (
+              <tr><td colSpan={5} className="px-3 py-8 text-center text-ink-3">Aucune balise enrôlée.</td></tr>
+            )}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }

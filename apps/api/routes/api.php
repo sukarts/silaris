@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Route;
+use Silaris\Modules\Road\Interface\Http\Controller\TelematicsController;
 
 /*
 |--------------------------------------------------------------------------
@@ -39,6 +40,12 @@ Route::prefix('v1')->group(function (): void {
     // Authentification portail
     Route::prefix('portal/auth')->middleware('throttle:login')->group(
         base_path('src/Modules/Crm/Interface/Http/portal_auth_routes.php'),
+    );
+
+    // Ingestion télématique — authentifiée par clé de balise (pas de session).
+    Route::middleware('throttle:telematics')->post(
+        '/telematics/positions',
+        [TelematicsController::class, 'store'],
     );
 
     // Routes publiques — throttle strict
