@@ -65,7 +65,27 @@ export default function ShipmentDetailPage({ params }: { params: Promise<{ shipm
   const { shipmentId } = use(params);
   const queryClient = useQueryClient();
   const canAdvance = useCan("shipments.advance");
+  const canUpdate = useCan("shipments.update");
   const [error, setError] = useState<string | null>(null);
+  const [refreshInfo, setRefreshInfo] = useState<string | null>(null);
+
+  const refreshTracking = useMutation({
+    mutationFn: async () => {
+      const { data: response, error: problem } = await rawApi.POST(`/v1/shipments/${shipmentId}/tracking/refresh`);
+      if (problem) throw problem;
+      return response as { subscriptions: number; polled: number; new_events: number; errors: string[] };
+    },
+    onSuccess: (result) => {
+      setRefreshInfo(
+        result.subscriptions === 0
+          ? "Aucun abonnement de tracking actif sur ce dossier."
+          : `${result.new_events} nouvel(s) événement(s)${result.errors.length ? ` — ${result.errors.join(" ")}` : ""}`,
+      );
+      queryClient.invalidateQueries({ queryKey: ["shipment", shipmentId] });
+      queryClient.invalidateQueries({ queryKey: ["timeline", shipmentId] });
+    },
+    onError: (problem) => setRefreshInfo(problemMessage(problem)),
+  });
 
   const { data } = useQuery({
     queryKey: ["shipment", shipmentId],
@@ -205,7 +225,20 @@ export default function ShipmentDetailPage({ params }: { params: Promise<{ shipm
         </div>
 
         <div className="rounded-xl border border-line bg-surface shadow-sm">
-          <div className="border-b border-line px-4 py-3 text-[13px] font-bold">Timeline</div>
+          <div className="flex items-center border-b border-line px-4 py-3">
+            <span className="text-[13px] font-bold">Timeline</span>
+            {canUpdate && (
+              <button
+                onClick={() => refreshTracking.mutate()}
+                disabled={refreshTracking.isPending}
+                title="Interroge immédiatement les compagnies (hors cadence quotidienne)"
+                className="ml-auto text-xs font-semibold text-sea hover:underline disabled:opacity-50"
+              >
+                {refreshTracking.isPending ? "Actualisation…" : "Actualiser le suivi"}
+              </button>
+            )}
+          </div>
+          {refreshInfo && <p className="border-b border-line px-4 py-2 text-xs text-ink-3">{refreshInfo}</p>}
           <ul className="p-4">
             {timeline?.map((event, index) => (
               <li key={event.id} className={`relative pl-6 ${index < timeline.length - 1 ? "border-l-2 border-line pb-4" : ""} ml-1.5`}>

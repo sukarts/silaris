@@ -120,7 +120,7 @@ final class ProvisionTenant extends Command
                 $conn->table('tenants')->insert([
                     'id' => $tenantId, 'name' => $name, 'slug' => $slug,
                     'plan' => 'standard', 'locale_default' => $locale,
-                    'settings' => json_encode(['tracking_refresh_minutes' => 120, 'delay_threshold_hours' => 24]),
+                    'settings' => json_encode(['tracking_refresh_minutes' => 1440, 'delay_threshold_hours' => 24]),
                     'is_active' => true, 'created_at' => $now, 'updated_at' => $now,
                 ]);
 
