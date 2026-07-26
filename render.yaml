@@ -41,9 +41,9 @@ services:
       - key: APP_KEY
         sync: false                                # secret — `php artisan key:generate --show`
       - key: APP_URL
-        sync: false                                # ex. https://silaris-api.onrender.com
+        sync: false                                # https://api.silaris.co
       - key: FRONTEND_URL
-        value: "https://silaris-web.onrender.com"  # liens des emails (reset, invitation, portail)
+        sync: false                                # https://app.silaris.co — liens des emails (invitations, reset)
       - key: LOG_CHANNEL
         value: stderr
       - key: DB_CONNECTION
