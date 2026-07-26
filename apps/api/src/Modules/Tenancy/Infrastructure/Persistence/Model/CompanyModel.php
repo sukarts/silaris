@@ -14,7 +14,7 @@ class CompanyModel extends BaseModel
 
     protected $table = 'companies';
 
-    protected $casts = ['address' => 'array', 'invoice_settings' => 'array', 'is_active' => 'bool'];
+    protected $casts = ['address' => 'array', 'invoice_settings' => 'array', 'shipment_settings' => 'array', 'is_active' => 'bool'];
 
     public function branches(): HasMany
     {

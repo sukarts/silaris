@@ -1,0 +1,63 @@
+<?php
+
+declare(strict_types=1);
+
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
+use Silaris\Modules\Shipment\Infrastructure\Persistence\SequenceReferenceGenerator;
+
+uses(RefreshDatabase::class);
+
+it('applique le format de référence choisi par le transitaire', function (): void {
+    $ids = seedCore();
+    DB::table('companies')->where('id', $ids['company'])->update([
+        'shipment_settings' => json_encode(['reference_format' => '{PREFIX}/{BRANCH}/{YY}/{SEQ:4}', 'reference_prefix' => 'SAHA']),
+    ]);
+
+    $reference = app(SequenceReferenceGenerator::class)->nextShipmentReference($ids['branch']);
+
+    expect($reference)->toMatch('#^SAHA/[A-Z0-9]+/'.date('y').'/\d{4}$#');
+});
+
+it('retombe sur le format historique sans réglage', function (): void {
+    $ids = seedCore();
+
+    expect(app(SequenceReferenceGenerator::class)->nextShipmentReference($ids['branch']))
+        ->toMatch('/^[A-Z0-9]+-'.date('Y').'-\d{5}$/');
+});
+
+it('donne un aperçu du format sans consommer de séquence', function (): void {
+    $ids = seedCore();
+
+    $preview = $this->withToken(tokenFor($ids['user_admin']))
+        ->getJson("/api/v1/admin/companies/{$ids['company']}/reference-preview?format=".urlencode('{PREFIX}-{YEAR}-{SEQ:3}').'&prefix=ACME')
+        ->assertOk()->json('preview');
+
+    expect($preview)->toBe('ACME-'.date('Y').'-128');
+    // Aucune séquence consommée : la génération réelle repart à 1.
+    expect(app(SequenceReferenceGenerator::class)->nextShipmentReference($ids['branch']))->toContain('-00001');
+});
+
+it('refuse un format sans séquence (risque de collision)', function (): void {
+    $ids = seedCore();
+
+    $this->withToken(tokenFor($ids['user_admin']))
+        ->patchJson("/api/v1/admin/companies/{$ids['company']}", [
+            'shipment_settings' => ['reference_format' => '{PREFIX}-{YEAR}'],
+        ])->assertUnprocessable();
+});
+
+it('enregistre les informations légales et crée une agence', function (): void {
+    $ids = seedCore();
+    $token = tokenFor($ids['user_admin']);
+
+    $this->withToken($token)->patchJson("/api/v1/admin/companies/{$ids['company']}", [
+        'legal_name' => 'SAHA TRANSIT SA',
+        'tax_id' => 'CI-ABJ-2026-B-0042',
+        'address' => ['line1' => 'Zone portuaire', 'city' => 'Abidjan', 'country' => 'CI'],
+    ])->assertOk()->assertJsonPath('legal_name', 'SAHA TRANSIT SA');
+
+    $this->withToken($token)->postJson("/api/v1/admin/companies/{$ids['company']}/branches", [
+        'name' => 'Agence San-Pédro', 'code' => 'SPY', 'timezone' => 'Africa/Abidjan',
+    ])->assertCreated()->assertJsonPath('code', 'SPY');
+});
