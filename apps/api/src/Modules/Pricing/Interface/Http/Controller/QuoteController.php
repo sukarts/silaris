@@ -16,6 +16,7 @@ use Silaris\Modules\Pricing\Infrastructure\Persistence\Model\QuoteModel;
 use Silaris\Modules\Shared\Application\Bus\CommandBus;
 use Silaris\Modules\Shared\Infrastructure\Tenancy\TenantContext;
 use Silaris\Modules\Shipment\Application\Command\CreateShipment\CreateShipmentCommand;
+use Silaris\Modules\Tenancy\Application\Service\BrandingResolver;
 use Silaris\Modules\Tenancy\Infrastructure\Persistence\Model\CompanyModel;
 use Symfony\Component\HttpFoundation\Response;
 
@@ -185,7 +186,7 @@ class QuoteController
         $quote = QuoteModel::with(['lines', 'party'])->findOrFail($quoteId);
         $company = CompanyModel::findOrFail($quote->company_id);
 
-        return Pdf::loadView('pdf.quote', ['quote' => $quote, 'company' => $company])
+        return Pdf::loadView('pdf.quote', ['quote' => $quote, 'company' => $company, 'logo' => app(BrandingResolver::class)->logoDataUri($company)])
             ->download('cotation-'.$quote->number.'.pdf');
     }
 }

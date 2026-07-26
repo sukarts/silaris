@@ -14,6 +14,7 @@ interface TrackingResult {
   destination_name: string | null;
   vessel_name: string | null;
   tenant_name: string | null;
+  logo_url: string | null;
   eta: string | null;
   ata: string | null;
   events: { title: string; type: string; occurred_at: string }[];
@@ -58,11 +59,16 @@ export default function TrackPage() {
   return (
     <main className="mx-auto w-full max-w-2xl px-5 py-12">
       <div className="text-center">
-        <div className="text-lg font-bold tracking-[0.18em]">
-          SILA<span className="text-accent">RIS</span>
-        </div>
-        <p className="pb-7 text-[13px] text-ink-3">
-          Suivi d&apos;expédition{result?.tenant_name ? ` — ${result.tenant_name}` : ""}
+        {result?.logo_url ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={result.logo_url} alt={result.tenant_name ?? ""} className="mx-auto h-12 max-w-56 object-contain" />
+        ) : (
+          <div className="text-lg font-bold tracking-[0.18em]">
+            {result?.tenant_name ?? "Suivi d'expédition"}
+          </div>
+        )}
+        <p className="pb-7 pt-1 text-[13px] text-ink-3">
+          Suivi d&apos;expédition{result?.tenant_name && result?.logo_url ? ` — ${result.tenant_name}` : ""}
         </p>
       </div>
 

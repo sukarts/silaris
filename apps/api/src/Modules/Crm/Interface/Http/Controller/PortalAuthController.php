@@ -6,12 +6,14 @@ namespace Silaris\Modules\Crm\Interface\Http\Controller;
 
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\ValidationException;
 use Silaris\Modules\Crm\Infrastructure\Persistence\Model\PortalAccountModel;
 use Silaris\Modules\Shared\Domain\Exception\AmbiguousAccount;
 use Silaris\Modules\Shared\Infrastructure\Tenancy\GuestTenantResolver;
 use Silaris\Modules\Shared\Infrastructure\Tenancy\TenantContext;
+use Silaris\Modules\Tenancy\Application\Service\BrandingResolver;
 
 class PortalAuthController
 {
@@ -64,6 +66,7 @@ class PortalAuthController
             'email' => $account->email,
             'party' => $account->party,
             'notification_prefs' => $account->notification_prefs,
+            'branding' => $this->branding(),
         ]);
     }
 
@@ -73,5 +76,25 @@ class PortalAuthController
         $request->user()->currentAccessToken()->delete();
 
         return response()->json(['logged_out' => true]);
+    }
+
+    /**
+     * Identité du transitaire affichée au client (marque blanche) :
+     * raison sociale + logo de la société du tenant.
+     *
+     * @return array{name: string|null, logo_url: string|null}
+     */
+    private function branding(): array
+    {
+        $company = DB::table('companies')
+            ->where('tenant_id', app(TenantContext::class)->id())
+            ->where('is_active', true)
+            ->orderBy('created_at')
+            ->first(['legal_name', 'logo_document_id']);
+
+        return [
+            'name' => $company->legal_name ?? null,
+            'logo_url' => app(BrandingResolver::class)->logoUrl($company->logo_document_id ?? null),
+        ];
     }
 }

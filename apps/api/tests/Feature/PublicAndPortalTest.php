@@ -8,21 +8,6 @@ use Illuminate\Support\Str;
 
 uses(RefreshDatabase::class);
 
-function seedShipmentFor(array $ids, string $clientId, string $reference): string
-{
-    $shipmentId = (string) Str::uuid7();
-    DB::table('shipments')->insert([
-        'id' => $shipmentId, 'tenant_id' => $ids['tenant'], 'reference' => $reference,
-        'client_id' => $clientId, 'branch_id' => $ids['branch'], 'company_id' => $ids['company'],
-        'agent_id' => $ids['user_transit_agent'], 'direction' => 'import', 'mode' => 'sea_fcl',
-        'status' => 'transit', 'workflow_definition_id' => $ids['workflow'], 'incoterm_code' => 'CIF',
-        'origin_locode' => 'CNSHA', 'destination_locode' => 'CIABJ',
-        'created_at' => now(), 'updated_at' => now(),
-    ]);
-
-    return $shipmentId;
-}
-
 it('expose le suivi public sans données sensibles et rejette les entrées invalides', function (): void {
     $ids = seedCore();
     seedShipmentFor($ids, $ids['client'], 'TST-2026-00042');

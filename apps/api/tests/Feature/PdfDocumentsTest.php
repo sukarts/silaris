@@ -8,26 +8,6 @@ use Illuminate\Support\Str;
 
 uses(RefreshDatabase::class);
 
-function seedInvoiceWithLine(array $ids): string
-{
-    $invoiceId = (string) Str::uuid7();
-    DB::table('invoices')->insert([
-        'id' => $invoiceId, 'tenant_id' => $ids['tenant'], 'company_id' => $ids['company'],
-        'type' => 'invoice', 'number' => 'F-2026-0001', 'party_id' => $ids['client'],
-        'status' => 'validated', 'currency_code' => 'XOF',
-        'total_excl_tax' => 100000, 'total_tax' => 18000, 'total_incl_tax' => 118000,
-        'issue_date' => now()->toDateString(), 'due_date' => now()->addDays(30)->toDateString(),
-        'created_at' => now(), 'updated_at' => now(),
-    ]);
-    DB::table('invoice_lines')->insert([
-        'id' => (string) Str::uuid7(), 'invoice_id' => $invoiceId, 'position' => 1,
-        'service_code' => 'FRT', 'description' => 'Fret maritime test', 'quantity' => 1,
-        'unit' => 'flat', 'unit_price' => 100000, 'created_at' => now(), 'updated_at' => now(),
-    ]);
-
-    return $invoiceId;
-}
-
 it('génère le PDF d\'une facture avec le bon nom de fichier', function (): void {
     $ids = seedCore();
     $invoiceId = seedInvoiceWithLine($ids);

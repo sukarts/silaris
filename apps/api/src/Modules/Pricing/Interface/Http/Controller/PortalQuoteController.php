@@ -8,6 +8,7 @@ use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Silaris\Modules\Pricing\Infrastructure\Persistence\Model\QuoteModel;
+use Silaris\Modules\Tenancy\Application\Service\BrandingResolver;
 use Silaris\Modules\Tenancy\Infrastructure\Persistence\Model\CompanyModel;
 use Symfony\Component\HttpFoundation\Response;
 
@@ -63,7 +64,7 @@ class PortalQuoteController
             ->findOrFail($quoteId);
         $company = CompanyModel::findOrFail($quote->company_id);
 
-        return Pdf::loadView('pdf.quote', ['quote' => $quote, 'company' => $company])
+        return Pdf::loadView('pdf.quote', ['quote' => $quote, 'company' => $company, 'logo' => app(BrandingResolver::class)->logoDataUri($company)])
             ->download('cotation-'.$quote->number.'.pdf');
     }
 }
