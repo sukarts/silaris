@@ -6,12 +6,16 @@ namespace Silaris\Modules\Crm\Interface\Http\Controller;
 
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 use Silaris\Modules\Crm\Infrastructure\Persistence\Model\PartyModel;
 use Silaris\Modules\Crm\Infrastructure\Persistence\Model\PortalAccountModel;
+use Silaris\Modules\Shared\Infrastructure\Tenancy\TenantContext;
 
 class PartyController
 {
+    public function __construct(private readonly TenantContext $tenant) {}
+
     /** GET /v1/parties — clients, prospects, fournisseurs (filtre type). */
     public function index(Request $request): JsonResponse
     {
@@ -48,9 +52,56 @@ class PartyController
     public function store(Request $request): JsonResponse
     {
         $data = $this->validatePayload($request);
-        $party = PartyModel::create($data);
+        $nested = $request->validate([
+            'contact' => ['sometimes', 'array'],
+            'contact.name' => ['required_with:contact', 'string', 'max:255'],
+            'contact.email' => ['nullable', 'email', 'max:255'],
+            'contact.phone' => ['nullable', 'string', 'max:32'],
+            'address' => ['sometimes', 'array'],
+            'address.line1' => ['required_with:address', 'string', 'max:255'],
+            'address.line2' => ['nullable', 'string', 'max:255'],
+            'address.city' => ['required_with:address', 'string', 'max:120'],
+            'address.postal_code' => ['nullable', 'string', 'max:20'],
+            'address.country_code' => ['required_with:address', 'size:2', 'exists:countries,code2'],
+        ]);
 
-        return response()->json($party, 201);
+        // Code interne : généré si absent — préfixe par type + séquence sans trou.
+        if (($data['code'] ?? '') === '') {
+            $prefixes = ['client' => 'CLI', 'prospect' => 'PRO', 'supplier' => 'FOU'];
+            $prefix = $prefixes[$data['type']] ?? 'TRS';
+            $sequence = DB::selectOne('SELECT next_sequence(?, ?) AS value', [
+                $this->tenant->id(), 'party:'.$data['type'],
+            ])->value;
+            $data['code'] = sprintf('%s-%04d', $prefix, $sequence);
+        }
+
+        $party = DB::transaction(function () use ($data, $nested) {
+            $party = PartyModel::create($data);
+
+            if (isset($nested['contact'])) {
+                $party->contacts()->create([
+                    'name' => $nested['contact']['name'],
+                    'email' => $nested['contact']['email'] ?? null,
+                    'phone' => $nested['contact']['phone'] ?? null,
+                    'is_primary' => true,
+                ]);
+            }
+            if (isset($nested['address'])) {
+                $party->addresses()->create([
+                    'label' => 'main',
+                    'line1' => $nested['address']['line1'],
+                    'line2' => $nested['address']['line2'] ?? null,
+                    'city' => $nested['address']['city'],
+                    'postal_code' => $nested['address']['postal_code'] ?? null,
+                    'country_code' => strtoupper($nested['address']['country_code']),
+                    'is_default' => true,
+                ]);
+            }
+
+            return $party;
+        });
+
+        return response()->json($party->fresh(['contacts', 'addresses']), 201);
     }
 
     public function update(Request $request, string $partyId): JsonResponse
@@ -83,9 +134,10 @@ class PartyController
             'type' => [$existing ? 'sometimes' : 'required', Rule::in(['client', 'prospect', 'supplier'])],
             'kind' => ['sometimes', Rule::in(['company', 'individual'])],
             'supplier_kind' => ['nullable', Rule::in(['ocean_carrier', 'airline', 'trucker', 'customs_agent', 'handler', 'insurer', 'port_agent', 'overseas_agent'])],
-            'code' => [$existing ? 'sometimes' : 'required', 'string', 'max:24'],
+            'code' => ['sometimes', 'nullable', 'string', 'max:24'],
             'name' => [$existing ? 'sometimes' : 'required', 'string', 'max:255'],
             'tax_id' => ['nullable', 'string', 'max:64'],
+            'industry' => ['nullable', 'string', 'max:100'],
             'currency_code' => ['nullable', 'size:3', 'exists:currencies,code'],
             'payment_terms_days' => ['nullable', 'integer', 'min:0', 'max:365'],
             'credit_limit' => ['nullable', 'numeric', 'min:0'],

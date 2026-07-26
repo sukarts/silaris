@@ -43,3 +43,27 @@ it('refuse l\'invitation portail sans crm.update', function (): void {
         ->postJson("/api/v1/parties/{$ids['client']}/portal-account")
         ->assertForbidden();
 });
+
+it('génère un code client automatique et crée contact + adresse imbriqués', function (): void {
+    $ids = seedCore();
+    DB::table('countries')->insertOrIgnore(['code2' => 'CI', 'code3' => 'CIV', 'name_fr' => "Côte d'Ivoire", 'name_en' => 'Ivory Coast', 'created_at' => now(), 'updated_at' => now()]);
+
+    $response = $this->withToken(tokenFor($ids['user_admin']))->postJson('/api/v1/parties', [
+        'type' => 'client', 'kind' => 'company', 'name' => 'Nouvelle Société SARL',
+        'tax_id' => 'CI-ABJ-2026-B-0001', 'industry' => 'Négoce',
+        'contact' => ['name' => 'Awa Contact', 'email' => 'awa@nouvelle.ci'],
+        'address' => ['line1' => 'Bd du Port', 'city' => 'Abidjan', 'country_code' => 'CI'],
+    ]);
+
+    $response->assertCreated();
+    expect($response->json('code'))->toMatch('/^CLI-\d{4}$/')
+        ->and($response->json('industry'))->toBe('Négoce')
+        ->and($response->json('contacts.0.email'))->toBe('awa@nouvelle.ci')
+        ->and($response->json('addresses.0.city'))->toBe('Abidjan');
+
+    // Deuxième création sans code → séquence suivante, jamais de collision.
+    $second = $this->withToken(tokenFor($ids['user_admin']))->postJson('/api/v1/parties', [
+        'type' => 'client', 'name' => 'Autre Société',
+    ])->assertCreated()->json('code');
+    expect($second)->not->toBe($response->json('code'))->toMatch('/^CLI-\d{4}$/');
+});

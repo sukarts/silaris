@@ -4,6 +4,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { problemMessage, rawApi } from "@/lib/api";
 import { Field, buttonPrimary, buttonSecondary, inputClass } from "@/components/Field";
+import { PlaceCombobox } from "@/components/PlaceCombobox";
 import { useCan } from "@/stores/auth";
 
 interface Party {
@@ -36,7 +37,13 @@ export default function CrmPage() {
   const [typeFilter, setTypeFilter] = useState<string>("");
   const [search, setSearch] = useState("");
   const [showForm, setShowForm] = useState(false);
-  const [form, setForm] = useState({ type: "client", kind: "company", code: "", name: "", currency_code: "XOF", payment_terms_days: "30" });
+  const emptyForm = {
+    type: "client", kind: "company", code: "", name: "", tax_id: "", industry: "",
+    currency_code: "XOF", payment_terms_days: "30",
+    contact_name: "", contact_email: "", contact_phone: "",
+    address_line1: "", address_city: "", address_country: "",
+  };
+  const [form, setForm] = useState(emptyForm);
   const [error, setError] = useState<string | null>(null);
 
   const { data, isLoading } = useQuery({
@@ -52,13 +59,28 @@ export default function CrmPage() {
   const create = useMutation({
     mutationFn: async () => {
       const { error: problem } = await rawApi.POST("/v1/parties", {
-        body: { ...form, payment_terms_days: Number(form.payment_terms_days) || null },
+        body: {
+          type: form.type,
+          kind: form.kind,
+          code: form.code || null,
+          name: form.name,
+          tax_id: form.tax_id || null,
+          industry: form.industry || null,
+          currency_code: form.currency_code || null,
+          payment_terms_days: Number(form.payment_terms_days) || null,
+          ...(form.contact_name
+            ? { contact: { name: form.contact_name, email: form.contact_email || null, phone: form.contact_phone || null } }
+            : {}),
+          ...(form.address_line1 && form.address_city && form.address_country
+            ? { address: { line1: form.address_line1, city: form.address_city, country_code: form.address_country } }
+            : {}),
+        },
       });
       if (problem) throw problem;
     },
     onSuccess: () => {
       setShowForm(false);
-      setForm({ type: "client", kind: "company", code: "", name: "", currency_code: "XOF", payment_terms_days: "30" });
+      setForm(emptyForm);
       setError(null);
       queryClient.invalidateQueries({ queryKey: ["parties"] });
     },
@@ -121,14 +143,43 @@ export default function CrmPage() {
               <option value="individual">Personne physique</option>
             </select>
           </Field>
-          <Field label="Code">
-            <input required maxLength={24} value={form.code} onChange={(e) => setForm({ ...form, code: e.target.value.toUpperCase() })} className={`${inputClass} mono`} />
+          <Field label="Code (vide = automatique)">
+            <input maxLength={24} value={form.code} onChange={(e) => setForm({ ...form, code: e.target.value.toUpperCase() })} placeholder="CLI-0001" className={`${inputClass} mono`} />
           </Field>
-          <Field label="Nom" className="md:col-span-2">
+          <Field label={form.kind === "company" ? "Raison sociale" : "Nom & prénom"} className="md:col-span-2">
             <input required value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} className={inputClass} />
           </Field>
           <Field label="Délai paiement (j)">
             <input type="number" min={0} value={form.payment_terms_days} onChange={(e) => setForm({ ...form, payment_terms_days: e.target.value })} className={inputClass} />
+          </Field>
+          <Field label={form.kind === "company" ? "RCCM / Registre" : "N° pièce d'identité"} className="md:col-span-2">
+            <input maxLength={64} value={form.tax_id} onChange={(e) => setForm({ ...form, tax_id: e.target.value })} placeholder={form.kind === "company" ? "CI-ABJ-2026-B-12345" : ""} className={`${inputClass} mono`} />
+          </Field>
+          <Field label="Secteur d'activité" className="md:col-span-2">
+            <input maxLength={100} value={form.industry} onChange={(e) => setForm({ ...form, industry: e.target.value })} placeholder="Agroalimentaire, BTP, négoce…" className={inputClass} />
+          </Field>
+          <Field label="Devise">
+            <select value={form.currency_code} onChange={(e) => setForm({ ...form, currency_code: e.target.value })} className={inputClass}>
+              {["XOF", "EUR", "USD", "GNF", "MAD", "NGN", "GHS", "CNY"].map((code) => <option key={code} value={code}>{code}</option>)}
+            </select>
+          </Field>
+          <Field label="Pays">
+            <PlaceCombobox referential="countries" value={form.address_country} onChange={(v) => setForm({ ...form, address_country: v })} placeholder="Côte d'Ivoire…" maxLength={2} />
+          </Field>
+          <Field label="Adresse" className="md:col-span-3">
+            <input value={form.address_line1} onChange={(e) => setForm({ ...form, address_line1: e.target.value })} placeholder="Rue, zone, BP…" className={inputClass} />
+          </Field>
+          <Field label="Ville" className="md:col-span-2">
+            <input value={form.address_city} onChange={(e) => setForm({ ...form, address_city: e.target.value })} className={inputClass} />
+          </Field>
+          <Field label="Personne de contact" className="md:col-span-2">
+            <input value={form.contact_name} onChange={(e) => setForm({ ...form, contact_name: e.target.value })} placeholder="Nom du contact principal" className={inputClass} />
+          </Field>
+          <Field label="Email contact" className="md:col-span-2">
+            <input type="email" value={form.contact_email} onChange={(e) => setForm({ ...form, contact_email: e.target.value })} className={inputClass} />
+          </Field>
+          <Field label="Téléphone contact" className="md:col-span-2">
+            <input value={form.contact_phone} onChange={(e) => setForm({ ...form, contact_phone: e.target.value })} placeholder="+225…" className={`${inputClass} mono`} />
           </Field>
           {error && <p className="rounded-lg bg-crit-soft px-3 py-2 text-xs text-crit md:col-span-6">{error}</p>}
           <div className="flex gap-2 md:col-span-6">
