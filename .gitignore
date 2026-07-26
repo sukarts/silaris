@@ -9,3 +9,7 @@ storage/*.key
 .DS_Store
 .turbo/
 coverage/
+
+# Captures d'écran de la présentation (regénérables)
+apps/web/captures/
+SILARIS-presentation.pptx
