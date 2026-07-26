@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { problemMessage, rawApi } from "@/lib/api";
 import { Field, buttonPrimary, inputClass } from "@/components/Field";
+import { PlaceCombobox } from "@/components/PlaceCombobox";
 import { useAuth } from "@/stores/auth";
 
 interface Option {
@@ -134,10 +135,10 @@ export default function NewShipmentPage() {
             </select>
           </Field>
           <Field label="Origine (UN/LOCODE)">
-            <input required value={form.origin_locode} onChange={(e) => set("origin_locode", e.target.value)} placeholder="CNSHA" maxLength={5} className={`${inputClass} mono uppercase`} />
+            <PlaceCombobox referential="ports" required value={form.origin_locode} onChange={(v) => set("origin_locode", v)} placeholder="Port ou LOCODE (ex. Shanghai)" maxLength={5} />
           </Field>
           <Field label="Destination (UN/LOCODE)">
-            <input required value={form.destination_locode} onChange={(e) => set("destination_locode", e.target.value)} placeholder="CIABJ" maxLength={5} className={`${inputClass} mono uppercase`} />
+            <PlaceCombobox referential="ports" required value={form.destination_locode} onChange={(v) => set("destination_locode", v)} placeholder="Port ou LOCODE (ex. Abidjan)" maxLength={5} />
           </Field>
           <Field label="Incoterm">
             <select value={form.incoterm_code} onChange={(e) => set("incoterm_code", e.target.value)} className={inputClass}>
