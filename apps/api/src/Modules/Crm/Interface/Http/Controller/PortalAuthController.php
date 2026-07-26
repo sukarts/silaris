@@ -90,11 +90,11 @@ class PortalAuthController
             ->where('tenant_id', app(TenantContext::class)->id())
             ->where('is_active', true)
             ->orderBy('created_at')
-            ->first(['legal_name', 'logo_document_id']);
+            ->first(['id', 'legal_name', 'logo_document_id']);
 
         return [
             'name' => $company->legal_name ?? null,
-            'logo_url' => app(BrandingResolver::class)->logoUrl($company->logo_document_id ?? null),
+            'logo_url' => app(BrandingResolver::class)->logoUrl($company->id ?? null, $company->logo_document_id ?? null),
         ];
     }
 }

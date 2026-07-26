@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace Silaris\Modules\Tenancy\Application\Service;
 
 use Illuminate\Support\Facades\Storage;
-use RuntimeException;
 use Silaris\Modules\Tenancy\Infrastructure\Persistence\Model\CompanyModel;
 use Throwable;
 
@@ -43,22 +42,19 @@ final class BrandingResolver
         }
     }
 
-    /** URL temporaire du logo pour les pages web ; null si absent. */
-    public function logoUrl(?string $key): ?string
+    /**
+     * URL du logo servie par l'API (jamais une URL signée du stockage : elles
+     * expirent et diffèrent selon le fournisseur). Le paramètre `v` force le
+     * rafraîchissement du cache navigateur au remplacement du logo.
+     */
+    public function logoUrl(?string $companyId, ?string $key): ?string
     {
-        if ($key === null || $key === '') {
+        if ($companyId === null || $key === null || $key === '') {
             return null;
         }
 
-        $disk = Storage::disk(config('filesystems.documents_disk', 'local'));
-
-        try {
-            return $disk->temporaryUrl($key, now()->addHours(6));
-        } catch (RuntimeException) {
-            return $disk->url($key);
-        } catch (Throwable) {
-            return null;
-        }
+        return rtrim((string) config('app.url'), '/')
+            .'/api/v1/public/companies/'.$companyId.'/logo?v='.substr(sha1($key), 0, 8);
     }
 
     private function mimeFor(string $key): string

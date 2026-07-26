@@ -78,7 +78,7 @@ class PublicTrackingController
         $tenantName = $system->table('tenants')->where('id', $shipment->tenant_id)->value('name');
         // Marque visible = celle du transitaire (SILARIS fournit la solution, pas l'enseigne).
         $branding = $system->table('companies')->where('id', $shipment->company_id)
-            ->first(['legal_name', 'logo_document_id']);
+            ->first(['id', 'legal_name', 'logo_document_id']);
 
         return response()->json([
             'package' => $packagePayload,
@@ -91,7 +91,7 @@ class PublicTrackingController
             'destination_name' => $portNames[$shipment->destination_locode] ?? null,
             'vessel_name' => $vesselName,
             'tenant_name' => $branding->legal_name ?? $tenantName,
-            'logo_url' => app(BrandingResolver::class)->logoUrl($branding->logo_document_id ?? null),
+            'logo_url' => app(BrandingResolver::class)->logoUrl($branding->id ?? null, $branding->logo_document_id ?? null),
             'eta' => $shipment->eta,
             'ata' => $shipment->ata,
             'events' => $events,

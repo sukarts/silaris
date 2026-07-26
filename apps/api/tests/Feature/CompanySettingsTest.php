@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use Silaris\Modules\Shipment\Infrastructure\Persistence\SequenceReferenceGenerator;
 
 uses(RefreshDatabase::class);
@@ -82,4 +83,25 @@ it('expose la marque du transitaire au suivi public', function (): void {
         ->assertOk()
         ->assertJsonPath('tenant_name', 'SAHA TRANSIT SA')
         ->assertJsonStructure(['logo_url']);
+});
+
+it('sert le logo via l\'API, sans authentification ni URL signée', function (): void {
+    $ids = seedCore();
+    Storage::fake('local');
+    config(['filesystems.documents_disk' => 'local']);
+    $key = 'tenants/'.$ids['tenant'].'/branding/logo-test.png';
+    Storage::disk('local')->put($key, base64_decode(
+        'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==',
+    ));
+    DB::table('companies')->where('id', $ids['company'])->update(['logo_document_id' => $key]);
+
+    $this->get("/api/v1/public/companies/{$ids['company']}/logo")
+        ->assertOk()
+        ->assertHeader('Content-Type', 'image/png');
+});
+
+it('renvoie 404 quand la société n\'a pas de logo', function (): void {
+    $ids = seedCore();
+
+    $this->get("/api/v1/public/companies/{$ids['company']}/logo")->assertNotFound();
 });

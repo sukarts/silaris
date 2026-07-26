@@ -10,6 +10,7 @@ use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Silaris\Modules\Shared\Infrastructure\Tenancy\TenantContext;
 use Silaris\Modules\Shipment\Infrastructure\Persistence\SequenceReferenceGenerator;
+use Silaris\Modules\Tenancy\Application\Service\BrandingResolver;
 use Silaris\Modules\Tenancy\Infrastructure\Persistence\Model\BranchModel;
 use Silaris\Modules\Tenancy\Infrastructure\Persistence\Model\CompanyModel;
 
@@ -108,7 +109,7 @@ class OrganizationController
             Storage::disk(config('filesystems.documents_disk', 'local'))->delete($previous);
         }
 
-        return response()->json(['logo_document_id' => $key, 'logo_url' => $this->logoUrl($key)]);
+        return response()->json(['logo_document_id' => $key, 'logo_url' => app(BrandingResolver::class)->logoUrl($company->id, $key)]);
     }
 
     /** GET /v1/admin/companies/{id}/logo-url — URL signée temporaire du logo. */
@@ -119,7 +120,7 @@ class OrganizationController
             return response()->json(['logo_url' => null]);
         }
 
-        return response()->json(['logo_url' => $this->logoUrl($company->logo_document_id)]);
+        return response()->json(['logo_url' => app(BrandingResolver::class)->logoUrl($company->id, $company->logo_document_id)]);
     }
 
     /**
@@ -149,17 +150,5 @@ class OrganizationController
                 'MONTH' => date('m'),
             ], 128),
         ]);
-    }
-
-    /** URL signée (S3/R2) ; repli sur l'URL publique pour les disques locaux. */
-    private function logoUrl(string $key): string
-    {
-        $disk = Storage::disk(config('filesystems.documents_disk', 'local'));
-
-        try {
-            return $disk->temporaryUrl($key, now()->addHours(6));
-        } catch (\RuntimeException) {
-            return $disk->url($key);
-        }
     }
 }
