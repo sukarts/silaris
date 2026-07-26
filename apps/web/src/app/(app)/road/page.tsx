@@ -7,9 +7,15 @@ import { Field, buttonPrimary, buttonSecondary, inputClass } from "@/components/
 import { TrackMap } from "@/components/TrackMap";
 import { useCan } from "@/stores/auth";
 
+interface Carrier {
+  id: string;
+  name: string;
+}
+
 interface Truck {
   id: string;
   plate_number: string;
+  carrier_party_id: string | null;
   type: string | null;
   capacity_kg: string | null;
   inspection_due: string | null;
@@ -20,11 +26,13 @@ interface Trailer {
   id: string;
   plate_number: string;
   type: string | null;
+  carrier_party_id: string | null;
 }
 
 interface Driver {
   id: string;
   name: string;
+  carrier_party_id: string | null;
   phone: string | null;
   license_number: string | null;
   license_categories: string | null;
@@ -48,6 +56,8 @@ interface Mission {
   failure_reason: string | null;
   driver: { id: string; name: string } | null;
   truck: { id: string; plate_number: string } | null;
+  carrier: { id: string; name: string } | null;
+  carrier_reference: string | null;
   shipment: { id: string; reference: string } | null;
   stops: MissionStop[];
 }
@@ -86,9 +96,57 @@ const TRANSITION_LABEL: Record<string, string> = {
 
 const TYPE_LABEL: Record<string, string> = { delivery: "Livraison", pickup: "Enlèvement", transfer: "Transfert" };
 
+/**
+ * Transporteurs affrétés : peu de transitaires roulent avec leurs propres
+ * camions, le pré/post-acheminement passe par des prestataires enregistrés au
+ * CRM comme fournisseurs. Cette information reste interne — ni le portail
+ * client ni le suivi public ne la reprennent.
+ */
+/** Moyens rattachés au propriétaire retenu — flotte propre quand aucun prestataire. */
+function ownedBy<T extends { carrier_party_id: string | null }>(items: T[] | undefined, carrierId: string): T[] {
+  return (items ?? []).filter((item) => (item.carrier_party_id ?? "") === carrierId);
+}
+
+/** Étiquette « Propre » ou nom du prestataire, sans refaire une requête par ligne. */
+function OwnerBadge({ carrierId }: { carrierId: string | null }) {
+  const carriers = useCarriers();
+  if (carrierId === null) {
+    return <span className="text-[11px] text-ink-3">Propre</span>;
+  }
+  const name = carriers.data?.find((carrier) => carrier.id === carrierId)?.name;
+
+  return <span className="rounded-full bg-sea-soft px-2 py-0.5 text-[11px] font-semibold text-sea">{name ?? "Affrété"}</span>;
+}
+
+function useCarriers() {
+  return useQuery({
+    queryKey: ["carriers"],
+    queryFn: async () => {
+      const { data } = await rawApi.GET("/v1/parties", {
+        params: { query: { type: "supplier", supplier_kind: "trucker", per_page: 100 } },
+      });
+      return ((data as { data: Carrier[] } | undefined)?.data ?? []);
+    },
+  });
+}
+
+/** Sélecteur « flotte propre / prestataire », partagé par la flotte et les missions. */
+function CarrierSelect({ value, onChange }: { value: string; onChange: (id: string) => void }) {
+  const carriers = useCarriers();
+
+  return (
+    <select value={value} onChange={(e) => onChange(e.target.value)} className={inputClass}>
+      <option value="">Flotte propre</option>
+      {carriers.data?.map((carrier) => <option key={carrier.id} value={carrier.id}>{carrier.name}</option>)}
+    </select>
+  );
+}
+
 const emptyMissionForm = {
   shipment_id: "",
   type: "delivery",
+  carrier_party_id: "",
+  carrier_reference: "",
   truck_id: "",
   trailer_id: "",
   driver_id: "",
@@ -154,6 +212,8 @@ export default function RoadPage() {
         body: {
           shipment_id: form.shipment_id || null,
           type: form.type,
+          carrier_party_id: form.carrier_party_id || null,
+          carrier_reference: form.carrier_reference || null,
           truck_id: form.truck_id || null,
           trailer_id: form.trailer_id || null,
           driver_id: form.driver_id || null,
@@ -260,10 +320,18 @@ export default function RoadPage() {
                   <option value="transfer">Transfert</option>
                 </select>
               </Field>
+              <Field label="Transporteur">
+                <CarrierSelect
+                  value={form.carrier_party_id}
+                  // Changer de transporteur invalide les moyens déjà choisis :
+                  // un camion affrété ne roule que pour son propriétaire.
+                  onChange={(id) => setForm({ ...form, carrier_party_id: id, truck_id: "", trailer_id: "", driver_id: "" })}
+                />
+              </Field>
               <Field label="Camion">
                 <select value={form.truck_id} onChange={(e) => setForm({ ...form, truck_id: e.target.value })} className={inputClass}>
                   <option value="">—</option>
-                  {trucks.data?.data.map((truck) => (
+                  {ownedBy(trucks.data?.data, form.carrier_party_id).map((truck) => (
                     <option key={truck.id} value={truck.id}>{truck.plate_number}</option>
                   ))}
                 </select>
@@ -271,7 +339,7 @@ export default function RoadPage() {
               <Field label="Remorque">
                 <select value={form.trailer_id} onChange={(e) => setForm({ ...form, trailer_id: e.target.value })} className={inputClass}>
                   <option value="">—</option>
-                  {trailers.data?.data.map((trailer) => (
+                  {ownedBy(trailers.data?.data, form.carrier_party_id).map((trailer) => (
                     <option key={trailer.id} value={trailer.id}>{trailer.plate_number}</option>
                   ))}
                 </select>
@@ -279,7 +347,7 @@ export default function RoadPage() {
               <Field label="Chauffeur">
                 <select value={form.driver_id} onChange={(e) => setForm({ ...form, driver_id: e.target.value })} className={inputClass}>
                   <option value="">—</option>
-                  {drivers.data?.data.map((driver) => (
+                  {ownedBy(drivers.data?.data, form.carrier_party_id).map((driver) => (
                     <option key={driver.id} value={driver.id}>{driver.name}</option>
                   ))}
                 </select>
@@ -295,6 +363,9 @@ export default function RoadPage() {
               </Field>
               <Field label="Destination (étape 2)" className="md:col-span-2">
                 <input value={form.destination_label} onChange={(e) => setForm({ ...form, destination_label: e.target.value })} className={inputClass} placeholder="Entrepôt client" />
+              </Field>
+              <Field label="N° d'ordre chez le transporteur">
+                <input value={form.carrier_reference} onChange={(e) => setForm({ ...form, carrier_reference: e.target.value })} disabled={form.carrier_party_id === ""} placeholder={form.carrier_party_id === "" ? "—" : "OT-2026-014"} className={`${inputClass} mono`} />
               </Field>
               <Field label="Dossier (ID)" className="md:col-span-2">
                 <input value={form.shipment_id} onChange={(e) => setForm({ ...form, shipment_id: e.target.value })} className={`${inputClass} mono`} placeholder="UUID du dossier (optionnel)" />
@@ -358,7 +429,14 @@ export default function RoadPage() {
                     <tr key={mission.id} className="border-b border-line last:border-0 hover:bg-sea/5">
                       <td className="mono px-3 py-2.5 font-semibold text-sea">{mission.reference}</td>
                       <td className="px-3 py-2.5 text-ink-2">{TYPE_LABEL[mission.type] ?? mission.type}</td>
-                      <td className="mono px-3 py-2.5">{mission.truck?.plate_number ?? "—"}</td>
+                      <td className="mono px-3 py-2.5">
+                        {mission.truck?.plate_number ?? "—"}
+                        {mission.carrier && (
+                          <span className="mt-0.5 block text-[11px] font-semibold text-sea">
+                            {mission.carrier.name}{mission.carrier_reference ? ` · ${mission.carrier_reference}` : ""}
+                          </span>
+                        )}
+                      </td>
                       <td className="px-3 py-2.5">{mission.driver?.name ?? "—"}</td>
                       <td className="px-3 py-2.5 text-ink-2">
                         {firstStop ? `${firstStop.label}${lastStop && lastStop.id !== firstStop.id ? ` → ${lastStop.label}` : ""}` : "—"}
@@ -429,7 +507,7 @@ export default function RoadPage() {
 
 function TruckPanel({ trucks, isLoading, canCreate }: { trucks: Truck[]; isLoading: boolean; canCreate: boolean }) {
   const queryClient = useQueryClient();
-  const [form, setForm] = useState({ plate_number: "", type: "", capacity_kg: "" });
+  const [form, setForm] = useState({ plate_number: "", type: "", capacity_kg: "", carrier_party_id: "" });
   const [error, setError] = useState<string | null>(null);
 
   const create = useMutation({
@@ -438,13 +516,14 @@ function TruckPanel({ trucks, isLoading, canCreate }: { trucks: Truck[]; isLoadi
         body: {
           plate_number: form.plate_number,
           type: form.type || null,
+          carrier_party_id: form.carrier_party_id || null,
           capacity_kg: form.capacity_kg ? Number(form.capacity_kg) : null,
         },
       });
       if (problem) throw problem;
     },
     onSuccess: () => {
-      setForm({ plate_number: "", type: "", capacity_kg: "" });
+      setForm({ plate_number: "", type: "", capacity_kg: "", carrier_party_id: "" });
       setError(null);
       queryClient.invalidateQueries({ queryKey: ["trucks"] });
     },
@@ -459,6 +538,7 @@ function TruckPanel({ trucks, isLoading, canCreate }: { trucks: Truck[]; isLoadi
           <input required maxLength={16} value={form.plate_number} onChange={(e) => setForm({ ...form, plate_number: e.target.value.toUpperCase() })} placeholder="Immatriculation" className={`${inputClass} mono w-36 flex-none`} />
           <input maxLength={32} value={form.type} onChange={(e) => setForm({ ...form, type: e.target.value })} placeholder="Type" className={`${inputClass} w-28 flex-none`} />
           <input type="number" min={0} value={form.capacity_kg} onChange={(e) => setForm({ ...form, capacity_kg: e.target.value })} placeholder="Cap. (kg)" className={`${inputClass} w-24 flex-none`} />
+          <div className="w-44 flex-none"><CarrierSelect value={form.carrier_party_id} onChange={(id) => setForm({ ...form, carrier_party_id: id })} /></div>
           <button type="submit" disabled={create.isPending} className={buttonSecondary}>Ajouter</button>
         </form>
       )}
@@ -470,16 +550,18 @@ function TruckPanel({ trucks, isLoading, canCreate }: { trucks: Truck[]; isLoadi
             <th className="px-2 py-2">Type</th>
             <th className="px-2 py-2 text-right">Cap. (kg)</th>
             <th className="px-2 py-2">Visite tech.</th>
+            <th className="px-2 py-2">Propriétaire</th>
           </tr>
         </thead>
         <tbody>
-          {isLoading && <tr><td colSpan={4} className="px-2 py-6 text-center text-ink-3">Chargement…</td></tr>}
+          {isLoading && <tr><td colSpan={5} className="px-2 py-6 text-center text-ink-3">Chargement…</td></tr>}
           {trucks.map((truck) => (
             <tr key={truck.id} className="border-b border-line last:border-0">
               <td className="mono px-2 py-2 font-semibold">{truck.plate_number}</td>
               <td className="px-2 py-2 text-ink-2">{truck.type ?? "—"}</td>
               <td className="mono px-2 py-2 text-right">{truck.capacity_kg != null ? Number(truck.capacity_kg).toLocaleString("fr-FR") : "—"}</td>
               <td className="mono px-2 py-2 text-ink-2">{truck.inspection_due ? new Date(truck.inspection_due).toLocaleDateString("fr-FR") : "—"}</td>
+              <td className="px-2 py-2"><OwnerBadge carrierId={truck.carrier_party_id} /></td>
             </tr>
           ))}
         </tbody>
@@ -490,18 +572,18 @@ function TruckPanel({ trucks, isLoading, canCreate }: { trucks: Truck[]; isLoadi
 
 function TrailerPanel({ trailers, isLoading, canCreate }: { trailers: Trailer[]; isLoading: boolean; canCreate: boolean }) {
   const queryClient = useQueryClient();
-  const [form, setForm] = useState({ plate_number: "", type: "" });
+  const [form, setForm] = useState({ plate_number: "", type: "", carrier_party_id: "" });
   const [error, setError] = useState<string | null>(null);
 
   const create = useMutation({
     mutationFn: async () => {
       const { error: problem } = await rawApi.POST("/v1/fleet/trailers", {
-        body: { plate_number: form.plate_number, type: form.type || null },
+        body: { plate_number: form.plate_number, type: form.type || null, carrier_party_id: form.carrier_party_id || null },
       });
       if (problem) throw problem;
     },
     onSuccess: () => {
-      setForm({ plate_number: "", type: "" });
+      setForm({ plate_number: "", type: "", carrier_party_id: "" });
       setError(null);
       queryClient.invalidateQueries({ queryKey: ["trailers"] });
     },
@@ -515,6 +597,7 @@ function TrailerPanel({ trailers, isLoading, canCreate }: { trailers: Trailer[];
         <form onSubmit={(event) => { event.preventDefault(); create.mutate(); }} className="flex flex-wrap gap-2">
           <input required maxLength={16} value={form.plate_number} onChange={(e) => setForm({ ...form, plate_number: e.target.value.toUpperCase() })} placeholder="Immatriculation" className={`${inputClass} mono w-36 flex-none`} />
           <input maxLength={32} value={form.type} onChange={(e) => setForm({ ...form, type: e.target.value })} placeholder="Type" className={`${inputClass} w-28 flex-none`} />
+          <div className="w-44 flex-none"><CarrierSelect value={form.carrier_party_id} onChange={(id) => setForm({ ...form, carrier_party_id: id })} /></div>
           <button type="submit" disabled={create.isPending} className={buttonSecondary}>Ajouter</button>
         </form>
       )}
@@ -524,14 +607,16 @@ function TrailerPanel({ trailers, isLoading, canCreate }: { trailers: Trailer[];
           <tr className="border-b border-line text-left text-[10px] uppercase tracking-wider text-ink-3">
             <th className="px-2 py-2">Immat.</th>
             <th className="px-2 py-2">Type</th>
+            <th className="px-2 py-2">Propriétaire</th>
           </tr>
         </thead>
         <tbody>
-          {isLoading && <tr><td colSpan={2} className="px-2 py-6 text-center text-ink-3">Chargement…</td></tr>}
+          {isLoading && <tr><td colSpan={3} className="px-2 py-6 text-center text-ink-3">Chargement…</td></tr>}
           {trailers.map((trailer) => (
             <tr key={trailer.id} className="border-b border-line last:border-0">
               <td className="mono px-2 py-2 font-semibold">{trailer.plate_number}</td>
               <td className="px-2 py-2 text-ink-2">{trailer.type ?? "—"}</td>
+              <td className="px-2 py-2"><OwnerBadge carrierId={trailer.carrier_party_id} /></td>
             </tr>
           ))}
         </tbody>
@@ -542,7 +627,7 @@ function TrailerPanel({ trailers, isLoading, canCreate }: { trailers: Trailer[];
 
 function DriverPanel({ drivers, isLoading, canCreate }: { drivers: Driver[]; isLoading: boolean; canCreate: boolean }) {
   const queryClient = useQueryClient();
-  const [form, setForm] = useState({ name: "", phone: "", license_number: "" });
+  const [form, setForm] = useState({ name: "", phone: "", license_number: "", carrier_party_id: "" });
   const [error, setError] = useState<string | null>(null);
 
   const create = useMutation({
@@ -552,12 +637,13 @@ function DriverPanel({ drivers, isLoading, canCreate }: { drivers: Driver[]; isL
           name: form.name,
           phone: form.phone || null,
           license_number: form.license_number || null,
+          carrier_party_id: form.carrier_party_id || null,
         },
       });
       if (problem) throw problem;
     },
     onSuccess: () => {
-      setForm({ name: "", phone: "", license_number: "" });
+      setForm({ name: "", phone: "", license_number: "", carrier_party_id: "" });
       setError(null);
       queryClient.invalidateQueries({ queryKey: ["drivers"] });
     },
@@ -583,16 +669,18 @@ function DriverPanel({ drivers, isLoading, canCreate }: { drivers: Driver[]; isL
             <th className="px-2 py-2">Téléphone</th>
             <th className="px-2 py-2">Permis</th>
             <th className="px-2 py-2">Expiration</th>
+            <th className="px-2 py-2">Employeur</th>
           </tr>
         </thead>
         <tbody>
-          {isLoading && <tr><td colSpan={4} className="px-2 py-6 text-center text-ink-3">Chargement…</td></tr>}
+          {isLoading && <tr><td colSpan={5} className="px-2 py-6 text-center text-ink-3">Chargement…</td></tr>}
           {drivers.map((driver) => (
             <tr key={driver.id} className="border-b border-line last:border-0">
               <td className="px-2 py-2 font-semibold">{driver.name}</td>
               <td className="mono px-2 py-2 text-ink-2">{driver.phone ?? "—"}</td>
               <td className="mono px-2 py-2 text-ink-2">{driver.license_number ?? "—"}</td>
               <td className="mono px-2 py-2 text-ink-2">{driver.license_expiry ? new Date(driver.license_expiry).toLocaleDateString("fr-FR") : "—"}</td>
+              <td className="px-2 py-2"><OwnerBadge carrierId={driver.carrier_party_id} /></td>
             </tr>
           ))}
         </tbody>

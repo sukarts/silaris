@@ -7,6 +7,7 @@ namespace Silaris\Modules\Road\Infrastructure\Persistence\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
+use Silaris\Modules\Crm\Infrastructure\Persistence\Model\PartyModel;
 use Silaris\Modules\Shared\Infrastructure\Persistence\BaseModel;
 use Silaris\Modules\Shared\Infrastructure\Persistence\Concerns\BelongsToTenant;
 use Silaris\Modules\Shipment\Infrastructure\Persistence\Model\ShipmentModel;
@@ -37,6 +38,12 @@ class MissionModel extends BaseModel
     public function truck(): BelongsTo
     {
         return $this->belongsTo(TruckModel::class, 'truck_id');
+    }
+
+    /** Transporteur affrété — absent quand la mission est assurée en propre. */
+    public function carrier(): BelongsTo
+    {
+        return $this->belongsTo(PartyModel::class, 'carrier_party_id');
     }
 
     public function stops(): HasMany
