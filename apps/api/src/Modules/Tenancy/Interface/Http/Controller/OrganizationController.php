@@ -8,8 +8,10 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
 use Silaris\Modules\Shared\Infrastructure\Tenancy\TenantContext;
 use Silaris\Modules\Shipment\Infrastructure\Persistence\SequenceReferenceGenerator;
+use Silaris\Modules\Tenancy\Application\Service\BranchCodeGenerator;
 use Silaris\Modules\Tenancy\Application\Service\BrandingResolver;
 use Silaris\Modules\Tenancy\Infrastructure\Persistence\Model\BranchModel;
 use Silaris\Modules\Tenancy\Infrastructure\Persistence\Model\CompanyModel;
@@ -60,17 +62,53 @@ class OrganizationController
     {
         CompanyModel::findOrFail($companyId);
 
-        return response()->json(BranchModel::create([
-            ...$request->validate([
-                'name' => ['required', 'string', 'max:255'],
-                'code' => ['required', 'string', 'max:8', 'alpha_num:ascii'],
-                'timezone' => ['sometimes', 'timezone:all'],
-                'address' => ['sometimes', 'array'],
-                'phone' => ['nullable', 'string', 'max:32'],
-                'email' => ['nullable', 'email', 'max:255'],
-            ]),
-            'company_id' => $companyId,
-        ]), 201);
+        if (is_string($request->input('country_code'))) {
+            $request->merge(['country_code' => strtoupper($request->string('country_code')->toString())]);
+        }
+
+        $data = $request->validate([
+            'name' => ['required', 'string', 'max:255'],
+            'code' => ['sometimes', 'nullable', 'string', 'max:8', 'alpha_num:ascii'],
+            'kind' => ['sometimes', Rule::in(['own', 'partner'])],
+            'partner_name' => ['nullable', 'string', 'max:255'],
+            // La localisation alimente le code : elle n'est exigée que lorsque
+            // le transitaire laisse SILARIS le générer.
+            'country_code' => ['required_without:code', 'nullable', 'size:2', 'exists:countries,code2'],
+            'city' => ['required_without:code', 'nullable', 'string', 'max:120'],
+            'locode' => ['sometimes', 'nullable', 'size:5'],
+            'timezone' => ['sometimes', 'timezone:all'],
+            'address' => ['sometimes', 'array'],
+            'phone' => ['nullable', 'string', 'max:32'],
+            'email' => ['nullable', 'email', 'max:255'],
+        ]);
+
+        // Code normalisé UN/LOCODE si l'utilisateur n'impose rien.
+        $data['kind'] ??= 'own';
+        if (($data['code'] ?? '') === '') {
+            $data['code'] = app(BranchCodeGenerator::class)
+                ->generate($data['country_code'], $data['city'], $data['locode'] ?? null);
+        }
+
+        return response()->json(BranchModel::create([...$data, 'company_id' => $companyId]), 201);
+    }
+
+    /**
+     * GET /v1/admin/branches/code-preview — code proposé pour un pays/ville,
+     * sans créer l'agence.
+     */
+    public function branchCodePreview(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'country_code' => ['required', 'size:2'],
+            'city' => ['required', 'string', 'max:120'],
+            'locode' => ['sometimes', 'nullable', 'size:5'],
+        ]);
+
+        return response()->json([
+            'code' => app(BranchCodeGenerator::class)->generate(
+                strtoupper($data['country_code']), $data['city'], $data['locode'] ?? null,
+            ),
+        ]);
     }
 
     public function updateBranch(Request $request, string $branchId): JsonResponse
@@ -78,6 +116,10 @@ class OrganizationController
         $branch = BranchModel::findOrFail($branchId);
         $branch->update($request->validate([
             'name' => ['sometimes', 'string', 'max:255'],
+            'kind' => ['sometimes', Rule::in(['own', 'partner'])],
+            'partner_name' => ['nullable', 'string', 'max:255'],
+            'country_code' => ['sometimes', 'size:2', 'exists:countries,code2'],
+            'city' => ['sometimes', 'string', 'max:120'],
             'timezone' => ['sometimes', 'timezone:all'],
             'address' => ['sometimes', 'array'],
             'phone' => ['nullable', 'string', 'max:32'],
