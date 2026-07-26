@@ -2,6 +2,9 @@ import { defineConfig } from "@playwright/test";
 
 export default defineConfig({
   testDir: "./e2e",
+  // capture.spec.ts produit les visuels de la présentation commerciale : lancé
+  // à la demande, il n'a rien à faire dans le run de non-régression.
+  testIgnore: "**/capture.spec.ts",
   timeout: 30_000,
   retries: 1,
   // Le serveur API en CI est `php artisan serve` (mono-thread, sans opcache) :
