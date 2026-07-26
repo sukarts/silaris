@@ -40,6 +40,11 @@ class AppServiceProvider extends ServiceProvider
         ]);
 
         // API interne : par utilisateur (ou IP avant auth).
+        // Balises : un lot par minute et par balise suffit largement ; borne les
+        // rejeux massifs sans pénaliser les remontées de tampon après coupure.
+        RateLimiter::for('telematics', fn (Request $request) => Limit::perMinute(60)
+            ->by((string) $request->header('X-Device-Key', $request->ip())));
+
         RateLimiter::for('api', fn (Request $request) => Limit::perMinute(120)->by($request->user()->id ?? $request->ip()));
     }
 }
