@@ -23,6 +23,17 @@ class CarrierStatusMappingSeeder extends Seeder
         $now = now();
 
         $mappings = [
+            'JCGO' => [
+                'Empty to shipper' => 'GTOT', 'Gate in' => 'GTIN', 'Gate In' => 'GTIN',
+                'Export received at CY' => 'GTIN', 'Received at origin' => 'GTIN',
+                'Loaded on vessel' => 'LOAD', 'Loaded' => 'LOAD', 'Load' => 'LOAD',
+                'Vessel departure' => 'DEPA', 'Vessel departed' => 'DEPA', 'Departed' => 'DEPA',
+                'Transshipment loaded' => 'TRSH', 'Transhipment' => 'TRSH',
+                'Vessel arrival' => 'ARRI', 'Vessel arrived' => 'ARRI', 'Arrived' => 'ARRI',
+                'Discharged from vessel' => 'DISC', 'Discharged' => 'DISC', 'Discharge' => 'DISC',
+                'Gate out' => 'GTOT', 'Gate Out' => 'GTOT', 'Import gate out' => 'GTOT',
+                'Empty received at CY' => 'RETU', 'Empty returned' => 'RETU', 'Empty return' => 'RETU',
+            ],
             'MSCU' => [
                 'Empty to shipper' => 'GTOT', 'Export received at CY' => 'GTIN',
                 'Loaded on vessel' => 'LOAD', 'Vessel departure' => 'DEPA',

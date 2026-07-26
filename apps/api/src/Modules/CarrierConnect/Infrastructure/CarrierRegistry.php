@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\DB;
 use RuntimeException;
 use Silaris\Modules\CarrierConnect\Infrastructure\Connector\ApiKeyDcsaConnector;
 use Silaris\Modules\CarrierConnect\Infrastructure\Connector\FakeCarrierConnector;
+use Silaris\Modules\CarrierConnect\Infrastructure\Connector\JsonCargoConnector;
 use Silaris\Modules\CarrierConnect\Infrastructure\Connector\MaerskConnector;
 use Silaris\Modules\CarrierConnect\Infrastructure\Support\ExchangeLogger;
 use Silaris\Modules\CarrierConnect\Infrastructure\Support\StatusNormalizer;
@@ -40,8 +41,24 @@ final readonly class CarrierRegistry
         private StatusNormalizer $normalizer,
     ) {}
 
+    /** SCAC → paramètre shipping_line JSONCargo (agrégateur multi-compagnies). */
+    private const JSONCARGO_LINES = [
+        'MAEU' => 'MAERSK',
+        'MSCU' => 'MSC',
+        'CMDU' => 'CMA_CGM',
+        'HLCU' => 'HAPAG_LLOYD',
+        'ONEY' => 'ONE',
+        'EGLV' => 'EVERGREEN',
+        'YMLU' => 'YANG_MING',
+        'COSU' => 'COSCO',
+        'ZIMU' => 'ZIM',
+        'HDMU' => 'HMM',
+        'PCIU' => 'PIL',
+    ];
+
     public function resolve(string $scac): CarrierTrackingProvider
     {
+        // 1. Credentials dédiés à la compagnie (contrat direct) — priorité.
         $credentials = $this->credentialsFor($scac);
 
         if ($credentials !== null) {
@@ -54,6 +71,21 @@ final readonly class CarrierRegistry
                 return new ApiKeyDcsaConnector($scac, $baseUrl, $header, $credentials, $this->logger, $this->normalizer);
             }
             throw new RuntimeException("Connecteur inconnu pour SCAC {$scac}");
+        }
+
+        // 2. Agrégateur JSONCargo : clé tenant (scac JSONCARGO) sinon clé plateforme (env).
+        if (isset(self::JSONCARGO_LINES[$scac])) {
+            $apiKey = $this->credentialsFor('JCGO')['api_key']
+                ?? config('services.jsoncargo.api_key');
+            if (is_string($apiKey) && $apiKey !== '') {
+                return new JsonCargoConnector(
+                    self::JSONCARGO_LINES[$scac],
+                    $apiKey,
+                    rtrim((string) config('services.jsoncargo.base_url'), '/'),
+                    $this->logger,
+                    $this->normalizer,
+                );
+            }
         }
 
         if (! app()->environment('production')) {
