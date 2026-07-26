@@ -13,5 +13,6 @@ Route::prefix('admin')->group(function (): void {
     Route::get('/companies/{companyId}/logo-url', [OrganizationController::class, 'logoUrlFor'])->whereUuid('companyId')->can('companies.read');
     Route::get('/companies/{companyId}/reference-preview', [OrganizationController::class, 'referencePreview'])->whereUuid('companyId')->can('companies.read');
     Route::post('/companies/{companyId}/branches', [OrganizationController::class, 'storeBranch'])->whereUuid('companyId')->can('branches.create');
+    Route::get('/branches/code-preview', [OrganizationController::class, 'branchCodePreview'])->can('branches.create');
     Route::patch('/branches/{branchId}', [OrganizationController::class, 'updateBranch'])->whereUuid('branchId')->can('branches.update');
 });

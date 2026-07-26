@@ -1,7 +1,7 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { problemMessage, rawApi } from "@/lib/api";
 import { Field, buttonPrimary, buttonSecondary, inputClass } from "@/components/Field";
 import { CountrySelect } from "@/components/CountrySelect";
@@ -11,7 +11,12 @@ interface Branch {
   id: string;
   name: string;
   code: string;
+  kind: "own" | "partner";
+  partner_name: string | null;
+  country_code: string | null;
+  city: string | null;
   timezone: string;
+  address: { line1?: string; postal_code?: string } | null;
   phone: string | null;
   email: string | null;
   is_active: boolean;
@@ -38,11 +43,22 @@ const FORMAT_PRESETS = [
   { format: "{BRANCH}-{YEAR}-{SEQ:5}", label: "ABJ-2026-00128 — code agence + année" },
 ];
 
-const TIMEZONES = [
+/**
+ * Un correspondant peut se trouver n'importe où : la liste complète de l'IANA
+ * est exposée, les fuseaux de la zone d'activité historique restant en tête.
+ */
+const FREQUENT_TIMEZONES = [
   "Africa/Abidjan", "Africa/Dakar", "Africa/Bamako", "Africa/Conakry", "Africa/Ouagadougou",
   "Africa/Lome", "Africa/Cotonou", "Africa/Accra", "Africa/Lagos", "Africa/Douala",
   "Africa/Casablanca", "Africa/Tunis", "Africa/Algiers", "Europe/Paris", "UTC",
 ];
+
+function allTimezones(): string[] {
+  const supported = Intl.supportedValuesOf?.("timeZone") ?? [];
+  const rest = supported.filter((tz) => !FREQUENT_TIMEZONES.includes(tz)).sort();
+
+  return [...FREQUENT_TIMEZONES, ...rest];
+}
 
 function CompanyTab({ company, canUpdate }: { company: Company; canUpdate: boolean }) {
   const queryClient = useQueryClient();
@@ -221,15 +237,46 @@ function CompanyTab({ company, canUpdate }: { company: Company; canUpdate: boole
 
 function BranchesTab({ company, canCreate }: { company: Company; canCreate: boolean }) {
   const queryClient = useQueryClient();
-  const emptyBranch = { name: "", code: "", timezone: "Africa/Abidjan", phone: "", email: "" };
+  const emptyBranch = {
+    name: "", kind: "own" as "own" | "partner", partner_name: "",
+    country_code: "", city: "", line1: "", postal_code: "",
+    timezone: "Africa/Abidjan", phone: "", email: "",
+  };
   const [form, setForm] = useState(emptyBranch);
   const [showForm, setShowForm] = useState(false);
+  const [suggestedCode, setSuggestedCode] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const timezones = useMemo(allTimezones, []);
+
+  // Le code suit la nomenclature UN/LOCODE : on le montre avant création pour
+  // que l'utilisateur sache sous quel code l'agence apparaîtra.
+  useEffect(() => {
+    if (form.country_code === "" || form.city.trim() === "") {
+      setSuggestedCode("");
+
+      return;
+    }
+    const timer = setTimeout(async () => {
+      const { data } = await rawApi.GET("/v1/admin/branches/code-preview", {
+        params: { query: { country_code: form.country_code, city: form.city.trim() } },
+      });
+      setSuggestedCode((data as { code?: string } | undefined)?.code ?? "");
+    }, 300);
+
+    return () => clearTimeout(timer);
+  }, [form.country_code, form.city]);
 
   const create = useMutation({
     mutationFn: async () => {
+      const { line1, postal_code, ...rest } = form;
       const { error: problem } = await rawApi.POST(`/v1/admin/companies/${company.id}/branches`, {
-        body: { ...form, phone: form.phone || null, email: form.email || null },
+        body: {
+          ...rest,
+          partner_name: form.kind === "partner" ? form.partner_name : null,
+          address: line1 || postal_code ? { line1, postal_code } : {},
+          phone: form.phone || null,
+          email: form.email || null,
+        },
       });
       if (problem) throw problem;
     },
@@ -253,7 +300,9 @@ function BranchesTab({ company, canCreate }: { company: Company; canCreate: bool
   return (
     <div className="flex flex-col gap-4">
       <div className="flex items-start">
-        <p className="text-[13px] text-ink-3">Agences de {company.legal_name} — le code agence sert dans les références dossier.</p>
+        <p className="text-[13px] text-ink-3">
+          Agences de {company.legal_name} — implantations propres et correspondants partenaires. Le code agence sert dans les références dossier.
+        </p>
         {canCreate && (
           <button onClick={() => setShowForm((v) => !v)} className={`ml-auto ${buttonPrimary}`}>+ Nouvelle agence</button>
         )}
@@ -261,23 +310,66 @@ function BranchesTab({ company, canCreate }: { company: Company; canCreate: bool
 
       {showForm && (
         <form onSubmit={(e) => { e.preventDefault(); create.mutate(); }} className="grid gap-4 rounded-xl border border-line bg-surface p-5 shadow-sm md:grid-cols-3">
-          <Field label="Nom de l'agence" className="md:col-span-2">
+          <Field label="Type d'implantation" className="md:col-span-3">
+            <div className="flex gap-2">
+              {([["own", "Agence propre"], ["partner", "Correspondant partenaire"]] as const).map(([key, label]) => (
+                <button
+                  key={key}
+                  type="button"
+                  onClick={() => setForm({ ...form, kind: key })}
+                  className={`rounded-full border px-3.5 py-1 text-xs font-semibold ${
+                    form.kind === key ? "border-ink bg-ink text-paper" : "border-line-strong text-ink-2 hover:bg-paper"
+                  }`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          </Field>
+
+          <Field label="Nom de l'agence" className={form.kind === "partner" ? "" : "md:col-span-2"}>
             <input required value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Agence Abidjan" className={inputClass} />
           </Field>
-          <Field label="Code (max 8)">
-            <input required maxLength={8} value={form.code} onChange={(e) => setForm({ ...form, code: e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, "") })} placeholder="ABJ" className={`${inputClass} mono`} />
+          {form.kind === "partner" && (
+            <Field label="Raison sociale du correspondant">
+              <input required value={form.partner_name} onChange={(e) => setForm({ ...form, partner_name: e.target.value })} placeholder="Global Freight Ltd" className={inputClass} />
+            </Field>
+          )}
+          <Field label="Code agence">
+            <input
+              readOnly
+              value={suggestedCode}
+              placeholder="généré"
+              className={`${inputClass} mono bg-paper text-ink-2`}
+            />
+          </Field>
+
+          <Field label="Pays">
+            <CountrySelect required value={form.country_code} onChange={(code2) => setForm({ ...form, country_code: code2 })} />
+          </Field>
+          <Field label="Ville">
+            <input required value={form.city} onChange={(e) => setForm({ ...form, city: e.target.value })} placeholder="Abidjan" className={inputClass} />
           </Field>
           <Field label="Fuseau horaire">
             <select value={form.timezone} onChange={(e) => setForm({ ...form, timezone: e.target.value })} className={inputClass}>
-              {TIMEZONES.map((tz) => <option key={tz} value={tz}>{tz}</option>)}
+              {timezones.map((tz) => <option key={tz} value={tz}>{tz}</option>)}
             </select>
           </Field>
+
+          <Field label="Adresse" className="md:col-span-2">
+            <input value={form.line1} onChange={(e) => setForm({ ...form, line1: e.target.value })} placeholder="Zone portuaire, rue du Havre" className={inputClass} />
+          </Field>
+          <Field label="Code postal">
+            <input value={form.postal_code} onChange={(e) => setForm({ ...form, postal_code: e.target.value })} className={`${inputClass} mono`} />
+          </Field>
+
           <Field label="Téléphone">
             <input value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} className={`${inputClass} mono`} />
           </Field>
-          <Field label="Email">
+          <Field label="Email" className="md:col-span-2">
             <input type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} className={inputClass} />
           </Field>
+
           {error && <p className="rounded-lg bg-crit-soft px-3 py-2 text-xs text-crit md:col-span-3">{error}</p>}
           <div className="flex gap-2 md:col-span-3">
             <button type="submit" disabled={create.isPending} className={buttonPrimary}>Créer l&apos;agence</button>
@@ -292,9 +384,10 @@ function BranchesTab({ company, canCreate }: { company: Company; canCreate: bool
             <tr className="border-b border-line text-left text-[10px] uppercase tracking-wider text-ink-3">
               <th className="px-3 py-2.5">Code</th>
               <th className="px-3 py-2.5">Nom</th>
+              <th className="px-3 py-2.5">Type</th>
+              <th className="px-3 py-2.5">Localisation</th>
               <th className="px-3 py-2.5">Fuseau</th>
-              <th className="px-3 py-2.5">Téléphone</th>
-              <th className="px-3 py-2.5">Email</th>
+              <th className="px-3 py-2.5">Contact</th>
               <th className="px-3 py-2.5">Statut</th>
               <th className="px-3 py-2.5" />
             </tr>
@@ -303,10 +396,23 @@ function BranchesTab({ company, canCreate }: { company: Company; canCreate: bool
             {company.branches.map((branch) => (
               <tr key={branch.id} className="border-b border-line last:border-0">
                 <td className="mono px-3 py-2.5 font-semibold text-sea">{branch.code}</td>
-                <td className="px-3 py-2.5">{branch.name}</td>
+                <td className="px-3 py-2.5">
+                  {branch.name}
+                  {branch.partner_name && <span className="block text-[11px] text-ink-3">{branch.partner_name}</span>}
+                </td>
+                <td className="px-3 py-2.5">
+                  <span className={`rounded-full px-2.5 py-0.5 text-[11px] font-semibold ${branch.kind === "partner" ? "bg-sea-soft text-sea" : "bg-paper text-ink-2"}`}>
+                    {branch.kind === "partner" ? "Partenaire" : "Propre"}
+                  </span>
+                </td>
+                <td className="px-3 py-2.5 text-ink-2">
+                  {branch.city ? `${branch.city}${branch.country_code ? ` (${branch.country_code})` : ""}` : "—"}
+                </td>
                 <td className="px-3 py-2.5 text-ink-2">{branch.timezone}</td>
-                <td className="mono px-3 py-2.5 text-ink-2">{branch.phone ?? "—"}</td>
-                <td className="px-3 py-2.5 text-ink-2">{branch.email ?? "—"}</td>
+                <td className="px-3 py-2.5 text-ink-2">
+                  {branch.phone && <span className="mono block">{branch.phone}</span>}
+                  {branch.email ?? (branch.phone ? "" : "—")}
+                </td>
                 <td className="px-3 py-2.5">
                   <span className={`rounded-full px-2.5 py-0.5 text-[11px] font-semibold ${branch.is_active ? "bg-ok-soft text-ok" : "bg-warn-soft text-warn"}`}>
                     {branch.is_active ? "Active" : "Inactive"}
