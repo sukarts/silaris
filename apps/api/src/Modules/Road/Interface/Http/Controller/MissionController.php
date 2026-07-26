@@ -8,6 +8,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 use Silaris\Modules\Road\Infrastructure\Persistence\Model\MissionModel;
 use Silaris\Modules\Shared\Domain\Exception\DomainException;
 use Silaris\Modules\Shared\Infrastructure\Tenancy\TenantContext;
@@ -44,7 +45,7 @@ class MissionController
         ]);
 
         return response()->json(
-            MissionModel::with(['driver:id,name', 'truck:id,plate_number', 'shipment:id,reference', 'stops'])
+            MissionModel::with(['driver:id,name', 'truck:id,plate_number', 'carrier:id,name', 'shipment:id,reference', 'stops'])
                 ->when($validated['status'] ?? null, fn ($q, $s) => $q->where('status', $s))
                 ->when($validated['driver_id'] ?? null, fn ($q, $d) => $q->where('driver_id', $d))
                 ->when($validated['date'] ?? null, fn ($q, $d) => $q->whereDate('window_start', $d))
@@ -57,6 +58,8 @@ class MissionController
     {
         $data = $request->validate([
             'shipment_id' => ['nullable', 'uuid', 'exists:shipments,id'],
+            'carrier_party_id' => ['nullable', 'uuid', 'exists:parties,id'],
+            'carrier_reference' => ['nullable', 'string', 'max:64'],
             'truck_id' => ['nullable', 'uuid', 'exists:trucks,id'],
             'trailer_id' => ['nullable', 'uuid', 'exists:trailers,id'],
             'driver_id' => ['nullable', 'uuid', 'exists:drivers,id'],
@@ -73,6 +76,8 @@ class MissionController
         $stops = $data['stops'] ?? [];
         unset($data['stops']);
 
+        $this->assertResourcesBelongToCarrier($data);
+
         $sequence = DB::selectOne('SELECT next_sequence(?, ?) AS value', [$tenant->id(), 'mission:'.date('Y')])->value;
         $mission = MissionModel::create([...$data, 'reference' => sprintf('MIS-%d-%03d', date('Y'), $sequence)]);
         foreach ($stops as $i => $stop) {
@@ -80,6 +85,36 @@ class MissionController
         }
 
         return response()->json($mission->fresh(['stops']), 201);
+    }
+
+    /**
+     * Un camion ou un chauffeur appartenant à un prestataire ne peut être
+     * affecté qu'aux missions confiées à ce prestataire : sans ce garde-fou,
+     * le dossier attribuerait le moyen d'un transporteur à un autre.
+     *
+     * @param  array<string, mixed>  $data
+     */
+    private function assertResourcesBelongToCarrier(array $data): void
+    {
+        $missionCarrier = $data['carrier_party_id'] ?? null;
+
+        foreach (['truck_id' => 'trucks', 'trailer_id' => 'trailers', 'driver_id' => 'drivers'] as $key => $table) {
+            $id = $data[$key] ?? null;
+            if ($id === null) {
+                continue;
+            }
+
+            $owner = DB::table($table)->where('id', $id)->value('carrier_party_id');
+            if ($owner === $missionCarrier) {
+                continue;
+            }
+
+            throw ValidationException::withMessages([$key => match (true) {
+                $owner === null => 'Ce moyen appartient à la flotte propre : retirez le transporteur affrété.',
+                $missionCarrier === null => 'Ce moyen appartient à un prestataire : renseignez le transporteur de la mission.',
+                default => 'Ce moyen appartient à un autre transporteur que celui de la mission.',
+            }]);
+        }
     }
 
     /** POST /v1/missions/{id}/transition — start / deliver / fail / cancel. */

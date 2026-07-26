@@ -31,6 +31,20 @@ const INDUSTRIES = [
 ];
 
 const TYPE_LABEL: Record<string, string> = { client: "Client", prospect: "Prospect", supplier: "Fournisseur" };
+
+/** Métiers des fournisseurs du transit — le transporteur routier sert à la sous-traitance des missions. */
+const SUPPLIER_KINDS: [string, string][] = [
+  ["trucker", "Transporteur routier"],
+  ["ocean_carrier", "Compagnie maritime"],
+  ["airline", "Compagnie aérienne"],
+  ["customs_agent", "Commissionnaire en douane"],
+  ["handler", "Manutentionnaire"],
+  ["port_agent", "Agent portuaire"],
+  ["overseas_agent", "Agent à l'étranger"],
+  ["insurer", "Assureur"],
+];
+
+const SUPPLIER_LABEL: Record<string, string> = Object.fromEntries(SUPPLIER_KINDS);
 const TYPE_TONE: Record<string, string> = {
   client: "bg-ok-soft text-ok",
   prospect: "bg-warn-soft text-warn",
@@ -47,7 +61,7 @@ export default function CrmPage() {
   const [search, setSearch] = useState("");
   const [showForm, setShowForm] = useState(false);
   const emptyForm = {
-    type: "client", kind: "company", code: "", name: "", tax_id: "", industry: "",
+    type: "client", kind: "company", supplier_kind: "trucker", code: "", name: "", tax_id: "", industry: "",
     currency_code: "XOF", payment_terms_days: "30",
     contact_name: "", contact_email: "", contact_dial: "+225", contact_phone: "",
     address_line1: "", address_city: "", address_country: "",
@@ -71,6 +85,7 @@ export default function CrmPage() {
         body: {
           type: form.type,
           kind: form.kind,
+          ...(form.type === "supplier" ? { supplier_kind: form.supplier_kind } : {}),
           code: form.code || null,
           name: form.name,
           tax_id: form.tax_id || null,
@@ -144,8 +159,16 @@ export default function CrmPage() {
             <select value={form.type} onChange={(e) => setForm({ ...form, type: e.target.value })} className={inputClass}>
               <option value="client">Client</option>
               <option value="prospect">Prospect</option>
+              <option value="supplier">Fournisseur</option>
             </select>
           </Field>
+          {form.type === "supplier" && (
+            <Field label="Métier du fournisseur">
+              <select value={form.supplier_kind} onChange={(e) => setForm({ ...form, supplier_kind: e.target.value })} className={inputClass}>
+                {SUPPLIER_KINDS.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
+              </select>
+            </Field>
+          )}
           <Field label="Nature">
             <select value={form.kind} onChange={(e) => setForm({ ...form, kind: e.target.value })} className={inputClass}>
               <option value="company">Personne morale (société)</option>
@@ -255,7 +278,7 @@ export default function CrmPage() {
                 <td className="px-3 py-2.5">
                   <span className={`rounded-full px-2.5 py-0.5 text-[11px] font-semibold ${TYPE_TONE[party.type]}`}>
                     {TYPE_LABEL[party.type]}
-                    {party.supplier_kind ? ` · ${party.supplier_kind}` : ""}
+                    {party.supplier_kind ? ` · ${SUPPLIER_LABEL[party.supplier_kind] ?? party.supplier_kind}` : ""}
                   </span>
                 </td>
                 <td className="mono px-3 py-2.5">{party.currency_code ?? "—"}</td>
