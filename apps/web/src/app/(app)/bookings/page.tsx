@@ -4,6 +4,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { problemMessage, rawApi } from "@/lib/api";
 import { Field, buttonPrimary, buttonSecondary, inputClass } from "@/components/Field";
+import { PlaceCombobox } from "@/components/PlaceCombobox";
 import { useCan } from "@/stores/auth";
 
 interface Booking {
@@ -44,7 +45,7 @@ const STATUS_TONE: Record<string, string> = {
   cancelled: "bg-crit-soft text-crit",
 };
 
-const emptyForm = { shipment_id: "", carrier_id: "", booking_number: "", vgm_cutoff: "", doc_cutoff: "", port_cutoff: "", notes: "" };
+const emptyForm = { shipment_id: "", carrier_id: "", carrier_display: "", booking_number: "", vgm_cutoff: "", doc_cutoff: "", port_cutoff: "", notes: "" };
 
 function formatDate(value: string | null | undefined) {
   return value ? new Date(value).toLocaleDateString("fr-FR", { day: "2-digit", month: "2-digit" }) : "—";
@@ -158,8 +159,18 @@ export default function BookingsPage() {
               ))}
             </select>
           </Field>
-          <Field label="Compagnie (UUID)" className="md:col-span-2">
-            <input required value={form.carrier_id} onChange={(e) => setForm({ ...form, carrier_id: e.target.value })} className={`${inputClass} mono`} />
+          <Field label="Compagnie" className="md:col-span-2">
+            <PlaceCombobox
+              referential="carriers"
+              required
+              value={form.carrier_display}
+              placeholder="MSC, Maersk, CMA…"
+              onChange={(v) => setForm({ ...form, carrier_display: v, carrier_id: "" })}
+              onPick={(s) => setForm({ ...form, carrier_display: `${s.code} — ${s.label}`, carrier_id: s.id ?? "" })}
+            />
+            {form.carrier_display !== "" && form.carrier_id === "" && (
+              <p className="pt-1 text-[10px] text-warn">Sélectionnez une compagnie dans la liste.</p>
+            )}
           </Field>
           <Field label="N° booking" className="md:col-span-2">
             <input maxLength={32} value={form.booking_number} onChange={(e) => setForm({ ...form, booking_number: e.target.value.toUpperCase() })} className={`${inputClass} mono`} />
@@ -178,7 +189,7 @@ export default function BookingsPage() {
           </Field>
           {error && <p className="rounded-lg bg-crit-soft px-3 py-2 text-xs text-crit md:col-span-6">{error}</p>}
           <div className="flex gap-2 md:col-span-6">
-            <button type="submit" disabled={create.isPending} className={buttonPrimary}>Créer</button>
+            <button type="submit" disabled={create.isPending || form.carrier_id === ""} className={buttonPrimary}>Créer</button>
             <button type="button" onClick={() => setShowForm(false)} className={buttonSecondary}>Annuler</button>
           </div>
         </form>
