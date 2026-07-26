@@ -34,6 +34,7 @@ const NAV = [
     items: [
       { href: "/documents", label: "Documents", perm: "documents.read" },
       { href: "/admin", label: "Administration", perm: "users.read" },
+      { href: "/settings", label: "Paramètres", perm: "companies.read" },
     ],
   },
 ];

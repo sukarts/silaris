@@ -8,25 +8,64 @@ use Illuminate\Support\Facades\DB;
 use Silaris\Modules\Shared\Infrastructure\Tenancy\TenantContext;
 use Silaris\Modules\Shipment\Application\Port\ReferenceGenerator;
 use Silaris\Modules\Tenancy\Infrastructure\Persistence\Model\BranchModel;
+use Silaris\Modules\Tenancy\Infrastructure\Persistence\Model\CompanyModel;
 
 /**
- * Référence dossier : {CODE_SOCIETE}-{ANNEE}-{SEQ:5}, séquence sans trou
- * par agence+année via next_sequence() (verrou ligne, même transaction).
+ * Référence dossier : format choisi par le transitaire dans les paramètres
+ * société (companies.shipment_settings), séquence sans trou par agence+année
+ * via next_sequence() (verrou ligne, même transaction).
+ *
+ * Placeholders : {PREFIX} {COMPANY} {BRANCH} {YEAR} {YY} {MONTH} {SEQ:n}
+ * Défaut historique : {COMPANY}-{YEAR}-{SEQ:5} → TAL-2026-00128
  */
 final readonly class SequenceReferenceGenerator implements ReferenceGenerator
 {
+    public const DEFAULT_FORMAT = '{COMPANY}-{YEAR}-{SEQ:5}';
+
     public function __construct(private TenantContext $tenant) {}
 
     public function nextShipmentReference(string $branchId): string
     {
         $branch = BranchModel::with('company')->findOrFail($branchId);
+        /** @var CompanyModel $company */
+        $company = $branch->company;
         $year = (int) date('Y');
 
-        $next = DB::selectOne(
+        $next = (int) DB::selectOne(
             'SELECT next_sequence(?, ?) AS value',
             [$this->tenant->id(), "shipment:{$branch->code}:{$year}"],
         )->value;
 
-        return sprintf('%s-%d-%05d', $branch->company->code, $year, $next);
+        $settings = $company->shipment_settings ?? [];
+        $format = (string) ($settings['reference_format'] ?? self::DEFAULT_FORMAT);
+        $prefix = (string) ($settings['reference_prefix'] ?? $company->code);
+
+        return self::render($format, [
+            'PREFIX' => $prefix,
+            'COMPANY' => (string) $company->code,
+            'BRANCH' => (string) $branch->code,
+            'YEAR' => (string) $year,
+            'YY' => date('y'),
+            'MONTH' => date('m'),
+        ], $next);
+    }
+
+    /**
+     * Substitue les placeholders ; {SEQ:n} pade la séquence sur n chiffres.
+     *
+     * @param  array<string, string>  $tokens
+     */
+    public static function render(string $format, array $tokens, int $sequence): string
+    {
+        $rendered = $format;
+        foreach ($tokens as $key => $value) {
+            $rendered = str_replace('{'.$key.'}', $value, $rendered);
+        }
+
+        return (string) preg_replace_callback(
+            '/\{SEQ:(\d+)\}/',
+            fn (array $m): string => str_pad((string) $sequence, (int) $m[1], '0', STR_PAD_LEFT),
+            $rendered,
+        );
     }
 }
