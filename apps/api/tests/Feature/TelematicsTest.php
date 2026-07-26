@@ -145,3 +145,37 @@ it('calcule correctement une distance connue (Abidjan → Yopougon ≈ 10 km)', 
 
     expect($meters)->toBeGreaterThan(9_000)->toBeLessThan(11_000);
 });
+
+it('expose la position de livraison au suivi public, arrondie et seulement en cours', function (): void {
+    $ids = seedCore();
+    $shipmentId = seedShipmentFor($ids, $ids['client'], 'TRK-2026-00001');
+    $ctx = seedTelematics($ids);
+    DB::table('missions')->where('id', $ctx['mission'])->update(['shipment_id' => $shipmentId]);
+
+    $this->withHeader('X-Device-Key', $ctx['key'])->postJson('/api/v1/telematics/positions', ['positions' => [
+        ['latitude' => 5.273512, 'longitude' => -4.008399, 'recorded_at' => now()->subMinutes(5)->toIso8601String()],
+    ]]);
+
+    $delivery = $this->getJson('/api/v1/public/tracking?q=TRK-2026-00001')
+        ->assertOk()->json('delivery');
+
+    expect($delivery['status'])->toBe('in_delivery')
+        // Arrondi ~100 m : le trajet du conducteur n'est pas pistable au mètre.
+        ->and($delivery['latitude'])->toBe(5.274)
+        ->and($delivery['longitude'])->toBe(-4.008)
+        ->and($delivery['destination']['label'])->toBe('Entrepôt client');
+});
+
+it('cache la position dès que la mission n\'est plus en cours', function (): void {
+    $ids = seedCore();
+    $shipmentId = seedShipmentFor($ids, $ids['client'], 'TRK-2026-00002');
+    $ctx = seedTelematics($ids);
+    DB::table('missions')->where('id', $ctx['mission'])->update(['shipment_id' => $shipmentId]);
+    $this->withHeader('X-Device-Key', $ctx['key'])->postJson('/api/v1/telematics/positions', ['positions' => [
+        ['latitude' => 5.2735, 'longitude' => -4.0083, 'recorded_at' => now()->subMinutes(5)->toIso8601String()],
+    ]]);
+
+    DB::table('missions')->where('id', $ctx['mission'])->update(['status' => 'delivered']);
+
+    expect($this->getJson('/api/v1/public/tracking?q=TRK-2026-00002')->assertOk()->json('delivery'))->toBeNull();
+});

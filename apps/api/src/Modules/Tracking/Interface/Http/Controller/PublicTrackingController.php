@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Silaris\Modules\Tracking\Interface\Http\Controller;
 
+use Illuminate\Database\Connection;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -82,6 +83,7 @@ class PublicTrackingController
 
         return response()->json([
             'package' => $packagePayload,
+            'delivery' => $this->deliveryPosition($system, $shipmentId),
             'reference' => $shipment->reference,
             'status' => $shipment->status,
             'mode' => $shipment->mode,
@@ -109,5 +111,53 @@ class PublicTrackingController
                 ->where('containers.number', str_replace([' ', '-'], '', $query))
                 ->orderByDesc('container_assignments.created_at')
                 ->value('container_assignments.shipment_id');
+    }
+
+    /**
+     * Position du véhicule pendant la livraison — exposée UNIQUEMENT quand une
+     * mission est en cours, et arrondie à ~100 m : le client suit son
+     * approche sans que le trajet du conducteur soit pistable au mètre.
+     *
+     * @return array{status: string, latitude: float, longitude: float, updated_at: string, destination: array{latitude: float, longitude: float, label: string}|null}|null
+     */
+    private function deliveryPosition(Connection $system, string $shipmentId): ?array
+    {
+        $mission = $system->table('missions')
+            ->where('shipment_id', $shipmentId)
+            ->where('status', 'in_progress')
+            ->orderByDesc('started_at')
+            ->first(['id']);
+
+        if ($mission === null) {
+            return null;
+        }
+
+        $position = $system->table('device_positions')
+            ->where('mission_id', $mission->id)
+            ->orderByDesc('recorded_at')
+            ->first(['latitude', 'longitude', 'recorded_at']);
+
+        if ($position === null) {
+            return null;
+        }
+
+        $stop = $system->table('mission_stops')
+            ->where('mission_id', $mission->id)
+            ->whereNull('arrived_at')
+            ->whereNotNull('latitude')
+            ->orderBy('position')
+            ->first(['label', 'latitude', 'longitude']);
+
+        return [
+            'status' => 'in_delivery',
+            'latitude' => round((float) $position->latitude, 3),
+            'longitude' => round((float) $position->longitude, 3),
+            'updated_at' => (string) $position->recorded_at,
+            'destination' => $stop === null ? null : [
+                'label' => (string) $stop->label,
+                'latitude' => round((float) $stop->latitude, 3),
+                'longitude' => round((float) $stop->longitude, 3),
+            ],
+        ];
     }
 }

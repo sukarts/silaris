@@ -4,6 +4,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { problemMessage, rawApi } from "@/lib/api";
 import { Field, buttonPrimary, buttonSecondary, inputClass } from "@/components/Field";
+import { TrackMap } from "@/components/TrackMap";
 import { useCan } from "@/stores/auth";
 
 interface Truck {
@@ -104,6 +105,7 @@ export default function RoadPage() {
   const canUpdate = useCan("road.update");
   const canPod = useCan("pod.create");
   const [tab, setTab] = useState<"missions" | "fleet" | "devices">("missions");
+  const [trackFor, setTrackFor] = useState<Mission | null>(null);
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState(emptyMissionForm);
   const [podFor, setPodFor] = useState<Mission | null>(null);
@@ -245,6 +247,7 @@ export default function RoadPage() {
 
       {tab === "missions" && (
         <>
+          {trackFor && <MissionTrackPanel mission={trackFor} onClose={() => setTrackFor(null)} />}
           {showForm && (
             <form
               onSubmit={(event) => { event.preventDefault(); createMission.mutate(); }}
@@ -392,6 +395,12 @@ export default function RoadPage() {
                               POD →
                             </button>
                           )}
+                          <button
+                            onClick={() => setTrackFor(mission)}
+                            className="text-xs font-semibold text-sea hover:underline"
+                          >
+                            Carte
+                          </button>
                         </div>
                       </td>
                     </tr>
@@ -744,6 +753,60 @@ function DevicesPanel({ trucks, canCreate }: { trucks: Truck[]; canCreate: boole
           </tbody>
         </table>
       </div>
+    </div>
+  );
+}
+
+interface MissionTrack {
+  mission: { id: string; reference: string; status: string };
+  last_position: { latitude: string; longitude: string; speed_kmh: string | null; recorded_at: string } | null;
+  distance_to_next_stop_m: number | null;
+  positions: { latitude: string; longitude: string }[];
+  stops: { label: string; latitude: string | null; longitude: string | null; arrived_at: string | null }[];
+}
+
+function MissionTrackPanel({ mission, onClose }: { mission: Mission; onClose: () => void }) {
+  const { data, isLoading } = useQuery({
+    queryKey: ["mission-track", mission.id],
+    queryFn: async () => {
+      const { data: response } = await rawApi.GET(`/v1/missions/${mission.id}/positions`);
+      return response as MissionTrack;
+    },
+    // Mission en cours : la position bouge, on rafraîchit régulièrement.
+    refetchInterval: mission.status === "in_progress" ? 60_000 : false,
+  });
+
+  const last = data?.last_position;
+
+  return (
+    <div className="rounded-xl border border-line bg-surface p-5 shadow-sm">
+      <div className="flex items-start pb-4">
+        <div>
+          <h2 className="text-sm font-bold">Suivi véhicule — {mission.reference}</h2>
+          <p className="pt-1 text-xs text-ink-3">
+            {isLoading
+              ? "Chargement…"
+              : last
+                ? `Dernier point ${new Date(last.recorded_at).toLocaleString("fr-FR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}${
+                    last.speed_kmh ? ` · ${Math.round(Number(last.speed_kmh))} km/h` : ""
+                  }${
+                    data?.distance_to_next_stop_m != null
+                      ? ` · ${(data.distance_to_next_stop_m / 1000).toFixed(1)} km du prochain arrêt`
+                      : " · tous les arrêts atteints"
+                  }`
+                : "Aucune position reçue — vérifiez qu'une balise est affectée au véhicule."}
+          </p>
+        </div>
+        <button onClick={onClose} className={`ml-auto ${buttonSecondary}`}>Fermer</button>
+      </div>
+      {data && (data.positions.length > 0 || data.stops.some((s) => s.latitude)) && (
+        <TrackMap
+          trail={data.positions}
+          stops={data.stops.map((s) => ({ latitude: s.latitude ?? 0, longitude: s.longitude ?? 0, label: s.label, reached: s.arrived_at !== null })).filter((s) => s.latitude !== 0)}
+          vehicle={last ? { latitude: last.latitude, longitude: last.longitude, label: "Véhicule" } : null}
+          height={360}
+        />
+      )}
     </div>
   );
 }

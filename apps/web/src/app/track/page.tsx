@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { rawApi } from "@/lib/api";
 import { buttonPrimary } from "@/components/Field";
+import { TrackMap } from "@/components/TrackMap";
 
 interface TrackingResult {
   reference: string;
@@ -15,6 +16,13 @@ interface TrackingResult {
   vessel_name: string | null;
   tenant_name: string | null;
   logo_url: string | null;
+  delivery: {
+    status: string;
+    latitude: number;
+    longitude: number;
+    updated_at: string;
+    destination: { label: string; latitude: number; longitude: number } | null;
+  } | null;
   eta: string | null;
   ata: string | null;
   events: { title: string; type: string; occurred_at: string }[];
@@ -136,6 +144,26 @@ export default function TrackPage() {
               </div>
             </div>
           </div>
+
+          {result.delivery && (
+            <div className="rounded-xl border border-line bg-surface p-4 shadow-sm">
+              <div className="flex flex-wrap items-baseline gap-2 pb-3">
+                <span className="text-[13px] font-bold">🚛 Livraison en cours</span>
+                {result.delivery.destination && (
+                  <span className="text-xs text-ink-3">vers {result.delivery.destination.label}</span>
+                )}
+                <span className="ml-auto text-[11px] text-ink-3">
+                  position du {new Date(result.delivery.updated_at).toLocaleString("fr-FR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}
+                </span>
+              </div>
+              <TrackMap
+                vehicle={{ latitude: result.delivery.latitude, longitude: result.delivery.longitude, label: "Véhicule" }}
+                stops={result.delivery.destination ? [{ ...result.delivery.destination, reached: false }] : []}
+                height={260}
+              />
+              <p className="pt-2 text-[11px] text-ink-3">Position approximative, actualisée à chaque remontée du véhicule.</p>
+            </div>
+          )}
 
           <div className="rounded-xl border border-line bg-surface p-5 shadow-sm">
             <ul>
