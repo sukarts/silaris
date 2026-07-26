@@ -48,7 +48,11 @@ export default function TrackPage() {
     setLoading(false);
     if (problem) {
       const p = problem as { status?: number };
-      setError(p.status === 404 ? "Aucune expédition trouvée pour ce numéro." : "Numéro invalide ou service indisponible.");
+      setError(
+        p.status === 404
+          ? "Aucune expédition trouvée pour ce numéro. Vérifiez la saisie, ou contactez votre transitaire si le dossier vient d'être ouvert."
+          : "Numéro invalide ou service momentanément indisponible.",
+      );
       return;
     }
     setResult(data as TrackingResult);
@@ -68,7 +72,7 @@ export default function TrackPage() {
           </div>
         )}
         <p className="pb-7 pt-1 text-[13px] text-ink-3">
-          Suivi d&apos;expédition{result?.tenant_name && result?.logo_url ? ` — ${result.tenant_name}` : ""}
+          {result?.logo_url && result?.tenant_name ? result.tenant_name : "Suivez votre expédition en temps réel"}
         </p>
       </div>
 
