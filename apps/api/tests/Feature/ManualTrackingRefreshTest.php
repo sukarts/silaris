@@ -37,14 +37,21 @@ function seedTrackedShipment(array $ids): array
 it('interroge immédiatement les compagnies, hors cadence planifiée', function (): void {
     $ids = seedCore();
     [$shipmentId] = seedTrackedShipment($ids);
-    Config::set('services.jsoncargo.api_key', 'test-key');
-    Config::set('services.jsoncargo.base_url', 'https://api.jsoncargo.com/api/v1');
+    Config::set('services.shipsgo.api_key', 'test-key');
+    Config::set('services.shipsgo.base_url', 'https://api.shipsgo.com/v2');
 
     Http::fake([
-        'api.jsoncargo.com/*' => Http::response(['data' => [
-            'container_status' => 'Discharged from vessel',
-            'last_movement_timestamp' => '2026-07-20 14:30',
-            'eta_final_destination' => '2026-07-28 06:00',
+        'api.shipsgo.com/v2/ocean/shipments?*' => Http::response(['shipments' => [['id' => 42]]]),
+        'api.shipsgo.com/v2/ocean/shipments/42' => Http::response(['shipment' => [
+            'status' => 'DISCHARGED',
+            'route' => ['port_of_discharge' => ['location' => ['name' => 'Abidjan', 'code' => 'CIABJ'], 'expected_date' => '2026-07-28T06:00:00Z']],
+            'containers' => [[
+                'number' => 'MSKU8842016', 'size' => 40, 'type' => 'HC',
+                'movements' => [
+                    ['event' => 'DISC', 'timestamp' => '2026-07-20T14:30:00Z',
+                        'location' => ['name' => 'Abidjan', 'code' => 'CIABJ'], 'vessel' => ['name' => 'MSC LORETO']],
+                ],
+            ]],
         ]]),
     ]);
 

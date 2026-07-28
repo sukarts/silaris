@@ -8,9 +8,10 @@ use Illuminate\Support\Facades\DB;
 use RuntimeException;
 use Silaris\Modules\CarrierConnect\Infrastructure\Connector\ApiKeyDcsaConnector;
 use Silaris\Modules\CarrierConnect\Infrastructure\Connector\FakeCarrierConnector;
-use Silaris\Modules\CarrierConnect\Infrastructure\Connector\JsonCargoConnector;
 use Silaris\Modules\CarrierConnect\Infrastructure\Connector\MaerskConnector;
+use Silaris\Modules\CarrierConnect\Infrastructure\Connector\ShipsGoConnector;
 use Silaris\Modules\CarrierConnect\Infrastructure\Support\ExchangeLogger;
+use Silaris\Modules\CarrierConnect\Infrastructure\Support\ShipsGoTranslator;
 use Silaris\Modules\CarrierConnect\Infrastructure\Support\StatusNormalizer;
 use Silaris\Modules\Shared\Infrastructure\Tenancy\TenantContext;
 use Silaris\Modules\Tracking\Domain\Contract\CarrierTrackingProvider;
@@ -41,19 +42,19 @@ final readonly class CarrierRegistry
         private StatusNormalizer $normalizer,
     ) {}
 
-    /** SCAC → paramètre shipping_line JSONCargo (agrégateur multi-compagnies). */
-    private const JSONCARGO_LINES = [
-        'MAEU' => 'MAERSK',
-        'MSCU' => 'MSC',
-        'CMDU' => 'CMA_CGM',
-        'HLCU' => 'HAPAG_LLOYD',
-        'ONEY' => 'ONE',
-        'EGLV' => 'EVERGREEN',
-        'YMLU' => 'YANG_MING',
-        'COSU' => 'COSCO',
-        'ZIMU' => 'ZIM',
-        'HDMU' => 'HMM',
-        'PCIU' => 'PIL',
+    /**
+     * Notre SCAC → SCAC ShipsGo. Ils coïncident pour les grandes lignes, mais
+     * pas pour plusieurs armateurs desservant l'Afrique de l'Ouest : Grimaldi
+     * est GRIU chez eux, MACS est ELOU.
+     */
+    private const SHIPSGO_CARRIERS = [
+        'MAEU' => 'MAEU', 'MSCU' => 'MSCU', 'CMDU' => 'CMDU', 'HLCU' => 'HLCU',
+        'EGLV' => 'EGLV', 'COSU' => 'COSU', 'ZIMU' => 'ZIMU', 'HDMU' => 'HDMU',
+        'PCIU' => 'PCIU', 'OOLU' => 'OOLU', 'SUDU' => 'SUDU', 'ARKU' => 'ARKU',
+        'APLU' => 'APLU', 'ANNU' => 'ANNU', 'KMTU' => 'KMTU', 'FESO' => 'FESO',
+        // Lignes africaines, absentes du précédent agrégateur.
+        'GRIM' => 'GRIU', 'MACS' => 'ELOU', 'MFTU' => 'MFTU', 'AELL' => 'AELL',
+        'MGSU' => 'MGSU', 'MELL' => 'MELL',
     ];
 
     public function resolve(string $scac): CarrierTrackingProvider
@@ -73,17 +74,17 @@ final readonly class CarrierRegistry
             throw new RuntimeException("Connecteur inconnu pour SCAC {$scac}");
         }
 
-        // 2. Agrégateur JSONCargo : clé tenant (scac JSONCARGO) sinon clé plateforme (env).
-        if (isset(self::JSONCARGO_LINES[$scac])) {
-            $apiKey = $this->credentialsFor('JCGO')['api_key']
-                ?? config('services.jsoncargo.api_key');
+        // 2. Agrégateur ShipsGo : clé du tenant sinon clé de la plateforme.
+        if (isset(self::SHIPSGO_CARRIERS[$scac])) {
+            $apiKey = $this->credentialsFor(ShipsGoConnector::SCAC)['api_key']
+                ?? config('services.shipsgo.api_key');
             if (is_string($apiKey) && $apiKey !== '') {
-                return new JsonCargoConnector(
-                    self::JSONCARGO_LINES[$scac],
+                return new ShipsGoConnector(
+                    self::SHIPSGO_CARRIERS[$scac],
                     $apiKey,
-                    rtrim((string) config('services.jsoncargo.base_url'), '/'),
+                    rtrim((string) config('services.shipsgo.base_url'), '/'),
                     $this->logger,
-                    $this->normalizer,
+                    new ShipsGoTranslator($this->normalizer),
                 );
             }
         }

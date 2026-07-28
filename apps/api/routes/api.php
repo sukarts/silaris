@@ -5,6 +5,7 @@ declare(strict_types=1);
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Route;
 use Silaris\Modules\Road\Interface\Http\Controller\TelematicsController;
+use Silaris\Modules\Tracking\Interface\Http\Controller\ShipsGoWebhookController;
 
 /*
 |--------------------------------------------------------------------------
@@ -46,6 +47,13 @@ Route::prefix('v1')->group(function (): void {
     Route::middleware('throttle:telematics')->post(
         '/telematics/positions',
         [TelematicsController::class, 'store'],
+    );
+
+    // Notifications de l'agrégateur de suivi — authentifiées par signature
+    // HMAC sur le corps brut, jamais par session : l'appelant est une machine.
+    Route::middleware('throttle:telematics')->post(
+        '/webhooks/shipsgo',
+        ShipsGoWebhookController::class,
     );
 
     // Routes publiques — throttle strict
