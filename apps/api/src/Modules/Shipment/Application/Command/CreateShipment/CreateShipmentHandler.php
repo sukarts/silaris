@@ -40,7 +40,7 @@ final readonly class CreateShipmentHandler
         $shipment = Shipment::create(
             id: (string) Str::uuid7(),
             tenantId: $this->tenant->id(),
-            reference: $this->references->nextShipmentReference($command->branchId),
+            reference: $this->references->nextShipmentReference($command->branchId, $command->direction),
             clientId: $command->clientId,
             workflowDefinitionId: $workflowId,
             direction: Direction::from($command->direction),

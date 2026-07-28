@@ -17,6 +17,7 @@ use Silaris\Modules\Identity\Infrastructure\Persistence\Model\UserModel;
 use Silaris\Modules\Shared\Domain\Exception\AmbiguousAccount;
 use Silaris\Modules\Shared\Infrastructure\Tenancy\GuestTenantResolver;
 use Silaris\Modules\Shared\Infrastructure\Tenancy\TenantContext;
+use Silaris\Modules\Tenancy\Infrastructure\Persistence\Model\BranchModel;
 
 class AuthController
 {
@@ -101,7 +102,7 @@ class AuthController
     {
         /** @var UserModel $user */
         $user = $request->user();
-        $user->load(['roles.permissions:key', 'branches:id,code,name']);
+        $user->load(['roles.permissions:key', 'branches:id,code,name,company_id', 'branches.company:id,legal_name,code']);
 
         return response()->json([
             'id' => $user->id,
@@ -112,7 +113,16 @@ class AuthController
             'mfa_enabled' => $user->mfa_enabled,
             'roles' => $user->roles->map(fn ($role) => ['key' => $role->key, 'name' => $role->name]),
             'permissions' => $user->roles->flatMap(fn ($role) => $role->permissions->pluck('key'))->unique()->sort()->values(),
-            'branches' => $user->branches,
+            // Les agences de rattachement portent leur société : c'est le
+            // périmètre dans lequel l'utilisateur ouvre ses dossiers, sans
+            // qu'il ait besoin d'accéder à l'administration.
+            'branches' => $user->branches->map(fn (BranchModel $branch) => [
+                'id' => $branch->id,
+                'code' => $branch->code,
+                'name' => $branch->name,
+                'company_id' => $branch->company_id,
+                'company_name' => $branch->company?->legal_name,
+            ]),
             'must_change_password' => $user->password_changed_at < now()->subYears(5),
         ]);
     }

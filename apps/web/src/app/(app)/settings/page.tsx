@@ -36,6 +36,8 @@ interface Company {
 }
 
 const FORMAT_PRESETS = [
+  { format: "{DIRECTION}-{YEAR}-{SEQ:5}", label: "IMP-2026-00128 / EXP-2026-00128 — sens + année" },
+  { format: "{COMPANY}-{DIRECTION}-{YEAR}-{SEQ:4}", label: "TAL-IMP-2026-0128 — société + sens + année" },
   { format: "{COMPANY}-{YEAR}-{SEQ:5}", label: "TAL-2026-00128 — code société + année" },
   { format: "{PREFIX}-{YEAR}-{SEQ:4}", label: "SAHA-2026-0128 — préfixe libre + année" },
   { format: "{PREFIX}/{BRANCH}/{YY}/{SEQ:4}", label: "SAHA/ABJ/26/0128 — préfixe + agence" },
@@ -74,7 +76,7 @@ function CompanyTab({ company, canUpdate }: { company: Company; canUpdate: boole
     invoice_format: company.invoice_settings?.number_format ?? "F-{YEAR}-{SEQ:4}",
     footer: company.invoice_settings?.footer ?? "",
   });
-  const [preview, setPreview] = useState<string | null>(null);
+  const [preview, setPreview] = useState<{ import: string; export: string } | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [logoUrl, setLogoUrl] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -90,7 +92,7 @@ function CompanyTab({ company, canUpdate }: { company: Company; canUpdate: boole
       const { data } = await rawApi.GET(`/v1/admin/companies/${company.id}/reference-preview`, {
         params: { query: { format: form.reference_format, prefix: form.reference_prefix } },
       });
-      setPreview((data as { preview: string } | undefined)?.preview ?? null);
+      setPreview((data as { previews: { import: string; export: string } } | undefined)?.previews ?? null);
     }, 250);
     return () => clearTimeout(timer);
   }, [company.id, form.reference_format, form.reference_prefix]);
@@ -170,6 +172,7 @@ function CompanyTab({ company, canUpdate }: { company: Company; canUpdate: boole
           Placeholders : <span className="mono">{"{PREFIX}"}</span> préfixe · <span className="mono">{"{COMPANY}"}</span> code société ·{" "}
           <span className="mono">{"{BRANCH}"}</span> code agence · <span className="mono">{"{YEAR}"}</span> année ·{" "}
           <span className="mono">{"{YY}"}</span> année courte · <span className="mono">{"{MONTH}"}</span> mois ·{" "}
+          <span className="mono">{"{DIRECTION}"}</span> sens (IMP / EXP / TRA) ·{" "}
           <span className="mono">{"{SEQ:4}"}</span> séquence (chiffres).
         </p>
         <div className="grid gap-4 md:grid-cols-3">
@@ -186,7 +189,19 @@ function CompanyTab({ company, canUpdate }: { company: Company; canUpdate: boole
           </Field>
           <div className="md:col-span-3">
             <span className="text-[10px] uppercase tracking-wide text-ink-3">Aperçu du prochain dossier</span>
-            <div className="mono pt-1 text-lg font-bold text-sea">{preview ?? "…"}</div>
+            <div className="flex flex-wrap gap-x-10 gap-y-2 pt-1">
+              {([["import", "Import"], ["export", "Export"]] as const).map(([key, label]) => (
+                <div key={key}>
+                  <div className="text-[10px] font-semibold uppercase tracking-wide text-ink-3">{label}</div>
+                  <div className="mono text-lg font-bold text-sea">{preview?.[key] ?? "…"}</div>
+                </div>
+              ))}
+            </div>
+            {preview !== null && preview.import === preview.export && (
+              <p className="pt-2 text-xs text-ink-3">
+                Ce format ne distingue pas les sens — ajoutez <span className="mono">{"{DIRECTION}"}</span> pour les séparer.
+              </p>
+            )}
           </div>
         </div>
       </section>

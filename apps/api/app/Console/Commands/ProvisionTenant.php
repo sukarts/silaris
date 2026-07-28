@@ -8,6 +8,7 @@ use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
+use Silaris\Modules\Shipment\Application\Service\StandardWorkflowInstaller;
 
 /**
  * Onboarding d'un tenant en production : crée tenant + société + agence + admin
@@ -151,6 +152,10 @@ final class ProvisionTenant extends Command
                 // user_roles / user_branches : pas de tenant_id (contraints via user_id).
                 $conn->table('user_roles')->insert(['user_id' => $userId, 'role_id' => $adminRoleId]);
                 $conn->table('user_branches')->insert(['user_id' => $userId, 'branch_id' => $branchId]);
+
+                // Sans workflow, le premier dossier du tenant échouerait — et
+                // l'échec surviendrait à la mise en service, pas ici.
+                app(StandardWorkflowInstaller::class)->installFor($tenantId, $conn);
             });
         } catch (\Throwable $e) {
             $this->error('Échec du provisioning : '.$e->getMessage());
