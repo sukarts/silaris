@@ -16,7 +16,7 @@ const NAV = [
     items: [
       { href: "/shipments", label: "Dossiers", perm: "shipments.read" },
       { href: "/bookings", label: "Bookings", perm: "bookings.read" },
-      { href: "/containers", label: "Conteneurs", perm: "containers.read" },
+      { href: "/demurrage", label: "Surestaries", perm: "containers.read" },
       { href: "/air", label: "Aérien", perm: "awb.read" },
       { href: "/road", label: "Routier", perm: "road.read" },
     ],

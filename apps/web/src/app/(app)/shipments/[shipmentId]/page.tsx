@@ -297,8 +297,8 @@ export default function ShipmentDetailPage({ params }: { params: Promise<{ shipm
           <div className="rounded-xl border border-line bg-surface shadow-sm">
             <div className="flex items-center border-b border-line px-4 py-3">
               <span className="text-[13px] font-bold">Conteneurs</span>
-              <Link href="/containers" className="ml-auto text-xs font-semibold text-sea hover:underline">
-                Affecter un conteneur →
+              <Link href="/demurrage" className="ml-auto text-xs font-semibold text-sea hover:underline">
+                Surestaries →
               </Link>
             </div>
 

@@ -20,3 +20,7 @@ Schedule::call(fn () => DB::statement('REFRESH MATERIALIZED VIEW CONCURRENTLY mv
 
 // Synchronisation Odoo : healthcheck + pull taxes et statuts de paiement.
 Schedule::command('odoo:sync')->hourly()->withoutOverlapping();
+
+// Franchises conteneur : l'alerte doit précéder la facturation de la compagnie,
+// d'où un passage tôt le matin, avant l'ouverture des terminaux.
+Schedule::command('demurrage:alert')->dailyAt('06:00');
