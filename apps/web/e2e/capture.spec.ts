@@ -16,7 +16,7 @@ const SCREENS: { route: string; name: string; setup?: (page: import("@playwright
   { route: "/dashboard", name: "01-tableau-de-bord" },
   { route: "/shipments", name: "02-dossiers" },
   { route: "/bookings", name: "04-bookings" },
-  { route: "/containers", name: "05-conteneurs" },
+  { route: "/demurrage", name: "05-surestaries" },
   { route: "/air", name: "06-aerien" },
   { route: "/road", name: "07-routier-missions" },
   {

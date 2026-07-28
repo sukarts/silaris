@@ -9,18 +9,6 @@ use Silaris\Modules\Tracking\Application\Service\TrackingSubscriber;
 
 uses(RefreshDatabase::class);
 
-/** Conteneur au format ISO 6346 valide, contrainte de la base. */
-function seedContainer(array $ids, string $number = 'MSCU1234566'): string
-{
-    $id = (string) Str::uuid7();
-    DB::table('containers')->insert([
-        'id' => $id, 'tenant_id' => $ids['tenant'], 'number' => $number,
-        'size_type' => '40HC', 'created_at' => now(), 'updated_at' => now(),
-    ]);
-
-    return $id;
-}
-
 it('abonne le dossier au suivi dès qu\'un conteneur lui est affecté', function (): void {
     $ids = seedCore();
     $shipmentId = seedShipmentFor($ids, $ids['client'], 'IMP-2026-00001');

@@ -6,6 +6,7 @@ use Illuminate\Support\Facades\Route;
 use Silaris\Modules\Ocean\Interface\Http\Controller\BillOfLadingController;
 use Silaris\Modules\Ocean\Interface\Http\Controller\BookingController;
 use Silaris\Modules\Ocean\Interface\Http\Controller\ContainerController;
+use Silaris\Modules\Ocean\Interface\Http\Controller\DemurrageController;
 use Silaris\Modules\Ocean\Interface\Http\Controller\PackageController;
 
 Route::prefix('bookings')->group(function (): void {
@@ -41,3 +42,10 @@ Route::post('/shipments/{shipmentId}/packages', [PackageController::class, 'stor
     ->whereUuid('shipmentId')->can('packages.create');
 Route::get('/shipments/{shipmentId}/packages/labels', [PackageController::class, 'labels'])
     ->whereUuid('shipmentId')->can('packages.read');
+
+// Franchises et surestaries — la question du matin : quelles boîtes sortir
+// aujourd'hui pour ne pas payer ?
+Route::prefix('demurrage')->group(function (): void {
+    Route::get('/', [DemurrageController::class, 'index'])->can('containers.read');
+    Route::patch('/free-time', [DemurrageController::class, 'updateFreeTime'])->can('containers.update');
+});

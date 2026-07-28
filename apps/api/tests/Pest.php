@@ -46,3 +46,15 @@ function seedInvoiceWithLine(array $ids): string
 
     return $invoiceId;
 }
+
+/** Conteneur du tenant — helper partagé entre suites. */
+function seedContainer(array $ids, string $number = 'MSCU1234566'): string
+{
+    $id = (string) Str::uuid7();
+    DB::table('containers')->insert([
+        'id' => $id, 'tenant_id' => $ids['tenant'], 'number' => $number,
+        'size_type' => '40HC', 'created_at' => now(), 'updated_at' => now(),
+    ]);
+
+    return $id;
+}

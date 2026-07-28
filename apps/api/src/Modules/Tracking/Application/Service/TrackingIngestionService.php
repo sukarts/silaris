@@ -4,8 +4,11 @@ declare(strict_types=1);
 
 namespace Silaris\Modules\Tracking\Application\Service;
 
+use DateTime;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
+use Silaris\Modules\Ocean\Application\Service\FreeTimeTracker;
 use Silaris\Modules\Shared\Infrastructure\Events\DomainEventPublisher;
 use Silaris\Modules\Shared\Infrastructure\Tenancy\TenantContext;
 use Silaris\Modules\Shipment\Infrastructure\Persistence\EloquentShipmentRepository;
@@ -34,6 +37,7 @@ final readonly class TrackingIngestionService
     public function __construct(
         private TenantContext $tenant,
         private EloquentShipmentRepository $shipments,
+        private FreeTimeTracker $freeTime,
         private DomainEventPublisher $events,
     ) {}
 
@@ -76,6 +80,15 @@ final readonly class TrackingIngestionService
                 'source' => 'carrier_api',
                 'occurred_at' => $event->occurredAt->format('Y-m-d H:i:sP'),
             ]);
+
+            // Jalons du conteneur : ils ouvrent et ferment le décompte de
+            // franchise, dont dépendent les surestaries.
+            $this->freeTime->recordMilestone(
+                $subscription->shipment_id,
+                $event->rawPayload['container'] ?? ($subscription->subject_type === 'container' ? $subscription->subject_number : null),
+                $event->dcsaEventCode,
+                Carbon::instance(DateTime::createFromInterface($event->occurredAt)),
+            );
 
             // Jalons automatiques sur le dossier
             $shipment = $this->shipments->get($subscription->shipment_id);
