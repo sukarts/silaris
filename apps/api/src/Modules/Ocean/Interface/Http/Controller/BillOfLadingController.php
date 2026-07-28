@@ -9,6 +9,8 @@ use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 use Silaris\Modules\Ocean\Infrastructure\Persistence\Model\BillOfLadingModel;
 use Silaris\Modules\Shared\Domain\Exception\DomainException;
+use Silaris\Modules\Shared\Infrastructure\Tenancy\TenantContext;
+use Silaris\Modules\Tracking\Application\Service\TrackingSubscriber;
 
 final class BlTransitionForbidden extends DomainException
 {
@@ -25,6 +27,11 @@ final class BlTransitionForbidden extends DomainException
 
 class BillOfLadingController
 {
+    public function __construct(
+        private readonly TenantContext $tenant,
+        private readonly TrackingSubscriber $subscriber,
+    ) {}
+
     /** draft → verified → issued → surrendered — jamais de retour arrière. */
     private const TRANSITIONS = [
         'draft' => ['verified'],
@@ -68,7 +75,15 @@ class BillOfLadingController
             'packages_count' => ['nullable', 'integer', 'min:0'],
         ]);
 
-        return response()->json(BillOfLadingModel::create($data), 201);
+        $bl = BillOfLadingModel::create($data);
+
+        // Les compagnies suivent le connaissement maître ; le house est un
+        // document du transitaire, inconnu d'elles.
+        if ($data['type'] === 'master') {
+            $this->subscriber->subscribe($this->tenant->id(), $data['shipment_id'], 'bl', $data['number']);
+        }
+
+        return response()->json($bl, 201);
     }
 
     /** PATCH — uniquement en draft (les BL émis sont immuables : snapshots légaux). */

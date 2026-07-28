@@ -33,6 +33,17 @@ interface ShipmentDetail {
     current: string;
     allowed_transitions: string[];
   };
+  containers?: AssignedContainer[];
+}
+
+/** Conteneur affecté au dossier, avec l'état de son abonnement au suivi. */
+interface AssignedContainer {
+  id: string;
+  number: string;
+  size_type: string;
+  seal_number: string | null;
+  tracking_status: string | null;
+  last_polled_at: string | null;
 }
 
 interface TimelineEvent {
@@ -121,6 +132,7 @@ export default function ShipmentDetailPage({ params }: { params: Promise<{ shipm
   if (!data) return <p className="text-sm text-ink-3">Chargement…</p>;
 
   const shipment = data.data;
+  const containers = data.containers ?? [];
   const stepLabel = (key: string) => data.workflow.steps.find((step) => step.key === key)?.label ?? key;
 
   return (
@@ -215,6 +227,49 @@ export default function ShipmentDetailPage({ params }: { params: Promise<{ shipm
               </table>
             </div>
           )}
+
+          <div className="rounded-xl border border-line bg-surface shadow-sm">
+            <div className="flex items-center border-b border-line px-4 py-3">
+              <span className="text-[13px] font-bold">Conteneurs</span>
+              <Link href="/containers" className="ml-auto text-xs font-semibold text-sea hover:underline">
+                Affecter un conteneur →
+              </Link>
+            </div>
+            {containers.length === 0 ? (
+              <p className="px-4 py-3 text-[13px] text-ink-3">
+                Aucun conteneur affecté — le suivi transporteur démarre dès qu'un conteneur rejoint le dossier.
+              </p>
+            ) : (
+              <table className="w-full text-[13px]">
+                <thead>
+                  <tr className="border-b border-line text-left text-[10px] uppercase tracking-wider text-ink-3">
+                    <th className="px-4 py-2">Numéro</th>
+                    <th className="px-4 py-2">Type</th>
+                    <th className="px-4 py-2">Scellé</th>
+                    <th className="px-4 py-2">Suivi</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {containers.map((container) => (
+                    <tr key={container.id} className="border-b border-line last:border-0">
+                      <td className="mono px-4 py-2 font-semibold">{container.number}</td>
+                      <td className="px-4 py-2 text-ink-2">{container.size_type}</td>
+                      <td className="mono px-4 py-2 text-ink-2">{container.seal_number ?? "—"}</td>
+                      <td className="px-4 py-2">
+                        {container.tracking_status === "active" ? (
+                          <span className="rounded-full bg-ok-soft px-2 py-0.5 text-[11px] font-semibold text-ok">
+                            Actif{container.last_polled_at ? ` · ${new Date(container.last_polled_at).toLocaleDateString("fr-FR")}` : " · jamais interrogé"}
+                          </span>
+                        ) : (
+                          <span className="text-[11px] text-ink-3">Hors suivi</span>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </div>
 
           {shipment.notes && (
             <div className="rounded-xl border border-line bg-surface p-4 text-[13px] shadow-sm">

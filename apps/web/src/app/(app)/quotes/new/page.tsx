@@ -1,9 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
 import { problemMessage, rawApi } from "@/lib/api";
 import { Field, buttonPrimary, buttonSecondary, inputClass } from "@/components/Field";
 import { PlaceCombobox } from "@/components/PlaceCombobox";
+import { useAuth } from "@/stores/auth";
 
 interface CalculatedLine {
   serviceCode: string;
@@ -17,9 +20,55 @@ interface CalculatedLine {
   buyTotal: number | null;
 }
 
+/** Ligne éditable du devis — issue de la simulation ou saisie à la main. */
+interface QuoteLine {
+  service_code: string;
+  description: string;
+  unit: string;
+  quantity: string;
+  unit_price: string;
+  buy_price: string;
+  // Le fret se cote souvent en devise étrangère quand les prestations locales
+  // restent en monnaie du pays : chaque ligne garde donc la sienne.
+  currency_code: string;
+  minimumApplied?: boolean;
+}
+
+interface UserBranch {
+  company_id: string;
+  company_name: string | null;
+}
+
+const UNITS = [
+  ["container", "conteneur"],
+  ["kg", "kg"],
+  ["m3", "m³"],
+  ["wm", "u. payante"],
+  ["flat", "forfait"],
+  ["percent", "%"],
+  ["unit", "unité"],
+] as const;
+
+function blankLine(currency: string): QuoteLine {
+  return {
+    service_code: "", description: "", unit: "flat", quantity: "1",
+    unit_price: "", buy_price: "", currency_code: currency,
+  };
+}
+
+function inNinetyDays(): string {
+  const date = new Date();
+  date.setDate(date.getDate() + 30);
+
+  return date.toISOString().slice(0, 10);
+}
+
 export default function NewQuotePage() {
+  const router = useRouter();
+  const user = useAuth((state) => state.user);
   const [form, setForm] = useState({
     mode: "sea_fcl",
+    direction: "import",
     origin_locode: "CNSHA",
     destination_locode: "CIABJ",
     container_type: "40HC",
@@ -28,12 +77,64 @@ export default function NewQuotePage() {
     volume_m3: "54",
     declared_value: "",
   });
-  const [lines, setLines] = useState<CalculatedLine[] | null>(null);
+  const [deal, setDeal] = useState({
+    party_id: "",
+    company_id: "",
+    incoterm_code: "CIF",
+    currency_code: "XOF",
+    valid_until: inNinetyDays(),
+  });
+  const [lines, setLines] = useState<QuoteLine[]>([]);
+  const [calculated, setCalculated] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [saving, setSaving] = useState(false);
+
+  const { data: clients } = useQuery({
+    queryKey: ["parties", "clients"],
+    queryFn: async () => {
+      const { data } = await rawApi.GET("/v1/parties", { params: { query: { type: "client", per_page: 100 } } });
+      return (data as { data: { id: string; name: string; code: string }[] }).data;
+    },
+  });
+  const { data: incoterms } = useQuery({
+    queryKey: ["incoterms"],
+    queryFn: async () => {
+      const { data } = await rawApi.GET("/v1/referentials/incoterms", { params: { query: { per_page: 20 } } });
+      return (data as { data: { code: string; label: string }[] }).data;
+    },
+  });
+  const { data: currencies } = useQuery({
+    queryKey: ["currencies"],
+    queryFn: async () => {
+      const { data } = await rawApi.GET("/v1/referentials/currencies", { params: { query: { per_page: 50 } } });
+      return (data as { data: { code: string; name: string }[] }).data;
+    },
+  });
+  // Société émettrice : celle des agences de rattachement, pas l'administration
+  // — un commercial cote sans droit sur les paramètres de la société.
+  const { data: scope } = useQuery({
+    queryKey: ["auth", "me", "branches"],
+    queryFn: async () => {
+      const { data } = await rawApi.GET("/v1/auth/me");
+      return (data as { branches: UserBranch[] } | undefined)?.branches ?? [];
+    },
+  });
+
+  const companies = Array.from(
+    new Map((scope ?? []).map((branch) => [branch.company_id, branch.company_name])).entries(),
+  ).map(([id, name]) => ({ id, name }));
+  const onlyCompany = companies.length === 1 ? companies[0] : undefined;
+  useEffect(() => {
+    if (onlyCompany && deal.company_id === "") setDeal((state) => ({ ...state, company_id: onlyCompany.id }));
+  }, [onlyCompany, deal.company_id]);
 
   function set(key: string, value: string) {
     setForm((state) => ({ ...state, [key]: value }));
+  }
+
+  function setLine(index: number, key: keyof QuoteLine, value: string) {
+    setLines((state) => state.map((line, i) => (i === index ? { ...line, [key]: value } : line)));
   }
 
   async function calculate(event: React.FormEvent) {
@@ -53,30 +154,93 @@ export default function NewQuotePage() {
     });
     setLoading(false);
     if (problem) return setError(problemMessage(problem));
-    setLines((data as { lines: CalculatedLine[] }).lines);
+
+    const computed = (data as { lines: CalculatedLine[] }).lines;
+    setCalculated(true);
+    setLines(computed.map((line) => ({
+      service_code: line.serviceCode,
+      description: line.description,
+      unit: line.unit,
+      quantity: String(line.quantity),
+      unit_price: String(line.unitPrice),
+      buy_price: line.buyTotal !== null && line.quantity > 0 ? String(line.buyTotal / line.quantity) : "",
+      currency_code: line.currency,
+      minimumApplied: line.minimumApplied,
+    })));
   }
 
-  const totals = lines?.reduce<Record<string, { sell: number; buy: number }>>((acc, line) => {
-    acc[line.currency] ??= { sell: 0, buy: 0 };
-    acc[line.currency]!.sell += line.total;
-    acc[line.currency]!.buy += line.buyTotal ?? 0;
+  async function submit(event: React.FormEvent) {
+    event.preventDefault();
+    if (!user) return;
+    setSaving(true);
+    setError(null);
+    const { error: problem } = await rawApi.POST("/v1/quotes", {
+      body: {
+        company_id: deal.company_id,
+        party_id: deal.party_id,
+        owner_id: user.id,
+        mode: form.mode,
+        direction: form.direction,
+        origin_locode: form.origin_locode.toUpperCase(),
+        destination_locode: form.destination_locode.toUpperCase(),
+        incoterm_code: deal.incoterm_code,
+        currency_code: deal.currency_code,
+        valid_until: deal.valid_until,
+        cargo_summary: {
+          containers: form.container_qty ? { [form.container_type]: Number(form.container_qty) } : {},
+          gross_weight_kg: Number(form.gross_weight_kg) || 0,
+          volume_m3: Number(form.volume_m3) || 0,
+        },
+        lines: lines.map((line) => ({
+          service_code: line.service_code || "SERVICE",
+          description: line.description,
+          quantity: Number(line.quantity) || 0,
+          unit: line.unit,
+          unit_price: Number(line.unit_price) || 0,
+          currency_code: line.currency_code,
+          buy_price: line.buy_price === "" ? null : Number(line.buy_price),
+        })),
+      },
+    });
+    setSaving(false);
+    if (problem) return setError(problemMessage(problem));
+    router.push("/quotes");
+  }
+
+  const money = (value: number) => value.toLocaleString("fr-FR", { maximumFractionDigits: 0 });
+  const totals = lines.reduce<Record<string, { sell: number; buy: number }>>((acc, line) => {
+    const quantity = Number(line.quantity) || 0;
+    acc[line.currency_code] ??= { sell: 0, buy: 0 };
+    acc[line.currency_code]!.sell += quantity * (Number(line.unit_price) || 0);
+    acc[line.currency_code]!.buy += quantity * (Number(line.buy_price) || 0);
+
     return acc;
   }, {});
 
   return (
-    <div className="mx-auto flex w-full max-w-4xl flex-col gap-5">
+    <div className="mx-auto flex w-full max-w-5xl flex-col gap-5">
       <div>
         <h1 className="text-xl font-bold">Nouvelle cotation</h1>
-        <p className="text-[13px] text-ink-3">Simulation depuis les grilles tarifaires actives — devis formel ensuite.</p>
+        <p className="text-[13px] text-ink-3">
+          Les grilles tarifaires proposent les lignes ; vous les ajustez, puis vous émettez le devis.
+        </p>
       </div>
 
       <form onSubmit={calculate} className="grid gap-4 rounded-xl border border-line bg-surface p-5 shadow-sm md:grid-cols-4">
+        <p className="text-[13px] font-bold md:col-span-4">1 · Trajet et marchandise</p>
         <Field label="Mode">
           <select value={form.mode} onChange={(e) => set("mode", e.target.value)} className={inputClass}>
             <option value="sea_fcl">Maritime FCL</option>
             <option value="sea_lcl">Maritime LCL</option>
             <option value="air">Aérien</option>
             <option value="road">Routier</option>
+          </select>
+        </Field>
+        <Field label="Sens">
+          <select value={form.direction} onChange={(e) => set("direction", e.target.value)} className={inputClass}>
+            <option value="import">Import</option>
+            <option value="export">Export</option>
+            <option value="transit">Transit</option>
           </select>
         </Field>
         <Field label="Origine">
@@ -103,71 +267,136 @@ export default function NewQuotePage() {
           <input type="number" min={0} value={form.declared_value} onChange={(e) => set("declared_value", e.target.value)} className={`${inputClass} mono`} />
         </Field>
         <div className="flex items-end">
-          <button type="submit" disabled={loading} className={`w-full ${buttonPrimary}`}>
-            {loading ? "Calcul…" : "Calculer"}
+          <button type="submit" disabled={loading} className={`w-full ${buttonSecondary}`}>
+            {loading ? "Calcul…" : "Proposer depuis les tarifs"}
           </button>
         </div>
       </form>
 
-      {error && <p className="rounded-lg bg-crit-soft px-4 py-2.5 text-[13px] text-crit">{error}</p>}
+      <form onSubmit={submit} className="flex flex-col gap-5">
+        <section className="rounded-xl border border-line bg-surface p-5 shadow-sm">
+          <div className="flex items-center pb-3">
+            <p className="text-[13px] font-bold">2 · Lignes du devis</p>
+            <button type="button" onClick={() => setLines((state) => [...state, blankLine(deal.currency_code)])} className="ml-auto text-xs font-semibold text-sea hover:underline">
+              + Ajouter une ligne
+            </button>
+          </div>
 
-      {lines && (
-        <div className="rounded-xl border border-line bg-surface shadow-sm">
-          <div className="border-b border-line px-4 py-3 text-[13px] font-bold">Résultat de la simulation</div>
-          {lines.length === 0 ? (
-            <p className="p-4 text-[13px] text-ink-3">Aucune grille tarifaire applicable pour ce trajet/mode.</p>
-          ) : (
-            <>
+          {calculated && lines.length === 0 && (
+            <p className="rounded-lg bg-warn-soft px-3 py-2 text-xs text-warn">
+              Aucune grille tarifaire ne couvre ce trajet. Ajoutez les lignes à la main — ou créez la grille
+              correspondante pour que les prochaines cotations se remplissent seules.
+            </p>
+          )}
+          {!calculated && lines.length === 0 && (
+            <p className="text-xs text-ink-3">
+              Lancez la proposition tarifaire ci-dessus, ou ajoutez directement vos lignes.
+            </p>
+          )}
+
+          {lines.length > 0 && (
+            <div className="overflow-x-auto">
               <table className="w-full text-[13px]">
                 <thead>
                   <tr className="border-b border-line text-left text-[10px] uppercase tracking-wider text-ink-3">
-                    <th className="px-4 py-2">Prestation</th>
-                    <th className="px-4 py-2">Unité</th>
-                    <th className="px-4 py-2 text-right">Qté</th>
-                    <th className="px-4 py-2 text-right">PU</th>
-                    <th className="px-4 py-2 text-right">Total vente</th>
-                    <th className="px-4 py-2 text-right">Coût achat</th>
-                    <th className="px-4 py-2 text-right">Marge</th>
+                    <th className="py-2 pr-2">Prestation</th>
+                    <th className="px-2 py-2">Unité</th>
+                    <th className="px-2 py-2 text-right">Qté</th>
+                    <th className="px-2 py-2 text-right">PU vente</th>
+                    <th className="px-2 py-2 text-right">PU achat</th>
+                    <th className="px-2 py-2">Devise</th>
+                    <th className="px-2 py-2 text-right">Total</th>
+                    <th className="py-2" />
                   </tr>
                 </thead>
                 <tbody>
                   {lines.map((line, index) => (
                     <tr key={index} className="border-b border-line last:border-0">
-                      <td className="px-4 py-2">
-                        {line.description}
-                        {line.minimumApplied && <span className="ml-1.5 rounded bg-warn-soft px-1.5 text-[10px] text-warn">minimum</span>}
+                      <td className="py-1.5 pr-2">
+                        <input required value={line.description} onChange={(e) => setLine(index, "description", e.target.value)} placeholder="Fret maritime" className={`${inputClass} w-full`} />
+                        {line.minimumApplied && <span className="mt-1 inline-block rounded bg-warn-soft px-1.5 text-[10px] text-warn">minimum appliqué</span>}
                       </td>
-                      <td className="px-4 py-2 text-ink-3">{line.unit}</td>
-                      <td className="mono px-4 py-2 text-right">{line.quantity}</td>
-                      <td className="mono px-4 py-2 text-right">{line.unitPrice.toLocaleString("fr-FR")}</td>
-                      <td className="mono px-4 py-2 text-right font-semibold">{line.total.toLocaleString("fr-FR")} {line.currency}</td>
-                      <td className="mono px-4 py-2 text-right text-ink-3">{line.buyTotal !== null ? line.buyTotal.toLocaleString("fr-FR") : "—"}</td>
-                      <td className={`mono px-4 py-2 text-right ${line.buyTotal !== null ? "text-ok" : "text-ink-3"}`}>
-                        {line.buyTotal !== null ? (line.total - line.buyTotal).toLocaleString("fr-FR") : "—"}
+                      <td className="px-2 py-1.5">
+                        <select value={line.unit} onChange={(e) => setLine(index, "unit", e.target.value)} className={inputClass}>
+                          {UNITS.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
+                        </select>
+                      </td>
+                      <td className="px-2 py-1.5">
+                        <input type="number" min={0} step="0.001" required value={line.quantity} onChange={(e) => setLine(index, "quantity", e.target.value)} className={`${inputClass} mono w-20 text-right`} />
+                      </td>
+                      <td className="px-2 py-1.5">
+                        <input type="number" min={0} required value={line.unit_price} onChange={(e) => setLine(index, "unit_price", e.target.value)} className={`${inputClass} mono w-28 text-right`} />
+                      </td>
+                      <td className="px-2 py-1.5">
+                        <input type="number" min={0} value={line.buy_price} onChange={(e) => setLine(index, "buy_price", e.target.value)} placeholder="—" className={`${inputClass} mono w-28 text-right`} />
+                      </td>
+                      <td className="px-2 py-1.5">
+                        <select value={line.currency_code} onChange={(e) => setLine(index, "currency_code", e.target.value)} className={inputClass}>
+                          {currencies?.map((currency) => <option key={currency.code} value={currency.code}>{currency.code}</option>)}
+                        </select>
+                      </td>
+                      <td className="mono px-2 py-1.5 text-right font-semibold">
+                        {money((Number(line.quantity) || 0) * (Number(line.unit_price) || 0))}
+                      </td>
+                      <td className="py-1.5 pl-2">
+                        <button type="button" onClick={() => setLines((state) => state.filter((_, i) => i !== index))} className="text-xs font-semibold text-crit hover:underline">
+                          Retirer
+                        </button>
                       </td>
                     </tr>
                   ))}
                 </tbody>
               </table>
-              {totals && (
-                <div className="flex flex-wrap gap-4 border-t border-line px-4 py-3">
-                  {Object.entries(totals).map(([currency, total]) => (
-                    <div key={currency} className="text-[13px]">
-                      <span className="text-ink-3">Total {currency} : </span>
-                      <span className="mono font-bold">{total.sell.toLocaleString("fr-FR")}</span>
-                      {total.buy > 0 && (
-                        <span className="ml-1.5 text-ok">
-                          (marge {(total.sell - total.buy).toLocaleString("fr-FR")})
-                        </span>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              )}
-            </>
+              <div className="flex flex-wrap gap-5 border-t border-line pt-3 text-[13px]">
+                {Object.entries(totals).map(([currency, total]) => (
+                  <span key={currency}>
+                    <span className="text-ink-3">Total {currency} : </span>
+                    <span className="mono font-bold">{money(total.sell)}</span>
+                    {total.buy > 0 && <span className="ml-1.5 text-ok">(marge {money(total.sell - total.buy)})</span>}
+                  </span>
+                ))}
+              </div>
+            </div>
           )}
+        </section>
+
+        <section className="grid gap-4 rounded-xl border border-line bg-surface p-5 shadow-sm md:grid-cols-4">
+          <p className="text-[13px] font-bold md:col-span-4">3 · Client et validité</p>
+          <Field label="Client" className="md:col-span-2">
+            <select required value={deal.party_id} onChange={(e) => setDeal({ ...deal, party_id: e.target.value })} className={inputClass}>
+              <option value="">— Sélectionner —</option>
+              {clients?.map((client) => <option key={client.id} value={client.id}>{client.name}</option>)}
+            </select>
+          </Field>
+          <Field label="Société émettrice">
+            <select required value={deal.company_id} onChange={(e) => setDeal({ ...deal, company_id: e.target.value })} className={inputClass}>
+              <option value="">— Sélectionner —</option>
+              {companies.map((company) => <option key={company.id} value={company.id}>{company.name}</option>)}
+            </select>
+          </Field>
+          <Field label="Incoterm">
+            <select value={deal.incoterm_code} onChange={(e) => setDeal({ ...deal, incoterm_code: e.target.value })} className={inputClass}>
+              {incoterms?.map((incoterm) => <option key={incoterm.code} value={incoterm.code}>{incoterm.code} — {incoterm.label}</option>)}
+            </select>
+          </Field>
+          <Field label="Devise">
+            <select value={deal.currency_code} onChange={(e) => setDeal({ ...deal, currency_code: e.target.value })} className={inputClass}>
+              {currencies?.map((currency) => <option key={currency.code} value={currency.code}>{currency.code} — {currency.name}</option>)}
+            </select>
+          </Field>
+          <Field label="Valable jusqu'au">
+            <input type="date" required value={deal.valid_until} onChange={(e) => setDeal({ ...deal, valid_until: e.target.value })} className={inputClass} />
+          </Field>
+        </section>
+
+        {error && <p className="rounded-lg bg-crit-soft px-4 py-2.5 text-[13px] text-crit">{error}</p>}
+
+        <div className="flex justify-end">
+          <button type="submit" disabled={saving || lines.length === 0} className={buttonPrimary}>
+            {saving ? "Création…" : "Créer la cotation"}
+          </button>
         </div>
-      )}
+      </form>
     </div>
   );
 }
