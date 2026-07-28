@@ -183,3 +183,64 @@ it('complète les abonnements en attente dès le booking enregistré', function 
 
     expect(DB::table('tracking_subscriptions')->value('carrier_scac'))->toBe('MSCU');
 });
+
+it('met un dossier import sous suivi à partir du seul connaissement', function (): void {
+    $ids = seedCore();
+    $shipmentId = seedShipmentFor($ids, $ids['client'], 'IMP-2026-00001');
+    DB::table('carriers')->insert([
+        'id' => (string) Str::uuid7(), 'scac' => 'MSCU', 'name' => 'MSC', 'is_active' => true,
+        'created_at' => now(), 'updated_at' => now(),
+    ]);
+
+    // À l'import le transitaire ne fait pas le booking : le connaissement est
+    // sa seule prise, et la compagnie lui apprend les conteneurs.
+    $response = $this->withToken(tokenFor($ids['user_admin']))
+        ->postJson("/api/v1/shipments/{$shipmentId}/tracking/subscribe", [
+            'subject_type' => 'bl', 'number' => 'MEDUJ2260417', 'carrier_scac' => 'MSCU',
+        ])->assertCreated()->json();
+
+    expect($response['carrier_known'])->toBeTrue()
+        ->and($response['new_events'])->toBeGreaterThan(0)
+        ->and($response['containers'])->not->toBeEmpty();
+
+    // Les conteneurs découverts sont affectés au dossier et suivis à leur tour.
+    $containers = $this->withToken(tokenFor($ids['user_admin']))
+        ->getJson("/api/v1/shipments/{$shipmentId}")->json('containers');
+
+    expect($containers)->toHaveCount(1)
+        ->and($containers[0]['number'])->toBe($response['containers'][0])
+        ->and($containers[0]['tracking_status'])->toBe('active');
+});
+
+it('signale un conteneur déjà affecté ailleurs plutôt que d\'échouer', function (): void {
+    $ids = seedCore();
+    DB::table('carriers')->insert([
+        'id' => (string) Str::uuid7(), 'scac' => 'MSCU', 'name' => 'MSC', 'is_active' => true,
+        'created_at' => now(), 'updated_at' => now(),
+    ]);
+    $token = tokenFor($ids['user_admin']);
+    $first = seedShipmentFor($ids, $ids['client'], 'IMP-2026-00001');
+    $second = seedShipmentFor($ids, $ids['client'], 'IMP-2026-00002');
+    $payload = ['subject_type' => 'bl', 'number' => 'MEDUJ2260417', 'carrier_scac' => 'MSCU'];
+
+    $this->withToken($token)->postJson("/api/v1/shipments/{$first}/tracking/subscribe", $payload)->assertCreated();
+    // Un conteneur n'a qu'une affectation active : le second dossier le signale.
+    $response = $this->withToken($token)
+        ->postJson("/api/v1/shipments/{$second}/tracking/subscribe", $payload)->assertCreated()->json();
+
+    expect($response['containers'])->toBeEmpty()
+        ->and($response['containers_busy'])->not->toBeEmpty();
+});
+
+it('enregistre l\'abonnement même sans compagnie, sans interroger', function (): void {
+    $ids = seedCore();
+    $shipmentId = seedShipmentFor($ids, $ids['client'], 'IMP-2026-00001');
+
+    $response = $this->withToken(tokenFor($ids['user_admin']))
+        ->postJson("/api/v1/shipments/{$shipmentId}/tracking/subscribe", [
+            'subject_type' => 'bl', 'number' => 'ABCD1234567',
+        ])->assertCreated()->json();
+
+    expect($response['carrier_known'])->toBeFalse()
+        ->and($response['message'])->toContain('Précisez la compagnie');
+});

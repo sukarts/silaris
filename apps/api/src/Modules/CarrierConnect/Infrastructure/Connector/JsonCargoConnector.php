@@ -60,7 +60,10 @@ class JsonCargoConnector implements CarrierTrackingProvider
             $atd ??= $result->atd;
         }
 
-        return new TrackingResult(events: $events, eta: $eta, etd: $etd, ata: $ata, atd: $atd);
+        return new TrackingResult(
+            events: $events, eta: $eta, etd: $etd, ata: $ata, atd: $atd,
+            containerNumbers: array_values(array_map('strval', $containers)),
+        );
     }
 
     public function capabilities(): array
