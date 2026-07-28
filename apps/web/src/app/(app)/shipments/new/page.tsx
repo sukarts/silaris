@@ -2,7 +2,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { problemMessage, rawApi } from "@/lib/api";
 import { Field, buttonPrimary, inputClass } from "@/components/Field";
 import { PlaceCombobox } from "@/components/PlaceCombobox";
@@ -14,6 +14,15 @@ interface Option {
   legal_name?: string;
   code?: string;
   branches?: { id: string; name: string; code: string }[];
+}
+
+/** Agence de rattachement telle que /auth/me la renvoie. */
+interface UserBranch {
+  id: string;
+  code: string;
+  name: string;
+  company_id: string;
+  company_name: string | null;
 }
 
 export default function NewShipmentPage() {
@@ -43,11 +52,14 @@ export default function NewShipmentPage() {
       return (data as { data: Option[] }).data;
     },
   });
-  const { data: companies } = useQuery({
-    queryKey: ["companies"],
+  // Le périmètre de saisie vient des agences de rattachement de l'utilisateur,
+  // pas de l'administration : un agent transit ouvre des dossiers sans avoir
+  // le droit de lire les paramètres de la société.
+  const { data: scope } = useQuery({
+    queryKey: ["auth", "me", "branches"],
     queryFn: async () => {
-      const { data } = await rawApi.GET("/v1/admin/companies");
-      return data as Option[];
+      const { data } = await rawApi.GET("/v1/auth/me");
+      return (data as { branches: UserBranch[] } | undefined)?.branches ?? [];
     },
   });
   const { data: incoterms } = useQuery({
@@ -58,7 +70,21 @@ export default function NewShipmentPage() {
     },
   });
 
-  const branches = companies?.find((company) => company.id === form.company_id)?.branches ?? [];
+  const companies = Array.from(
+    new Map((scope ?? []).map((branch) => [branch.company_id, branch.company_name])).entries(),
+  ).map(([id, name]) => ({ id, name }));
+  const branches = (scope ?? []).filter((branch) => branch.company_id === form.company_id);
+
+  // Rattachement unique — le cas courant : on pré-remplit plutôt que d'imposer
+  // deux choix sans alternative.
+  const onlyCompany = companies.length === 1 ? companies[0] : undefined;
+  const onlyBranch = branches.length === 1 ? branches[0] : undefined;
+  useEffect(() => {
+    if (onlyCompany && form.company_id === "") set("company_id", onlyCompany.id);
+  }, [onlyCompany, form.company_id]);
+  useEffect(() => {
+    if (onlyBranch && form.branch_id === "") set("branch_id", onlyBranch.id);
+  }, [onlyBranch, form.branch_id]);
 
   function set(key: string, value: string) {
     setForm((state) => ({ ...state, [key]: value }));
@@ -121,8 +147,8 @@ export default function NewShipmentPage() {
           <Field label="Société">
             <select required value={form.company_id} onChange={(e) => { set("company_id", e.target.value); set("branch_id", ""); }} className={inputClass}>
               <option value="">— Sélectionner —</option>
-              {companies?.map((company) => (
-                <option key={company.id} value={company.id}>{company.legal_name}</option>
+              {companies.map((company) => (
+                <option key={company.id} value={company.id}>{company.name}</option>
               ))}
             </select>
           </Field>

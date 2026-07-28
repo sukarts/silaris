@@ -56,6 +56,7 @@ class UserModel extends Authenticatable
         return $this->belongsToMany(RoleModel::class, 'user_roles', 'user_id', 'role_id');
     }
 
+    /** @return BelongsToMany<BranchModel, $this> */
     public function branches(): BelongsToMany
     {
         return $this->belongsToMany(BranchModel::class, 'user_branches', 'user_id', 'branch_id');

@@ -16,6 +16,7 @@ class BranchModel extends BaseModel
 
     protected $casts = ['address' => 'array', 'is_active' => 'bool'];
 
+    /** @return BelongsTo<CompanyModel, $this> */
     public function company(): BelongsTo
     {
         return $this->belongsTo(CompanyModel::class, 'company_id');

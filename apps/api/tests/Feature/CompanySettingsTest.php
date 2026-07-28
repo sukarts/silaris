@@ -105,3 +105,72 @@ it('renvoie 404 quand la société n\'a pas de logo', function (): void {
 
     $this->get("/api/v1/public/companies/{$ids['company']}/logo")->assertNotFound();
 });
+
+it('distingue les dossiers import et export dans la référence', function (): void {
+    $ids = seedCore();
+    DB::table('companies')->where('id', $ids['company'])->update([
+        'shipment_settings' => json_encode(['reference_format' => '{DIRECTION}-{YEAR}-{SEQ:5}']),
+    ]);
+    $generator = app(SequenceReferenceGenerator::class);
+
+    expect($generator->nextShipmentReference($ids['branch'], 'import'))->toBe('IMP-'.date('Y').'-00001')
+        ->and($generator->nextShipmentReference($ids['branch'], 'export'))->toBe('EXP-'.date('Y').'-00001')
+        ->and($generator->nextShipmentReference($ids['branch'], 'transit'))->toBe('TRA-'.date('Y').'-00001');
+});
+
+it('numérote chaque sens sans trou malgré l\'alternance', function (): void {
+    $ids = seedCore();
+    DB::table('companies')->where('id', $ids['company'])->update([
+        'shipment_settings' => json_encode(['reference_format' => '{DIRECTION}-{YEAR}-{SEQ:5}']),
+    ]);
+    $generator = app(SequenceReferenceGenerator::class);
+
+    // Alternance import/export : chaque série garde sa propre continuité, sans
+    // quoi un contrôle lirait les numéros sautés comme des pièces manquantes.
+    $references = [];
+    foreach (['import', 'export', 'import', 'export', 'import'] as $direction) {
+        $references[] = $generator->nextShipmentReference($ids['branch'], $direction);
+    }
+
+    $year = date('Y');
+    expect($references)->toBe([
+        "IMP-{$year}-00001", "EXP-{$year}-00001", "IMP-{$year}-00002",
+        "EXP-{$year}-00002", "IMP-{$year}-00003",
+    ]);
+});
+
+it('garde une séquence unique quand le format ignore le sens', function (): void {
+    $ids = seedCore();
+    $generator = app(SequenceReferenceGenerator::class);
+
+    // Format historique sans {DIRECTION} : un seul compteur, comme avant.
+    expect($generator->nextShipmentReference($ids['branch'], 'import'))->toContain('-00001')
+        ->and($generator->nextShipmentReference($ids['branch'], 'export'))->toContain('-00002');
+});
+
+it('donne un aperçu des deux sens côte à côte', function (): void {
+    $ids = seedCore();
+
+    $body = $this->withToken(tokenFor($ids['user_admin']))
+        ->getJson("/api/v1/admin/companies/{$ids['company']}/reference-preview?format=".urlencode('{DIRECTION}-{YEAR}-{SEQ:4}'))
+        ->assertOk()->json();
+
+    expect($body['previews']['import'])->toBe('IMP-'.date('Y').'-0128')
+        ->and($body['previews']['export'])->toBe('EXP-'.date('Y').'-0128');
+});
+
+it('applique le sens du dossier à sa création', function (): void {
+    $ids = seedCore();
+    DB::table('companies')->where('id', $ids['company'])->update([
+        'shipment_settings' => json_encode(['reference_format' => '{DIRECTION}-{YEAR}-{SEQ:5}']),
+    ]);
+
+    $reference = $this->withToken(tokenFor($ids['user_admin']))
+        ->postJson('/api/v1/shipments', [
+            'client_id' => $ids['client'], 'branch_id' => $ids['branch'], 'company_id' => $ids['company'],
+            'agent_id' => $ids['user_transit_agent'], 'direction' => 'export', 'mode' => 'sea_fcl',
+            'incoterm_code' => 'CIF', 'origin_locode' => 'CIABJ', 'destination_locode' => 'FRLEH',
+        ])->assertCreated()->json('data.reference');
+
+    expect($reference)->toStartWith('EXP-');
+});

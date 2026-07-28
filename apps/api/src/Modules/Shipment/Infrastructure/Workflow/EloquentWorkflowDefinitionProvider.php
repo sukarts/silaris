@@ -5,16 +5,33 @@ declare(strict_types=1);
 namespace Silaris\Modules\Shipment\Infrastructure\Workflow;
 
 use Illuminate\Support\Facades\Cache;
-use RuntimeException;
-use Silaris\Modules\Shared\Infrastructure\Tenancy\TenantContext;
+use Silaris\Modules\Shared\Domain\Exception\DomainException;
 use Silaris\Modules\Shipment\Domain\Service\WorkflowDefinitionProvider;
 use Silaris\Modules\Shipment\Domain\Service\WorkflowStepDefinition;
 use Silaris\Modules\Shipment\Infrastructure\Persistence\Model\WorkflowDefinitionModel;
 
+/**
+ * Un dossier ne peut pas naître sans workflow : plutôt qu'une erreur technique,
+ * l'exploitant reçoit la marche à suivre.
+ */
+final class NoWorkflowAvailable extends DomainException
+{
+    public static function make(string $mode, string $direction): self
+    {
+        return new self(
+            "Aucun workflow actif pour {$mode} / {$direction}. ".
+            'Créez-en un dans Paramètres avant de saisir des dossiers.'
+        );
+    }
+
+    public function errorCode(): string
+    {
+        return 'workflow.none_available';
+    }
+}
+
 final readonly class EloquentWorkflowDefinitionProvider implements WorkflowDefinitionProvider
 {
-    public function __construct(private TenantContext $tenant) {}
-
     public function stepsOf(string $workflowDefinitionId): array
     {
         return Cache::remember(
@@ -49,7 +66,7 @@ final readonly class EloquentWorkflowDefinitionProvider implements WorkflowDefin
             ->value('id');
 
         if ($id === null) {
-            throw new RuntimeException("Aucun workflow actif pour {$mode}/{$direction} (tenant {$this->tenant->id()})");
+            throw NoWorkflowAvailable::make($mode, $direction);
         }
 
         return $id;

@@ -175,6 +175,7 @@ class OrganizationController
         $data = $request->validate([
             'format' => ['sometimes', 'string', 'max:64'],
             'prefix' => ['sometimes', 'nullable', 'string', 'max:16'],
+            'direction' => ['sometimes', Rule::in(array_keys(SequenceReferenceGenerator::DIRECTION_CODES))],
         ]);
 
         $settings = $company->shipment_settings ?? [];
@@ -182,15 +183,24 @@ class OrganizationController
         $prefix = $data['prefix'] ?? $settings['reference_prefix'] ?? $company->code;
         $branchCode = (string) ($company->branches->first()->code ?? 'HQ');
 
+        $render = fn (string $direction): string => SequenceReferenceGenerator::render($format, [
+            'PREFIX' => (string) $prefix,
+            'COMPANY' => (string) $company->code,
+            'BRANCH' => $branchCode,
+            'DIRECTION' => SequenceReferenceGenerator::directionCode($direction),
+            'YEAR' => date('Y'),
+            'YY' => date('y'),
+            'MONTH' => date('m'),
+        ], 128);
+
         return response()->json([
-            'preview' => SequenceReferenceGenerator::render($format, [
-                'PREFIX' => (string) $prefix,
-                'COMPANY' => (string) $company->code,
-                'BRANCH' => $branchCode,
-                'YEAR' => date('Y'),
-                'YY' => date('y'),
-                'MONTH' => date('m'),
-            ], 128),
+            'preview' => $render($data['direction'] ?? 'import'),
+            // Les deux sens côte à côte : c'est là que le transitaire voit si
+            // son format les distingue vraiment.
+            'previews' => [
+                'import' => $render('import'),
+                'export' => $render('export'),
+            ],
         ]);
     }
 }

@@ -15,39 +15,58 @@ use Silaris\Modules\Tenancy\Infrastructure\Persistence\Model\CompanyModel;
  * société (companies.shipment_settings), séquence sans trou par agence+année
  * via next_sequence() (verrou ligne, même transaction).
  *
- * Placeholders : {PREFIX} {COMPANY} {BRANCH} {YEAR} {YY} {MONTH} {SEQ:n}
+ * Placeholders : {PREFIX} {COMPANY} {BRANCH} {DIRECTION} {YEAR} {YY} {MONTH} {SEQ:n}
  * Défaut historique : {COMPANY}-{YEAR}-{SEQ:5} → TAL-2026-00128
+ *
+ * {DIRECTION} rend IMP, EXP ou TRA. Dès qu'il figure au format, la séquence est
+ * comptée par sens : sans cela la série IMP présenterait des trous à chaque
+ * dossier export intercalé, ce qu'un contrôle fiscal lit comme une pièce
+ * manquante.
  */
 final readonly class SequenceReferenceGenerator implements ReferenceGenerator
 {
     public const DEFAULT_FORMAT = '{COMPANY}-{YEAR}-{SEQ:5}';
 
+    /** Sens du dossier tel qu'il apparaît dans la référence. */
+    public const DIRECTION_CODES = ['import' => 'IMP', 'export' => 'EXP', 'transit' => 'TRA'];
+
     public function __construct(private TenantContext $tenant) {}
 
-    public function nextShipmentReference(string $branchId): string
+    public function nextShipmentReference(string $branchId, string $direction = 'import'): string
     {
         $branch = BranchModel::with('company')->findOrFail($branchId);
         /** @var CompanyModel $company */
         $company = $branch->company;
         $year = (int) date('Y');
 
-        $next = (int) DB::selectOne(
-            'SELECT next_sequence(?, ?) AS value',
-            [$this->tenant->id(), "shipment:{$branch->code}:{$year}"],
-        )->value;
-
         $settings = $company->shipment_settings ?? [];
         $format = (string) ($settings['reference_format'] ?? self::DEFAULT_FORMAT);
         $prefix = (string) ($settings['reference_prefix'] ?? $company->code);
+        $directionCode = self::directionCode($direction);
+
+        // Compteur par sens seulement lorsque le sens figure dans la référence,
+        // pour que chaque série reste continue.
+        $scope = str_contains($format, '{DIRECTION}') ? ":{$directionCode}" : '';
+        $next = (int) DB::selectOne(
+            'SELECT next_sequence(?, ?) AS value',
+            [$this->tenant->id(), "shipment:{$branch->code}{$scope}:{$year}"],
+        )->value;
 
         return self::render($format, [
             'PREFIX' => $prefix,
             'COMPANY' => (string) $company->code,
             'BRANCH' => (string) $branch->code,
+            'DIRECTION' => $directionCode,
             'YEAR' => (string) $year,
             'YY' => date('y'),
             'MONTH' => date('m'),
         ], $next);
+    }
+
+    /** IMP, EXP ou TRA ; repli sur IMP pour un sens inconnu. */
+    public static function directionCode(string $direction): string
+    {
+        return self::DIRECTION_CODES[$direction] ?? 'IMP';
     }
 
     /**
