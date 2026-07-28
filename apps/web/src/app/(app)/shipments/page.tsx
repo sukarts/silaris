@@ -27,7 +27,7 @@ const MODE_LABEL: Record<string, string> = {
   sea_fcl: "🚢 FCL",
   sea_lcl: "🚢 LCL",
   air: "✈ Aérien",
-  road: "🚛 Routier",
+  road: "🚛 Terrestre",
   multimodal: "⛓ Multimodal",
 };
 

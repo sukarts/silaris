@@ -1,6 +1,6 @@
 @php
     $address = is_array($company->address ?? null) ? $company->address : (json_decode((string) ($company->address ?? '{}'), true) ?: []);
-    $modeLabels = ['sea_fcl' => 'Maritime FCL', 'sea_lcl' => 'Maritime LCL', 'air' => 'Aérien', 'road' => 'Routier', 'multimodal' => 'Multimodal'];
+    $modeLabels = ['sea_fcl' => 'Maritime FCL', 'sea_lcl' => 'Maritime LCL', 'air' => 'Aérien', 'road' => 'Terrestre', 'multimodal' => 'Multimodal'];
     $fmt = fn ($n) => number_format((float) $n, 0, ',', ' ');
 @endphp
 <!DOCTYPE html>

@@ -233,7 +233,7 @@ export default function NewQuotePage() {
             <option value="sea_fcl">Maritime FCL</option>
             <option value="sea_lcl">Maritime LCL</option>
             <option value="air">Aérien</option>
-            <option value="road">Routier</option>
+            <option value="road">Terrestre</option>
           </select>
         </Field>
         <Field label="Sens">
