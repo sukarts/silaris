@@ -37,9 +37,11 @@ return [
         ],
     ],
 
-    'jsoncargo' => [
-        'api_key' => env('JSONCARGO_API_KEY'),
-        'base_url' => env('JSONCARGO_BASE_URL', 'https://api.jsoncargo.com/api/v1'),
+    'shipsgo' => [
+        'api_key' => env('SHIPSGO_API_KEY'),
+        'base_url' => env('SHIPSGO_BASE_URL', 'https://api.shipsgo.com/v2'),
+        // Secret de compte servant à valider la signature des webhooks.
+        'webhook_secret' => env('SHIPSGO_WEBHOOK_SECRET'),
     ],
 
 ];

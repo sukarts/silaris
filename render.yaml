@@ -81,6 +81,12 @@ services:
         sync: false
       - key: MEILISEARCH_KEY
         sync: false
+      # Agrégateur de suivi maritime — clé de compte et secret de signature
+      # des notifications poussées (webhook).
+      - key: SHIPSGO_API_KEY
+        sync: false
+      - key: SHIPSGO_WEBHOOK_SECRET
+        sync: false
       - key: DOCUMENTS_DISK
         value: s3
       - key: AWS_ACCESS_KEY_ID
