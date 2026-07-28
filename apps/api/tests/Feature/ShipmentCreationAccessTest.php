@@ -13,8 +13,9 @@ function shipmentPayload(array $ids, array $overrides = []): array
 {
     return [
         'client_id' => $ids['client'], 'branch_id' => $ids['branch'], 'company_id' => $ids['company'],
-        'agent_id' => $ids['user_transit_agent'], 'direction' => 'import', 'mode' => 'sea_fcl',
-        'incoterm_code' => 'CIF', 'origin_locode' => 'CNSHA', 'destination_locode' => 'CIABJ',
+        'agent_id' => $ids['user_transit_agent'],
+        // Le dossier n'existe que sur cotation acceptée : le payload en porte une.
+        'quote_id' => seedAcceptedQuote($ids),
         ...$overrides,
     ];
 }

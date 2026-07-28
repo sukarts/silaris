@@ -171,7 +171,7 @@ for part, col in (("SILA", WHITE), ("RIS", ACCENT)):
 
 text(s, "Le système d'information du transitaire", Inches(1.15), Inches(3.3), Inches(10), Inches(0.6),
      size=27, color=WHITE)
-text(s, "Maritime · Aérien · Routier · Douane · Facturation · Portail client",
+text(s, "Maritime · Aérien · Terrestre · Douane · Facturation · Portail client",
      Inches(1.15), Inches(4.05), Inches(10), Inches(0.4), size=15, color=INK3)
 
 for i, (val, lab) in enumerate([("19", "modules"), ("100", "tables"), ("169", "routes API"), ("109", "tests")]):
@@ -208,7 +208,7 @@ text(s, "Chaque expédition porte son mode de transport, ses conteneurs, ses doc
      Inches(0.85), Inches(1.75), Inches(11.3), Inches(1), size=14.5, color=INK3, spacing=1.35)
 
 pillars = [
-    ("Un dossier unique", "Maritime, aérien et routier dans\nla même chaîne, du devis à la facture.", ACCENT),
+    ("Un dossier unique", "Maritime, aérien et terrestre dans\nla même chaîne, du devis à la facture.", ACCENT),
     ("Le client autonome", "Portail dédié et page de suivi publique\npar numéro de conteneur ou de BL.", SEA),
     ("Le suivi automatique", "Les positions conteneurs remontent\nseules depuis onze compagnies.", OK),
     ("Chaque geste tracé", "Piste d'audit, rôles fins et cloisonnement\nétanche entre sociétés.", WARN),
@@ -230,7 +230,7 @@ s = slide()
 section_header(s, "Périmètre", "Vingt-quatre briques fonctionnelles, dix-neuf déjà livrées",
                "Le décompte porte sur les briques visibles à l'usage.")
 groups = [
-    ("Opérations", [("Dossiers", 1), ("Bookings", 1), ("Conteneurs", 1), ("Aérien", 1), ("Routier", 1), ("Télématique", 1)]),
+    ("Opérations", [("Dossiers", 1), ("Bookings", 1), ("Conteneurs", 1), ("Aérien", 1), ("Terrestre", 1), ("Télématique", 1)]),
     ("Commercial", [("CRM", 1), ("Cotations", 1), ("Facturation", 1), ("Recouvrement", 0)]),
     ("Ressources", [("Documents", 1), ("Référentiels", 1), ("Reporting", 1), ("Entrepôt / stock", 0)]),
     ("Plateforme", [("Identité & rôles", 1), ("Multi-société", 1), ("Notifications", 1), ("Audit", 1), ("Recherche", 1),
@@ -278,7 +278,7 @@ MODULES = [
       "Accès direct aux derniers dossiers", "Recherche globale ⌘K sur dossiers, clients et conteneurs"]),
     ("Opérations", "Dossiers", "02-dossiers.png",
      "Le cœur du métier : chaque expédition, quel que soit son mode, suit un workflow d'étapes configurable.",
-     ["Import, export et transit — maritime FCL/LCL, aérien, routier", "Référence générée au format choisi par le transitaire",
+     ["Import, export et transit — maritime FCL/LCL, aérien, terrestre", "Référence générée au format choisi par le transitaire",
       "Filtres par statut, mode, client et agence", "Retards signalés automatiquement"]),
     ("Opérations", "Détail du dossier", "03-dossier-detail.png",
      "Toute la vie de l'expédition sur une page : étapes, timeline, documents, conteneurs et coûts.",
@@ -298,15 +298,15 @@ MODULES = [
      "Le fret aérien avec ses propres codes : LTA, compagnies, aéroports et poids taxable.",
      ["Master et House Air Waybill", "Aéroports IATA en autocomplétion",
       "Poids brut, volumétrique et taxable", "Vols et escales"]),
-    ("Opérations", "Routier — missions", "07-routier-missions.png",
+    ("Opérations", "Terrestre — missions", "07-routier-missions.png",
      "Le pré et post-acheminement : missions, étapes, preuve de livraison signée.",
      ["Livraison, enlèvement et transfert", "Étapes géolocalisées avec détection d'arrivée",
       "Sous-traitance : transporteur affrété identifié", "Bon de livraison PDF signé"]),
-    ("Opérations", "Routier — flotte", "08-routier-flotte.png",
+    ("Opérations", "Terrestre — flotte", "08-routier-flotte.png",
      "Camions, remorques et chauffeurs, en propre ou fournis par un prestataire.",
      ["Propriétaire distingué : flotte propre ou affrétée", "Visites techniques et assurances suivies",
       "Permis et échéances des chauffeurs", "Affectation croisée refusée par le serveur"]),
-    ("Opérations", "Routier — balises GPS", "09-routier-balises.png",
+    ("Opérations", "Terrestre — balises GPS", "09-routier-balises.png",
      "Le dernier kilomètre suivi par balise, du port jusqu'à la livraison.",
      ["Compatible Teltonika, Queclink, Traccar, Flespi", "Clé d'ingestion par balise, jamais un compte utilisateur",
       "Géorepérage à 250 m pour détecter l'arrivée", "Position visible du client pendant la livraison"]),
@@ -449,12 +449,12 @@ s = slide()
 section_header(s, "MVP", "Ce qui tourne aujourd'hui en production",
                "Déployé sur silaris.co — accessible aux exploitants comme aux clients.")
 delivered = [
-    ("Chaîne opérationnelle complète", "Dossiers, bookings, conteneurs, aérien, routier — du devis à la facture."),
+    ("Chaîne opérationnelle complète", "Dossiers, bookings, conteneurs, aérien, terrestre — du devis à la facture."),
     ("Suivi maritime automatique", "Onze compagnies interrogées chaque jour, actualisation manuelle possible."),
     ("Portail et suivi public", "Le client consulte ses dossiers, accepte ses cotations, télécharge ses pièces."),
     ("Documents à votre marque", "Factures, cotations et bons de livraison signés, sous votre logo."),
     ("Emails réels", "Invitations, réinitialisations et alertes envoyés depuis votre domaine."),
-    ("Télématique routière", "Balises GPS, géorepérage et preuve de livraison signée sur place."),
+    ("Télématique terrestre", "Balises GPS, géorepérage et preuve de livraison signée sur place."),
 ]
 y = Inches(2.15)
 for i, (t, d) in enumerate(delivered):

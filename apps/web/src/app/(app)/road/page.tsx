@@ -300,7 +300,7 @@ export default function RoadPage() {
     <div className="flex flex-col gap-4">
       <div className="flex items-start">
         <div>
-          <h1 className="text-xl font-bold">Routier</h1>
+          <h1 className="text-xl font-bold">Terrestre</h1>
           <p className="text-[13px] text-ink-3">Missions de transport et gestion de la flotte</p>
         </div>
         {canCreate && tab === "missions" && (

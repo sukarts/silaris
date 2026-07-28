@@ -168,8 +168,10 @@ it('applique le sens du dossier à sa création', function (): void {
     $reference = $this->withToken(tokenFor($ids['user_admin']))
         ->postJson('/api/v1/shipments', [
             'client_id' => $ids['client'], 'branch_id' => $ids['branch'], 'company_id' => $ids['company'],
-            'agent_id' => $ids['user_transit_agent'], 'direction' => 'export', 'mode' => 'sea_fcl',
-            'incoterm_code' => 'CIF', 'origin_locode' => 'CIABJ', 'destination_locode' => 'FRLEH',
+            'agent_id' => $ids['user_transit_agent'],
+            'quote_id' => seedAcceptedQuote($ids, overrides: [
+                'direction' => 'export', 'origin_locode' => 'CIABJ', 'destination_locode' => 'FRLEH',
+            ]),
         ])->assertCreated()->json('data.reference');
 
     expect($reference)->toStartWith('EXP-');

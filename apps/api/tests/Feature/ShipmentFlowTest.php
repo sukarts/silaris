@@ -12,12 +12,11 @@ it('crée un dossier via l API avec référence séquencée, puis bloque et déb
     $ids = seedCore();
     $token = tokenFor($ids['user_transit_agent']);
 
-    // Création
+    // Création — sur cotation acceptée, seul point d'entrée d'un dossier.
     $create = $this->withToken($token)->postJson('/api/v1/shipments', [
         'client_id' => $ids['client'], 'branch_id' => $ids['branch'], 'company_id' => $ids['company'],
         'agent_id' => $ids['user_transit_agent'],
-        'direction' => 'import', 'mode' => 'sea_fcl', 'incoterm_code' => 'CIF',
-        'origin_locode' => 'CNSHA', 'destination_locode' => 'CIABJ',
+        'quote_id' => seedAcceptedQuote($ids),
     ]);
     $create->assertCreated();
     $shipmentId = $create->json('data.id');

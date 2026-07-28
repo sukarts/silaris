@@ -58,3 +58,38 @@ function seedContainer(array $ids, string $number = 'MSCU1234566'): string
 
     return $id;
 }
+
+/**
+ * Cotation acceptée par le client — préalable désormais obligatoire à
+ * l'ouverture d'un dossier. Helper partagé entre suites.
+ *
+ * @param  array<string, string>  $overrides
+ */
+function seedAcceptedQuote(array $ids, ?string $clientId = null, array $overrides = []): string
+{
+    $quoteId = (string) Str::uuid7();
+    DB::table('quotes')->insert([
+        'id' => $quoteId,
+        'tenant_id' => $ids['tenant'],
+        'company_id' => $ids['company'],
+        'number' => 'Q-'.date('Y').'-'.substr($quoteId, 0, 4),
+        'party_id' => $clientId ?? $ids['client'],
+        'owner_id' => $ids['user_admin'],
+        'status' => 'accepted',
+        'mode' => 'sea_fcl',
+        'direction' => 'import',
+        'origin_locode' => 'CNSHA',
+        'destination_locode' => 'CIABJ',
+        'incoterm_code' => 'CIF',
+        'cargo_summary' => '{}',
+        'currency_code' => 'XOF',
+        'total_amount' => 1_250_000,
+        'valid_until' => now()->addDays(30),
+        'accepted_at' => now(),
+        ...$overrides,
+        'created_at' => now(),
+        'updated_at' => now(),
+    ]);
+
+    return $quoteId;
+}

@@ -32,9 +32,9 @@ const INDUSTRIES = [
 
 const TYPE_LABEL: Record<string, string> = { client: "Client", prospect: "Prospect", supplier: "Fournisseur" };
 
-/** Métiers des fournisseurs du transit — le transporteur routier sert à la sous-traitance des missions. */
+/** Métiers des fournisseurs du transit — le transporteur terrestre sert à la sous-traitance des missions. */
 const SUPPLIER_KINDS: [string, string][] = [
-  ["trucker", "Transporteur routier"],
+  ["trucker", "Transporteur terrestre"],
   ["ocean_carrier", "Compagnie maritime"],
   ["airline", "Compagnie aérienne"],
   ["customs_agent", "Commissionnaire en douane"],
