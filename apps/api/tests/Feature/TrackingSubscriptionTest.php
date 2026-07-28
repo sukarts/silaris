@@ -111,3 +111,75 @@ it('réactive un abonnement en pause plutôt que d\'en ouvrir un second', functi
         ->and($subscription->status)->toBe('active')
         ->and($subscription->consecutive_failures)->toBe(0);
 });
+
+it('déduit la compagnie du booking du dossier', function (): void {
+    $ids = seedCore();
+    $shipmentId = seedShipmentFor($ids, $ids['client'], 'IMP-2026-00001');
+    $carrierId = (string) Str::uuid7();
+    DB::table('carriers')->insert([
+        'id' => $carrierId, 'scac' => 'MSCU', 'name' => 'MSC', 'is_active' => true,
+        'created_at' => now(), 'updated_at' => now(),
+    ]);
+    DB::table('bookings')->insert([
+        'id' => (string) Str::uuid7(), 'tenant_id' => $ids['tenant'], 'shipment_id' => $shipmentId,
+        'carrier_id' => $carrierId, 'booking_number' => 'EBKG12345678', 'status' => 'requested',
+        'created_at' => now(), 'updated_at' => now(),
+    ]);
+
+    // Le conteneur est loué (préfixe SELU, aucun armateur) : seul le booking
+    // dit sous quelle compagnie il voyage.
+    app(TrackingSubscriber::class)->subscribe($ids['tenant'], $shipmentId, 'container', 'SELU4043526');
+
+    expect(DB::table('tracking_subscriptions')->value('carrier_scac'))->toBe('MSCU');
+});
+
+it('déduit la compagnie du préfixe propriétaire à défaut de booking', function (): void {
+    $ids = seedCore();
+    $shipmentId = seedShipmentFor($ids, $ids['client'], 'IMP-2026-00001');
+    DB::table('carriers')->insert([
+        'id' => (string) Str::uuid7(), 'scac' => 'MSCU', 'name' => 'MSC', 'is_active' => true,
+        'created_at' => now(), 'updated_at' => now(),
+    ]);
+
+    app(TrackingSubscriber::class)->subscribe($ids['tenant'], $shipmentId, 'container', 'MSCU1234566');
+
+    expect(DB::table('tracking_subscriptions')->value('carrier_scac'))->toBe('MSCU');
+});
+
+it('laisse l\'abonnement en attente quand la compagnie reste inconnue', function (): void {
+    $ids = seedCore();
+    $shipmentId = seedShipmentFor($ids, $ids['client'], 'IMP-2026-00001');
+
+    app(TrackingSubscriber::class)->subscribe($ids['tenant'], $shipmentId, 'container', 'SELU4043526');
+
+    $refresh = $this->withToken(tokenFor($ids['user_admin']))
+        ->postJson("/api/v1/shipments/{$shipmentId}/tracking/refresh")->assertOk()->json();
+
+    // Le dossier ne doit pas paraître suivi alors qu'aucun appel n'est possible.
+    expect($refresh['subscriptions'])->toBe(0)
+        ->and($refresh['pending_carrier'])->toBe(1)
+        ->and($refresh['errors'][0])->toContain('compagnie inconnue');
+});
+
+it('complète les abonnements en attente dès le booking enregistré', function (): void {
+    $ids = seedCore();
+    $shipmentId = seedShipmentFor($ids, $ids['client'], 'IMP-2026-00001');
+    $containerId = seedContainer($ids, 'SELU4043526');
+    $carrierId = (string) Str::uuid7();
+    DB::table('carriers')->insert([
+        'id' => $carrierId, 'scac' => 'MSCU', 'name' => 'MSC', 'is_active' => true,
+        'created_at' => now(), 'updated_at' => now(),
+    ]);
+    $token = tokenFor($ids['user_admin']);
+
+    // Ordre réel : les conteneurs sont souvent affectés avant que la compagnie
+    // soit arrêtée.
+    $this->withToken($token)->postJson("/api/v1/containers/{$containerId}/assign", ['shipment_id' => $shipmentId]);
+    expect(DB::table('tracking_subscriptions')->value('carrier_scac'))->toBeNull();
+
+    $this->withToken($token)->postJson('/api/v1/bookings', [
+        'shipment_id' => $shipmentId, 'carrier_id' => $carrierId, 'booking_number' => 'EBKG12345678',
+    ])->assertCreated();
+
+    expect(DB::table('tracking_subscriptions')->value('carrier_scac'))->toBe('MSCU');
+});
