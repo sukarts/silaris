@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\DB;
 use Silaris\Modules\CarrierConnect\Infrastructure\CarrierRegistry;
 use Silaris\Modules\CarrierConnect\Infrastructure\Support\CircuitBreaker;
 use Silaris\Modules\Tracking\Domain\Contract\CarrierUnavailable;
+use Silaris\Modules\Tracking\Domain\Contract\TrackingResult;
 
 /**
  * Interrogation d'UN abonnement de tracking : connecteur → ingestion →
@@ -28,6 +29,17 @@ final readonly class TrackingPoller
     /** @return int Nombre de nouveaux événements ingérés. */
     public function poll(object $subscription): int
     {
+        return $this->pollDetailed($subscription)['events'];
+    }
+
+    /**
+     * Interroge et rend aussi le relevé, pour éviter un second appel à
+     * l'appelant qui en aurait besoin — le quota transporteur se compte.
+     *
+     * @return array{events: int, result: TrackingResult}
+     */
+    public function pollDetailed(object $subscription): array
+    {
         try {
             $connector = $this->registry->resolve($subscription->carrier_scac);
             $result = $subscription->subject_type === 'bl'
@@ -36,11 +48,17 @@ final readonly class TrackingPoller
 
             $inserted = $this->ingestion->ingest($subscription, $result);
 
-            DB::table('tracking_subscriptions')->where('id', $subscription->id)
-                ->update(['last_polled_at' => now(), 'consecutive_failures' => 0, 'updated_at' => now()]);
+            DB::table('tracking_subscriptions')->where('id', $subscription->id)->update([
+                'last_polled_at' => now(),
+                'consecutive_failures' => 0,
+                // La photo prime sur le seul statut : c'est elle qui porte le
+                // navire, les escales et l'ETA.
+                'last_snapshot' => $result->snapshot === [] ? null : json_encode($result->snapshot),
+                'updated_at' => now(),
+            ]);
             $this->breaker->recordSuccess($subscription->carrier_scac);
 
-            return $inserted;
+            return ['events' => $inserted, 'result' => $result];
         } catch (CarrierUnavailable $e) {
             $failures = $subscription->consecutive_failures + 1;
             DB::table('tracking_subscriptions')->where('id', $subscription->id)

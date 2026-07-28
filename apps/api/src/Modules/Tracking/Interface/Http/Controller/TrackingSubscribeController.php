@@ -9,11 +9,11 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
-use Silaris\Modules\CarrierConnect\Infrastructure\CarrierRegistry;
 use Silaris\Modules\Shared\Infrastructure\Tenancy\TenantContext;
 use Silaris\Modules\Tracking\Application\Service\TrackingPoller;
 use Silaris\Modules\Tracking\Application\Service\TrackingSubscriber;
 use Silaris\Modules\Tracking\Domain\Contract\CarrierUnavailable;
+use Silaris\Modules\Tracking\Domain\Contract\TrackingResult;
 
 /**
  * Mise sous suivi d'un dossier à partir d'un numéro.
@@ -40,6 +40,10 @@ class TrackingSubscribeController
             'carrier_scac' => ['nullable', 'string', 'size:4', 'exists:carriers,scac'],
         ]);
 
+        // La compagnie saisie vaut pour tout le dossier : les conteneurs déjà
+        // affectés attendaient précisément cette information.
+        $this->subscriber->attachCarrier($shipmentId, $data['carrier_scac'] ?? null);
+
         $subscriptionId = $this->subscriber->subscribe(
             $this->tenant->id(), $shipmentId, $data['subject_type'], $data['number'], $data['carrier_scac'] ?? null,
         );
@@ -60,7 +64,7 @@ class TrackingSubscribeController
         // Interrogation immédiate : l'exploitant vient de saisir le numéro, il
         // doit savoir tout de suite si la compagnie le reconnaît.
         try {
-            $newEvents = $this->poller->poll($subscription);
+            $polled = $this->poller->pollDetailed($subscription);
         } catch (CarrierUnavailable $e) {
             return response()->json([
                 'subscription_id' => $subscriptionId,
@@ -71,13 +75,13 @@ class TrackingSubscribeController
         }
 
         $containers = $data['subject_type'] === 'bl'
-            ? $this->attachContainersOf($subscription, $shipmentId)
+            ? $this->attachContainersOf($subscription, $shipmentId, $polled['result'])
             : ['attached' => [], 'busy' => []];
 
         return response()->json([
             'subscription_id' => $subscriptionId,
             'carrier_known' => true,
-            'new_events' => $newEvents,
+            'new_events' => $polled['events'],
             'containers' => $containers['attached'],
             'containers_busy' => $containers['busy'],
         ], 201);
@@ -88,16 +92,8 @@ class TrackingSubscribeController
      *
      * @return array{attached: list<string>, busy: list<string>}
      */
-    private function attachContainersOf(object $subscription, string $shipmentId): array
+    private function attachContainersOf(object $subscription, string $shipmentId, TrackingResult $result): array
     {
-        $registry = app(CarrierRegistry::class);
-        try {
-            $result = $registry->resolve($subscription->carrier_scac)
-                ->trackBillOfLading($subscription->subject_number);
-        } catch (CarrierUnavailable) {
-            return ['attached' => [], 'busy' => []];
-        }
-
         $attached = [];
         $busy = [];
         foreach ($result->containerNumbers as $number) {
@@ -141,9 +137,17 @@ class TrackingSubscribeController
                 $attached[] = $number;
             }
 
-            $this->subscriber->subscribe(
+            $containerSubscription = $this->subscriber->subscribe(
                 $this->tenant->id(), $shipmentId, 'container', $number, $subscription->carrier_scac,
             );
+
+            // Le relevé du connaissement décrit le voyage de ses conteneurs :
+            // le reprendre évite un appel par boîte à la souscription.
+            if ($containerSubscription !== null && $result->snapshot !== []) {
+                DB::table('tracking_subscriptions')->where('id', $containerSubscription)
+                    ->whereNull('last_snapshot')
+                    ->update(['last_snapshot' => json_encode($result->snapshot), 'updated_at' => now()]);
+            }
         }
 
         return ['attached' => $attached, 'busy' => $busy];

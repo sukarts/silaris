@@ -244,3 +244,49 @@ it('enregistre l\'abonnement même sans compagnie, sans interroger', function ()
     expect($response['carrier_known'])->toBeFalse()
         ->and($response['message'])->toContain('Précisez la compagnie');
 });
+
+it('conserve le relevé transporteur, pas seulement le statut', function (): void {
+    $ids = seedCore();
+    $shipmentId = seedShipmentFor($ids, $ids['client'], 'IMP-2026-00001');
+    DB::table('carriers')->insert([
+        'id' => (string) Str::uuid7(), 'scac' => 'MSCU', 'name' => 'MSC', 'is_active' => true,
+        'created_at' => now(), 'updated_at' => now(),
+    ]);
+
+    $this->withToken(tokenFor($ids['user_admin']))
+        ->postJson("/api/v1/shipments/{$shipmentId}/tracking/subscribe", [
+            'subject_type' => 'bl', 'number' => 'MEDUJ2260417', 'carrier_scac' => 'MSCU',
+        ])->assertCreated();
+
+    // L'agrégateur ne renvoie pas d'historique : tout ce qu'il sait du voyage
+    // tient dans cette photo, qu'il serait dommage de réduire au statut.
+    $container = $this->withToken(tokenFor($ids['user_admin']))
+        ->getJson("/api/v1/shipments/{$shipmentId}")->json('containers.0');
+    $snapshot = json_decode((string) $container['last_snapshot'], true);
+
+    expect($snapshot)->toHaveKeys([
+        'container_status', 'current_vessel_name', 'last_location', 'next_location', 'eta_final_destination',
+    ]);
+});
+
+it('renseigne la compagnie d\'un abonnement déjà créé sans elle', function (): void {
+    $ids = seedCore();
+    $shipmentId = seedShipmentFor($ids, $ids['client'], 'IMP-2026-00001');
+    $containerId = seedContainer($ids, 'SELU4043526');
+    DB::table('carriers')->insert([
+        'id' => (string) Str::uuid7(), 'scac' => 'MSCU', 'name' => 'MSC', 'is_active' => true,
+        'created_at' => now(), 'updated_at' => now(),
+    ]);
+    $token = tokenFor($ids['user_admin']);
+
+    // Conteneur affecté avant toute compagnie connue : son abonnement reste muet.
+    $this->withToken($token)->postJson("/api/v1/containers/{$containerId}/assign", ['shipment_id' => $shipmentId]);
+    expect(DB::table('tracking_subscriptions')->where('subject_number', 'SELU4043526')->value('carrier_scac'))->toBeNull();
+
+    // La compagnie saisie pour le connaissement débloque tout le dossier.
+    $this->withToken($token)->postJson("/api/v1/shipments/{$shipmentId}/tracking/subscribe", [
+        'subject_type' => 'bl', 'number' => 'MEDUJ2260417', 'carrier_scac' => 'MSCU',
+    ])->assertCreated();
+
+    expect(DB::table('tracking_subscriptions')->where('subject_number', 'SELU4043526')->value('carrier_scac'))->toBe('MSCU');
+});

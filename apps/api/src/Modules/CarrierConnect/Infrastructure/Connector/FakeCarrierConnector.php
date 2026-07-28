@@ -48,7 +48,32 @@ class FakeCarrierConnector implements CarrierTrackingProvider
             }
         }
 
-        return new TrackingResult(events: $events, eta: $eta);
+        return new TrackingResult(events: $events, eta: $eta, snapshot: self::fakeSnapshot($containerNumber, $eta));
+    }
+
+    /**
+     * Photo comparable à celle d'un agrégateur : navire, escales, ETA. Sans
+     * elle, le développement croirait que seule la ligne de statut remonte.
+     *
+     * @return array<string, mixed>
+     */
+    private static function fakeSnapshot(string $subject, ?\DateTimeInterface $eta = null): array
+    {
+        return [
+            'container_status' => 'On Vessel',
+            'container_type' => "40' HIGH CUBE",
+            'shipping_line_name' => 'MSC',
+            'last_location' => 'Shanghai, China',
+            'next_location' => 'Abidjan, Ivory Coast',
+            'current_vessel_name' => 'MSC LORETO',
+            'current_voyage_number' => 'FJ427A',
+            'loading_port' => 'Shanghai',
+            'discharging_port' => 'Abidjan',
+            // Même source que l'ETA du résultat : chez le vrai connecteur les
+            // deux sortent du champ eta_final_destination.
+            'eta_final_destination' => ($eta ?? now()->addDays(12))->format(DATE_ATOM),
+            'bill_of_lading' => $subject,
+        ];
     }
 
     public function trackBillOfLading(string $blNumber): TrackingResult
@@ -65,6 +90,7 @@ class FakeCarrierConnector implements CarrierTrackingProvider
             events: $result->events,
             eta: $result->eta, etd: $result->etd, ata: $result->ata, atd: $result->atd,
             containerNumbers: [self::fakeContainerNumber('MSCU', $seed)],
+            snapshot: self::fakeSnapshot($blNumber, $result->eta),
         );
     }
 

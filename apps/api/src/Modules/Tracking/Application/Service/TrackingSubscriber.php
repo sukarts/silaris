@@ -85,13 +85,28 @@ final class TrackingSubscriber
             ->where('subject_type', $subjectType)
             ->where('subject_number', $number)
             ->where('shipment_id', $shipmentId)
-            ->first(['id', 'status']);
+            ->first(['id', 'status', 'carrier_scac']);
 
         if ($existing !== null) {
+            $changes = [];
+
             // Un dossier rouvert reprend son suivi là où il s'était arrêté.
             if ($existing->status !== 'active') {
+                $changes = ['status' => 'active', 'consecutive_failures' => 0];
+            }
+
+            // Un abonnement né avant que la compagnie soit connue reste muet
+            // tant qu'on ne la lui donne pas : la renseigner le débloque.
+            if ($existing->carrier_scac === null) {
+                $carrier = $carrierScac ?? $this->resolveCarrier($shipmentId, $number);
+                if ($carrier !== null) {
+                    $changes['carrier_scac'] = $carrier;
+                }
+            }
+
+            if ($changes !== []) {
                 DB::table('tracking_subscriptions')->where('id', $existing->id)
-                    ->update(['status' => 'active', 'consecutive_failures' => 0, 'updated_at' => now()]);
+                    ->update([...$changes, 'updated_at' => now()]);
             }
 
             return (string) $existing->id;

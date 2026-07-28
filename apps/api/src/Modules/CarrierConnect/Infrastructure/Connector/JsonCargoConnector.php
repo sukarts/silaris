@@ -50,10 +50,12 @@ class JsonCargoConnector implements CarrierTrackingProvider
         $containers = array_slice((array) ($data['associated_container_numbers'] ?? []), 0, self::MAX_BL_CONTAINERS);
 
         $events = [];
+        $snapshot = [];
         $eta = $etd = $ata = $atd = null;
         foreach ($containers as $containerNumber) {
             $result = $this->trackContainer((string) $containerNumber);
             $events = array_merge($events, $result->events);
+            $snapshot = $snapshot === [] ? $result->snapshot : $snapshot;
             $eta ??= $result->eta;
             $etd ??= $result->etd;
             $ata ??= $result->ata;
@@ -63,6 +65,7 @@ class JsonCargoConnector implements CarrierTrackingProvider
         return new TrackingResult(
             events: $events, eta: $eta, etd: $etd, ata: $ata, atd: $atd,
             containerNumbers: array_values(array_map('strval', $containers)),
+            snapshot: $snapshot,
         );
     }
 
@@ -125,6 +128,32 @@ class JsonCargoConnector implements CarrierTrackingProvider
             events: $events,
             eta: $this->parseDate($data['eta_final_destination'] ?? null),
             atd: $this->parseDate($data['atd_origin'] ?? null),
+            snapshot: self::snapshotOf($data),
+        );
+    }
+
+    /**
+     * Photo exploitable du relevé. L'API ne renvoie pas d'historique : ce qu'elle
+     * sait du voyage tient dans ces champs, qu'il serait dommage de réduire au
+     * seul statut.
+     *
+     * @param  array<string, mixed>  $data
+     * @return array<string, mixed>
+     */
+    private static function snapshotOf(array $data): array
+    {
+        $keep = [
+            'container_status', 'container_type', 'shipping_line_name',
+            'last_location', 'last_location_terminal', 'next_location', 'next_location_terminal',
+            'current_vessel_name', 'current_voyage_number', 'last_vessel_name', 'last_voyage_number',
+            'loading_port', 'discharging_port', 'shipped_from', 'shipped_to',
+            'atd_origin', 'atd_last_location', 'eta_next_destination', 'eta_final_destination',
+            'customs_clearance', 'timestamp_of_last_location', 'last_updated', 'bill_of_lading',
+        ];
+
+        return array_filter(
+            array_intersect_key($data, array_flip($keep)),
+            static fn ($value) => $value !== null && $value !== '',
         );
     }
 

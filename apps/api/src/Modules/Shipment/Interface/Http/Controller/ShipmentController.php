@@ -115,6 +115,7 @@ class ShipmentController
                     'container_assignments.discharged_at',
                     'tracking_subscriptions.status AS tracking_status',
                     'tracking_subscriptions.last_polled_at',
+                    'tracking_subscriptions.last_snapshot',
                 ]),
         ])->response();
     }
