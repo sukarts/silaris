@@ -79,6 +79,10 @@ export default function ShipmentDetailPage({ params }: { params: Promise<{ shipm
   const canUpdate = useCan("shipments.update");
   const [error, setError] = useState<string | null>(null);
   const [refreshInfo, setRefreshInfo] = useState<string | null>(null);
+  // À l'import, le dossier démarre souvent avec le seul connaissement : la
+  // compagnie en déduit les conteneurs.
+  const [watch, setWatch] = useState({ number: "", subject_type: "bl", carrier_scac: "" });
+  const [watchInfo, setWatchInfo] = useState<string | null>(null);
 
   const refreshTracking = useMutation({
     mutationFn: async () => {
@@ -108,6 +112,39 @@ export default function ShipmentDetailPage({ params }: { params: Promise<{ shipm
       if (problem) throw problem;
       return response as ShipmentDetail;
     },
+  });
+
+  const { data: carriers } = useQuery({
+    queryKey: ["carriers"],
+    queryFn: async () => {
+      const { data } = await rawApi.GET("/v1/referentials/carriers", { params: { query: { per_page: 50 } } });
+      return (data as { data: { scac: string; name: string }[] }).data;
+    },
+  });
+
+  const subscribe = useMutation({
+    mutationFn: async () => {
+      const { data: response, error: problem } = await rawApi.POST(`/v1/shipments/${shipmentId}/tracking/subscribe`, {
+        body: { ...watch, carrier_scac: watch.carrier_scac || null },
+      });
+      if (problem) throw problem;
+      return response as {
+        carrier_known: boolean; new_events?: number;
+        containers?: string[]; containers_busy?: string[]; message?: string;
+      };
+    },
+    onSuccess: (result) => {
+      const found = result.containers?.length
+        ? ` — ${result.containers.length} conteneur(s) rattaché(s) : ${result.containers.join(", ")}`
+        : "";
+      const busy = result.containers_busy?.length
+        ? ` — ${result.containers_busy.join(", ")} déjà affecté(s) à un autre dossier ouvert.`
+        : "";
+      setWatchInfo(result.message ?? `${result.new_events ?? 0} événement(s) reçu(s)${found}${busy}`);
+      setWatch({ number: "", subject_type: watch.subject_type, carrier_scac: watch.carrier_scac });
+      queryClient.invalidateQueries({ queryKey: ["shipment", shipmentId] });
+    },
+    onError: (problem) => setWatchInfo(problemMessage(problem)),
   });
 
   const { data: timeline } = useQuery({
@@ -238,6 +275,36 @@ export default function ShipmentDetailPage({ params }: { params: Promise<{ shipm
                 Affecter un conteneur →
               </Link>
             </div>
+
+            {canUpdate && (
+              <form
+                onSubmit={(event) => { event.preventDefault(); subscribe.mutate(); }}
+                className="flex flex-wrap items-end gap-2 border-b border-line px-4 py-3"
+              >
+                <div className="min-w-[9rem] flex-1">
+                  <label className="text-[10px] uppercase tracking-wider text-ink-3">Numéro à suivre</label>
+                  <input
+                    required
+                    value={watch.number}
+                    onChange={(e) => setWatch({ ...watch, number: e.target.value.toUpperCase() })}
+                    placeholder="BL ou conteneur"
+                    className={`${inputClass} mono w-full`}
+                  />
+                </div>
+                <select value={watch.subject_type} onChange={(e) => setWatch({ ...watch, subject_type: e.target.value })} className={inputClass}>
+                  <option value="bl">Connaissement</option>
+                  <option value="container">Conteneur</option>
+                </select>
+                <select value={watch.carrier_scac} onChange={(e) => setWatch({ ...watch, carrier_scac: e.target.value })} className={inputClass}>
+                  <option value="">Compagnie…</option>
+                  {carriers?.map((carrier) => <option key={carrier.scac} value={carrier.scac}>{carrier.name}</option>)}
+                </select>
+                <button type="submit" disabled={subscribe.isPending} className="rounded-lg border border-line-strong px-3 py-2 text-xs font-semibold text-ink-2 hover:bg-paper disabled:opacity-50">
+                  {subscribe.isPending ? "Interrogation…" : "Suivre"}
+                </button>
+                {watchInfo && <p className="w-full text-xs text-ink-3">{watchInfo}</p>}
+              </form>
+            )}
             {containers.length === 0 ? (
               <p className="px-4 py-3 text-[13px] text-ink-3">
                 Aucun conteneur affecté — le suivi transporteur démarre dès qu'un conteneur rejoint le dossier.

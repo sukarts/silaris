@@ -53,7 +53,36 @@ class FakeCarrierConnector implements CarrierTrackingProvider
 
     public function trackBillOfLading(string $blNumber): TrackingResult
     {
-        return $this->trackContainer($blNumber);
+        $result = $this->trackContainer($blNumber);
+
+        // Une compagnie répond les conteneurs rattachés au connaissement : sans
+        // eux, le double laisserait croire que l'import par BL ne les remonte
+        // pas. Les numéros sont dérivés du BL pour rester stables d'un appel à
+        // l'autre.
+        $seed = substr(preg_replace('/[^0-9]/', '', $blNumber) ?: '1', 0, 4);
+
+        return new TrackingResult(
+            events: $result->events,
+            eta: $result->eta, etd: $result->etd, ata: $result->ata, atd: $result->atd,
+            containerNumbers: [self::fakeContainerNumber('MSCU', $seed)],
+        );
+    }
+
+    /** Numéro ISO 6346 cohérent (clé de contrôle calculée) pour le jeu d'essai. */
+    private static function fakeContainerNumber(string $prefix, string $digits): string
+    {
+        $body = $prefix.str_pad(substr($digits.'000000', 0, 6), 6, '0');
+        $values = array_combine(range('A', 'Z'), [
+            10, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 23, 24, 25, 26,
+            27, 28, 29, 30, 31, 32, 34, 35, 36, 37, 38,
+        ]);
+
+        $sum = 0;
+        foreach (str_split($body) as $position => $character) {
+            $sum += (ctype_alpha($character) ? $values[$character] : (int) $character) * (2 ** $position);
+        }
+
+        return $body.((int) ($sum % 11) % 10);
     }
 
     public function capabilities(): array
