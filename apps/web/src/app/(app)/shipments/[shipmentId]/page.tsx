@@ -84,13 +84,16 @@ export default function ShipmentDetailPage({ params }: { params: Promise<{ shipm
     mutationFn: async () => {
       const { data: response, error: problem } = await rawApi.POST(`/v1/shipments/${shipmentId}/tracking/refresh`);
       if (problem) throw problem;
-      return response as { subscriptions: number; polled: number; new_events: number; errors: string[] };
+      return response as { subscriptions: number; pending_carrier: number; polled: number; new_events: number; errors: string[] };
     },
     onSuccess: (result) => {
+      const suffix = result.errors.length > 0 ? ` — ${result.errors.join(" ")}` : "";
       setRefreshInfo(
-        result.subscriptions === 0
-          ? "Aucun abonnement de tracking actif sur ce dossier."
-          : `${result.new_events} nouvel(s) événement(s)${result.errors.length ? ` — ${result.errors.join(" ")}` : ""}`,
+        result.subscriptions === 0 && result.pending_carrier === 0
+          ? "Aucun conteneur ni connaissement suivi sur ce dossier."
+          : result.subscriptions === 0
+            ? `En attente de la compagnie${suffix}`
+            : `${result.new_events} nouvel(s) événement(s)${suffix}`,
       );
       queryClient.invalidateQueries({ queryKey: ["shipment", shipmentId] });
       queryClient.invalidateQueries({ queryKey: ["timeline", shipmentId] });

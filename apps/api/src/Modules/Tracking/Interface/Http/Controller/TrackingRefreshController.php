@@ -24,11 +24,16 @@ class TrackingRefreshController
 
     public function __invoke(string $shipmentId): JsonResponse
     {
-        $subscriptions = DB::table('tracking_subscriptions')
+        $active = DB::table('tracking_subscriptions')
             ->where('shipment_id', $shipmentId)
             ->where('status', 'active')
-            ->whereNotNull('carrier_scac')
             ->get();
+
+        // Sans compagnie, l'agrégateur n'a rien à interroger : l'abonnement
+        // existe mais reste en attente du booking. Le dire plutôt que de le
+        // taire, sinon le dossier paraît suivi alors qu'il ne l'est pas.
+        $subscriptions = $active->whereNotNull('carrier_scac')->values();
+        $pending = $active->whereNull('carrier_scac')->values();
 
         $polled = 0;
         $newEvents = 0;
@@ -48,8 +53,13 @@ class TrackingRefreshController
             }
         }
 
+        foreach ($pending as $subscription) {
+            $errors[] = "{$subscription->subject_number} : compagnie inconnue — renseignez le booking du dossier.";
+        }
+
         return response()->json([
             'subscriptions' => $subscriptions->count(),
+            'pending_carrier' => $pending->count(),
             'polled' => $polled,
             'new_events' => $newEvents,
             'errors' => $errors,
