@@ -9,9 +9,16 @@ use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 use Silaris\Modules\Ocean\Infrastructure\Persistence\Model\ContainerAssignmentModel;
 use Silaris\Modules\Ocean\Infrastructure\Persistence\Model\ContainerModel;
+use Silaris\Modules\Shared\Infrastructure\Tenancy\TenantContext;
+use Silaris\Modules\Tracking\Application\Service\TrackingSubscriber;
 
 class ContainerController
 {
+    public function __construct(
+        private readonly TenantContext $tenant,
+        private readonly TrackingSubscriber $subscriber,
+    ) {}
+
     private const SIZE_TYPES = ['20GP', '40GP', '40HC', '45HC', '20RF', '40RF', '20OT', '40OT', '20FR', '40FR', '20TK'];
 
     public function index(Request $request): JsonResponse
@@ -51,7 +58,7 @@ class ContainerController
     /** POST /v1/containers/{id}/assign — affectation à un dossier. */
     public function assign(Request $request, string $containerId): JsonResponse
     {
-        ContainerModel::findOrFail($containerId);
+        $container = ContainerModel::findOrFail($containerId);
         $data = $request->validate([
             'shipment_id' => ['required', 'uuid', 'exists:shipments,id'],
             'booking_id' => ['nullable', 'uuid', 'exists:bookings,id'],
@@ -60,7 +67,18 @@ class ContainerController
             'free_time_days' => ['nullable', 'integer', 'min:0', 'max:90'],
         ]);
 
-        return response()->json(ContainerAssignmentModel::create([...$data, 'container_id' => $containerId]), 201);
+        $assignment = ContainerAssignmentModel::create([...$data, 'container_id' => $containerId]);
+
+        // Le conteneur porte enfin un numéro rattaché à un dossier : c'est le
+        // moment où le suivi transporteur a quelque chose à interroger.
+        $this->subscriber->subscribe(
+            $this->tenant->id(),
+            $data['shipment_id'],
+            'container',
+            (string) $container->number,
+        );
+
+        return response()->json($assignment, 201);
     }
 
     /** PATCH /v1/containers/assignments/{id} — jalons (gate-in, chargement, restitution…). */

@@ -7,6 +7,7 @@ namespace Silaris\Modules\Shipment\Interface\Http\Controller;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 use Silaris\Modules\Shared\Application\Bus\CommandBus;
 use Silaris\Modules\Shared\Application\Bus\QueryBus;
@@ -94,6 +95,27 @@ class ShipmentController
                 'current' => $model->status,
                 'allowed_transitions' => $this->workflow->allowedTransitions($model->workflow_definition_id, $model->status),
             ],
+            // Les conteneurs affectés et l'état de leur suivi : c'est depuis le
+            // dossier que l'exploitant vérifie que la marchandise remonte.
+            'containers' => DB::table('container_assignments')
+                ->join('containers', 'containers.id', '=', 'container_assignments.container_id')
+                ->leftJoin('tracking_subscriptions', function ($join) use ($shipmentId): void {
+                    $join->on('tracking_subscriptions.subject_number', '=', 'containers.number')
+                        ->where('tracking_subscriptions.subject_type', '=', 'container')
+                        ->where('tracking_subscriptions.shipment_id', '=', $shipmentId);
+                })
+                ->where('container_assignments.shipment_id', $shipmentId)
+                ->orderBy('containers.number')
+                ->get([
+                    'container_assignments.id',
+                    'containers.number',
+                    'containers.size_type',
+                    'container_assignments.seal_number',
+                    'container_assignments.gate_in_at',
+                    'container_assignments.discharged_at',
+                    'tracking_subscriptions.status AS tracking_status',
+                    'tracking_subscriptions.last_polled_at',
+                ]),
         ])->response();
     }
 
