@@ -40,10 +40,36 @@ interface ShipmentDetail {
 interface AssignedContainer {
   id: string;
   number: string;
-  size_type: string;
+  size_type: string | null;
   seal_number: string | null;
   tracking_status: string | null;
   last_polled_at: string | null;
+  last_snapshot: string | null;
+}
+
+/**
+ * Relevé transporteur. Les agrégateurs ne renvoient pas d'historique mais une
+ * photo du voyage : c'est elle qui porte le navire, les escales et l'ETA.
+ */
+interface CarrierSnapshot {
+  container_status?: string;
+  last_location?: string;
+  next_location?: string;
+  current_vessel_name?: string;
+  current_voyage_number?: string;
+  loading_port?: string;
+  discharging_port?: string;
+  eta_next_destination?: string;
+  eta_final_destination?: string;
+}
+
+function parseSnapshot(raw: string | null): CarrierSnapshot | null {
+  if (!raw) return null;
+  try {
+    return JSON.parse(raw) as CarrierSnapshot;
+  } catch {
+    return null;
+  }
 }
 
 interface TimelineEvent {
@@ -320,10 +346,26 @@ export default function ShipmentDetailPage({ params }: { params: Promise<{ shipm
                   </tr>
                 </thead>
                 <tbody>
-                  {containers.map((container) => (
-                    <tr key={container.id} className="border-b border-line last:border-0">
-                      <td className="mono px-4 py-2 font-semibold">{container.number}</td>
-                      <td className="px-4 py-2 text-ink-2">{container.size_type}</td>
+                  {containers.map((container) => {
+                    const snapshot = parseSnapshot(container.last_snapshot);
+                    return (
+                    <tr key={container.id} className="border-b border-line last:border-0 align-top">
+                      <td className="px-4 py-2">
+                        <span className="mono font-semibold">{container.number}</span>
+                        {snapshot && (
+                          <span className="mt-0.5 block text-[11px] font-normal text-ink-3">
+                            {[
+                              snapshot.container_status,
+                              snapshot.current_vessel_name && `${snapshot.current_vessel_name}${snapshot.current_voyage_number ? ` ${snapshot.current_voyage_number}` : ""}`,
+                              snapshot.last_location && snapshot.next_location
+                                ? `${snapshot.last_location} → ${snapshot.next_location}`
+                                : snapshot.last_location,
+                              snapshot.eta_final_destination && `ETA ${new Date(snapshot.eta_final_destination).toLocaleDateString("fr-FR")}`,
+                            ].filter(Boolean).join(" · ")}
+                          </span>
+                        )}
+                      </td>
+                      <td className="px-4 py-2 text-ink-2">{container.size_type ?? "—"}</td>
                       <td className="mono px-4 py-2 text-ink-2">{container.seal_number ?? "—"}</td>
                       <td className="px-4 py-2">
                         {container.tracking_status === "active" ? (
@@ -335,7 +377,8 @@ export default function ShipmentDetailPage({ params }: { params: Promise<{ shipm
                         )}
                       </td>
                     </tr>
-                  ))}
+                    );
+                  })}
                 </tbody>
               </table>
             )}

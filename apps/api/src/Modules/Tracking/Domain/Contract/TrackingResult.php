@@ -10,6 +10,9 @@ final readonly class TrackingResult
 {
     /**
      * @param  list<TrackingEventDto>  $events
+     * @param  array<string, mixed>  $snapshot  Photo du dernier relevé : navire,
+     *                                          escales, ETA. Les agrégateurs ne
+     *                                          fournissent pas d'historique.
      * @param  list<string>  $containerNumbers  Conteneurs rattachés au connaissement.
      *                                          À l'import, le transitaire ne connaît
      *                                          souvent que le BL : c'est la compagnie
@@ -22,5 +25,6 @@ final readonly class TrackingResult
         public ?DateTimeImmutable $ata = null,
         public ?DateTimeImmutable $atd = null,
         public array $containerNumbers = [],
+        public array $snapshot = [],
     ) {}
 }
