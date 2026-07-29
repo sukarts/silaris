@@ -16,9 +16,12 @@ class PermissionSeeder extends Seeder
 {
     /** module => actions disponibles */
     private const MODULES = [
-        'shipments' => ['read', 'create', 'update', 'delete', 'export', 'advance', 'close', 'reopen', 'archive'],
+        'shipments' => ['read', 'create', 'update', 'delete', 'export', 'advance', 'approve_step', 'approve_step_all', 'close', 'reopen', 'archive'],
         'bookings' => ['read', 'create', 'update', 'delete'],
         'containers' => ['read', 'create', 'update', 'delete'],
+        // Dérogations : volontairement hors du module concerné, pour qu'aucun
+        // caractère générique (« shipments.* ») ne les accorde par ricochet.
+        'derogations' => ['open_shipment_without_quote'],
         'bl' => ['read', 'create', 'update', 'issue'],
         'consolidations' => ['read', 'create', 'update', 'close'],
         'packages' => ['read', 'create', 'scan', 'force_delivery'],
@@ -28,7 +31,7 @@ class PermissionSeeder extends Seeder
         'tracking' => ['read', 'refresh', 'manual_event'],
         'crm' => ['read', 'create', 'update', 'delete', 'export', 'convert'],
         'complaints' => ['read', 'create', 'update', 'resolve'],
-        'quotes' => ['read', 'create', 'update', 'delete', 'send', 'accept'],
+        'quotes' => ['read', 'create', 'update', 'delete', 'approve', 'send', 'accept'],
         'tariffs' => ['read', 'create', 'update', 'delete', 'import'],
         'invoices' => ['read', 'create', 'update', 'validate', 'credit', 'export', 'sync_odoo'],
         'documents' => ['read', 'create', 'update', 'delete', 'download', 'archive'],
@@ -58,6 +61,23 @@ class PermissionSeeder extends Seeder
             'crm.*', 'complaints.read', 'quotes.read', 'tariffs.read', 'invoices.read', 'invoices.export',
             'documents.read', 'documents.download', 'reports.*', 'dashboard.*', 'audit.read', 'audit.export',
             'users.read', 'odoo.read',
+            // Ouverture exceptionnelle d'un dossier sans accord client : le
+            // directeur en répond, la trace le nomme.
+            'shipments.create', 'derogations.open_shipment_without_quote',
+            // Une cotation engage un prix : elle passe sous ses yeux avant de
+            // quitter la maison.
+            'quotes.approve',
+        ]],
+        'service_manager' => ['label' => 'Chef de service', 'perms' => [
+            // Même périmètre opérationnel qu'un agent, plus la validation des
+            // passages d'étape — bornée à son service par le contrôle d'accès.
+            'packages.*',
+            'shipments.read', 'shipments.create', 'shipments.update', 'shipments.advance',
+            'shipments.approve_step', 'shipments.export',
+            'bookings.*', 'containers.*', 'bl.*', 'consolidations.*', 'awb.*',
+            'road.*', 'pod.*', 'tracking.*', 'crm.read', 'complaints.*',
+            'quotes.read', 'invoices.read', 'invoices.create',
+            'documents.*', 'notifications.read', 'reports.read', 'dashboard.*',
         ]],
         'ops_manager' => ['label' => 'Responsable transit / exploitation', 'perms' => [
             'packages.*',
@@ -68,7 +88,9 @@ class PermissionSeeder extends Seeder
         ]],
         'transit_agent' => ['label' => 'Agent Transit', 'perms' => [
             'packages.read', 'packages.create', 'packages.scan',
-            'shipments.read', 'shipments.create', 'shipments.update', 'shipments.advance',
+            // Il tient les dossiers et propose leur franchissement d'étape,
+            // mais ne les ouvre pas : la création revient au chef de service.
+            'shipments.read', 'shipments.update', 'shipments.advance',
             'bookings.*', 'containers.*', 'bl.read', 'bl.create', 'bl.update', 'consolidations.read', 'consolidations.create', 'consolidations.update',
             'awb.read', 'awb.create', 'awb.update', 'road.read', 'road.create', 'road.update', 'pod.read',
             'tracking.*', 'crm.read', 'complaints.read', 'complaints.create',

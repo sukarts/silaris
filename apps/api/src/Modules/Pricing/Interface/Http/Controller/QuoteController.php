@@ -8,8 +8,10 @@ use Barryvdh\DomPDF\Facade\Pdf;
 use DateTimeImmutable;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
+use Silaris\Modules\Pricing\Domain\Exception\QuoteNotApproved;
 use Silaris\Modules\Pricing\Domain\Service\CargoSpec;
 use Silaris\Modules\Pricing\Domain\Service\QuoteCalculator;
 use Silaris\Modules\Pricing\Infrastructure\Persistence\Model\QuoteModel;
@@ -130,8 +132,32 @@ class QuoteController
     public function send(string $quoteId): JsonResponse
     {
         $quote = QuoteModel::where('status', 'draft')->findOrFail($quoteId);
+
+        // Une cotation partie ne se reprend pas : elle ne quitte la maison
+        // qu'une fois validée en interne.
+        if ($quote->approved_at === null) {
+            throw QuoteNotApproved::make($quote->number);
+        }
+
         $quote->update(['status' => 'sent', 'sent_at' => now()]);
         // Notification email au client : module Notifications (listener sur quote.sent).
+
+        return response()->json($quote->fresh());
+    }
+
+    /**
+     * POST /v1/quotes/{id}/approve — validation interne du prix proposé.
+     * Réservée au directeur, à l'administration et au responsable commercial.
+     */
+    public function approve(string $quoteId): JsonResponse
+    {
+        $quote = QuoteModel::where('status', 'draft')->findOrFail($quoteId);
+
+        if ($quote->approved_at !== null) {
+            return response()->json(['message' => "La cotation {$quote->number} est déjà validée."], 422);
+        }
+
+        $quote->update(['approved_by' => Auth::id(), 'approved_at' => now()]);
 
         return response()->json($quote->fresh());
     }

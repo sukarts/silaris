@@ -16,6 +16,7 @@ use Silaris\Modules\Shipment\Application\Command\CloseShipment\CloseShipmentComm
 use Silaris\Modules\Shipment\Application\Command\CreateShipment\CreateShipmentCommand;
 use Silaris\Modules\Shipment\Application\Query\GetShipmentTimeline\GetShipmentTimelineQuery;
 use Silaris\Modules\Shipment\Application\Query\ListShipments\ListShipmentsQuery;
+use Silaris\Modules\Shipment\Application\Service\StepApprovalService;
 use Silaris\Modules\Shipment\Domain\Service\WorkflowDefinitionProvider;
 use Silaris\Modules\Shipment\Domain\Service\WorkflowEngine;
 use Silaris\Modules\Shipment\Infrastructure\Persistence\Model\ShipmentModel;
@@ -34,6 +35,7 @@ class ShipmentController
         private readonly QueryBus $queries,
         private readonly WorkflowDefinitionProvider $workflows,
         private readonly WorkflowEngine $workflow,
+        private readonly StepApprovalService $approvals,
     ) {}
 
     /** GET /api/v1/shipments — liste paginée (curseur) sur read model. */
@@ -70,6 +72,7 @@ class ShipmentController
             etd: $data['etd'] ?? null,
             eta: $data['eta'] ?? null,
             quoteId: $data['quote_id'] ?? null,
+            waiverReason: $data['waiver_reason'] ?? null,
             workflowDefinitionId: $data['workflow_definition_id'] ?? null,
             notes: $data['notes'] ?? null,
         ));
@@ -132,11 +135,25 @@ class ShipmentController
     }
 
     /** POST /api/v1/shipments/{shipment}/advance */
-    public function advance(AdvanceStepRequest $request, string $shipmentId): ShipmentResource
+    public function advance(AdvanceStepRequest $request, string $shipmentId): ShipmentResource|JsonResponse
     {
+        $nextStep = $request->validated('next_step');
+
+        // Le responsable exploitation franchit l'étape ; l'agent la propose.
+        if (! $this->approvals->canDecide()) {
+            $shipment = ShipmentModel::findOrFail($shipmentId);
+            $requestId = $this->approvals->request($shipmentId, (string) $shipment->status, $nextStep);
+
+            return response()->json([
+                'status' => 'pending_approval',
+                'request_id' => $requestId,
+                'message' => 'Passage proposé — en attente de validation du responsable exploitation.',
+            ], 202);
+        }
+
         $this->commands->dispatch(new AdvanceWorkflowStepCommand(
             shipmentId: $shipmentId,
-            nextStep: $request->validated('next_step'),
+            nextStep: $nextStep,
         ));
 
         return new ShipmentResource($this->loadDetail($shipmentId));

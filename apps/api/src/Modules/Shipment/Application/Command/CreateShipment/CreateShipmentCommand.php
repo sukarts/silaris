@@ -21,6 +21,8 @@ final readonly class CreateShipmentCommand
         public ?string $etd = null,
         public ?string $eta = null,
         public ?string $quoteId = null,
+        /** Motif invoqué quand aucune cotation n'appuie l'ouverture. */
+        public ?string $waiverReason = null,
         public ?string $workflowDefinitionId = null,
         public ?string $notes = null,
     ) {}

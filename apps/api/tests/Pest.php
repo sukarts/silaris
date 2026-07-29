@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
 use Tests\TestCase;
 
@@ -92,4 +93,23 @@ function seedAcceptedQuote(array $ids, ?string $clientId = null, array $override
     ]);
 
     return $quoteId;
+}
+
+/** Utilisateur porteur d'un rôle système donné — helper partagé entre suites. */
+function seedUserWithRole(array $ids, string $roleKey, string $email): string
+{
+    $userId = (string) Str::uuid7();
+    DB::table('users')->insert([
+        'id' => $userId, 'tenant_id' => $ids['tenant'], 'email' => $email,
+        'password_hash' => Hash::make('Str0ng!Passw0rd'), 'first_name' => ucfirst($roleKey),
+        'last_name' => 'Test', 'password_changed_at' => now(),
+        'created_at' => now(), 'updated_at' => now(),
+    ]);
+    DB::table('user_roles')->insert([
+        'user_id' => $userId,
+        'role_id' => DB::table('roles')->whereNull('tenant_id')->where('key', $roleKey)->value('id'),
+    ]);
+    DB::table('user_branches')->insert(['user_id' => $userId, 'branch_id' => $ids['branch']]);
+
+    return $userId;
 }

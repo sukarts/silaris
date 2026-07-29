@@ -27,6 +27,7 @@ interface AdminUser {
   locale: string;
   is_active: boolean;
   roles?: RoleRef[];
+  service?: { id: string; code: string; name: string } | null;
   branches?: BranchRef[];
 }
 
@@ -119,6 +120,11 @@ function UsersTab() {
   const [branchIds, setBranchIds] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [invitation, setInvitation] = useState<{ email: string; password: string } | null>(null);
+  // Édition des accès d'un utilisateur déjà créé : rôles, service, agences.
+  const [editing, setEditing] = useState<AdminUser | null>(null);
+  const [access, setAccess] = useState<{ role_ids: string[]; branch_ids: string[]; service_id: string }>({
+    role_ids: [], branch_ids: [], service_id: "",
+  });
 
   const { data, isLoading } = useQuery({
     queryKey: ["admin-users"],
@@ -134,7 +140,16 @@ function UsersTab() {
       const { data: response } = await rawApi.GET("/v1/admin/roles");
       return response as Role[];
     },
-    enabled: showForm && canReadRoles,
+    enabled: (showForm || editing !== null) && canReadRoles,
+  });
+
+  const { data: services } = useQuery({
+    queryKey: ["admin-services"],
+    queryFn: async () => {
+      const { data: response } = await rawApi.GET("/v1/admin/services");
+      return response as { id: string; code: string; name: string }[];
+    },
+    enabled: showForm || editing !== null,
   });
 
   const { data: companies } = useQuery({
@@ -143,7 +158,7 @@ function UsersTab() {
       const { data: response } = await rawApi.GET("/v1/admin/companies");
       return response as Company[];
     },
-    enabled: showForm,
+    enabled: showForm || editing !== null,
   });
 
   const branches = (companies ?? []).flatMap((company) => company.branches ?? []);
@@ -167,6 +182,35 @@ function UsersTab() {
     },
     onError: (problem) => setError(problemMessage(problem)),
   });
+
+  const saveAccess = useMutation({
+    mutationFn: async () => {
+      if (!editing) return;
+      const { error: problem } = await rawApi.PATCH(`/v1/admin/users/${editing.id}`, {
+        body: {
+          role_ids: access.role_ids,
+          branch_ids: access.branch_ids,
+          service_id: access.service_id || null,
+        },
+      });
+      if (problem) throw problem;
+    },
+    onSuccess: () => {
+      setEditing(null);
+      setError(null);
+      queryClient.invalidateQueries({ queryKey: ["admin-users"] });
+    },
+    onError: (problem) => setError(problemMessage(problem)),
+  });
+
+  function openAccess(user: AdminUser) {
+    setEditing(user);
+    setAccess({
+      role_ids: (user.roles ?? []).map((role) => role.id),
+      branch_ids: (user.branches ?? []).map((branch) => branch.id),
+      service_id: user.service?.id ?? "",
+    });
+  }
 
   const toggleActive = useMutation({
     mutationFn: async (user: AdminUser) => {
@@ -267,6 +311,88 @@ function UsersTab() {
 
       {error && !showForm && <p className="rounded-lg bg-crit-soft px-4 py-2.5 text-[13px] text-crit">{error}</p>}
 
+      {editing && (
+        <form
+          onSubmit={(event) => { event.preventDefault(); saveAccess.mutate(); }}
+          className="grid gap-4 rounded-xl border border-line bg-surface p-5 shadow-sm md:grid-cols-3"
+        >
+          <p className="text-[13px] font-bold md:col-span-3">
+            Accès de {editing.first_name} {editing.last_name}
+            <span className="mono ml-2 font-normal text-ink-3">{editing.email}</span>
+          </p>
+
+          <Field label="Rôles" className="md:col-span-2">
+            <div className="flex flex-wrap gap-2">
+              {(roles ?? []).map((role) => {
+                const checked = access.role_ids.includes(role.id);
+                return (
+                  <button
+                    key={role.id}
+                    type="button"
+                    onClick={() => setAccess((state) => ({
+                      ...state,
+                      role_ids: checked
+                        ? state.role_ids.filter((id) => id !== role.id)
+                        : [...state.role_ids, role.id],
+                    }))}
+                    className={`rounded-full border px-3 py-1 text-xs font-semibold ${
+                      checked ? "border-sea bg-sea-soft text-sea" : "border-line-strong text-ink-2 hover:bg-paper"
+                    }`}
+                  >
+                    {role.name}
+                  </button>
+                );
+              })}
+            </div>
+          </Field>
+
+          <Field label="Service">
+            <select
+              value={access.service_id}
+              onChange={(event) => setAccess((state) => ({ ...state, service_id: event.target.value }))}
+              className={inputClass}
+            >
+              <option value="">— Aucun —</option>
+              {(services ?? []).map((service) => (
+                <option key={service.id} value={service.id}>{service.name}</option>
+              ))}
+            </select>
+          </Field>
+
+          <Field label="Agences" className="md:col-span-3">
+            <div className="flex flex-wrap gap-2">
+              {branches.map((branch) => {
+                const checked = access.branch_ids.includes(branch.id);
+                return (
+                  <button
+                    key={branch.id}
+                    type="button"
+                    onClick={() => setAccess((state) => ({
+                      ...state,
+                      branch_ids: checked
+                        ? state.branch_ids.filter((id) => id !== branch.id)
+                        : [...state.branch_ids, branch.id],
+                    }))}
+                    className={`rounded-full border px-3 py-1 text-xs font-semibold ${
+                      checked ? "border-sea bg-sea-soft text-sea" : "border-line-strong text-ink-2 hover:bg-paper"
+                    }`}
+                  >
+                    {branch.name ?? branch.code}
+                  </button>
+                );
+              })}
+            </div>
+          </Field>
+
+          <div className="flex gap-2 md:col-span-3">
+            <button type="submit" disabled={saveAccess.isPending || access.role_ids.length === 0} className={buttonPrimary}>
+              {saveAccess.isPending ? "Enregistrement…" : "Enregistrer les accès"}
+            </button>
+            <button type="button" onClick={() => setEditing(null)} className={buttonSecondary}>Annuler</button>
+          </div>
+        </form>
+      )}
+
       <div className="overflow-x-auto rounded-xl border border-line bg-surface shadow-sm">
         <table className="w-full text-[13px]">
           <thead>
@@ -274,13 +400,14 @@ function UsersTab() {
               <th className="px-3 py-2.5">Nom</th>
               <th className="px-3 py-2.5">Email</th>
               <th className="px-3 py-2.5">Rôles</th>
+              <th className="px-3 py-2.5">Service</th>
               <th className="px-3 py-2.5">Agences</th>
               <th className="px-3 py-2.5">Actif</th>
               <th className="px-3 py-2.5" />
             </tr>
           </thead>
           <tbody>
-            {isLoading && <tr><td colSpan={6} className="px-3 py-8 text-center text-ink-3">Chargement…</td></tr>}
+            {isLoading && <tr><td colSpan={7} className="px-3 py-8 text-center text-ink-3">Chargement…</td></tr>}
             {(data?.data ?? []).map((user) => (
               <tr key={user.id} className="border-b border-line last:border-0 hover:bg-sea/5">
                 <td className="px-3 py-2.5 font-semibold">{user.last_name} {user.first_name}</td>
@@ -292,6 +419,7 @@ function UsersTab() {
                     ))}
                   </div>
                 </td>
+                <td className="px-3 py-2.5 text-ink-2">{user.service?.name ?? "—"}</td>
                 <td className="mono px-3 py-2.5 text-ink-2">{(user.branches ?? []).map((branch) => branch.code).join(", ") || "—"}</td>
                 <td className="px-3 py-2.5">
                   <span className={`rounded-full px-2.5 py-0.5 text-[11px] font-semibold ${user.is_active ? "bg-ok-soft text-ok" : "bg-crit-soft text-crit"}`}>
@@ -300,6 +428,11 @@ function UsersTab() {
                 </td>
                 <td className="px-3 py-2.5">
                   <div className="flex gap-3">
+                    {canUpdate && (
+                      <button onClick={() => openAccess(user)} className="text-xs font-semibold text-sea hover:underline">
+                        Accès
+                      </button>
+                    )}
                     {canUpdate && (
                       <button
                         onClick={() => toggleActive.mutate(user)}
