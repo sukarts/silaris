@@ -7,6 +7,7 @@ namespace Silaris\Modules\Documents\Interface\Http\Controller;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\URL;
 use Illuminate\Support\Str;
@@ -82,7 +83,13 @@ class DocumentController
                 'tenants/%s/documents/%s/v%d/%s',
                 $this->tenant->id(), $document->id, $version, Str::random(40).'.'.$file->getClientOriginalExtension(),
             );
-            Storage::disk(config('filesystems.documents_disk', 'local'))->put($key, $file->getContent());
+            // Le disque est configuré en throw => false : une écriture qui échoue
+            // renvoie false au lieu de lever. Sans ce contrôle, la version serait
+            // enregistrée alors qu'aucun objet n'existe derrière — le document
+            // apparaît dans la liste et son téléchargement casse plus tard.
+            if (Storage::disk(config('filesystems.documents_disk', 'local'))->put($key, $file->getContent()) === false) {
+                abort(503, "Le document n'a pas pu être enregistré sur l'espace de stockage. Réessayez, et prévenez l'administrateur si le problème persiste.");
+            }
 
             $documentVersion = $document->versions()->create([
                 'version' => $version,
@@ -133,8 +140,22 @@ class DocumentController
             'ip' => $request->ip(),
         ]);
 
-        return Storage::disk(config('filesystems.documents_disk', 'local'))
-            ->download($version->s3_key, $version->original_filename);
+        $disk = Storage::disk(config('filesystems.documents_disk', 'local'));
+
+        // download() interroge la taille de l'objet avant de streamer, et cette
+        // lecture lève même sur un disque en throw => false. Un objet manquant
+        // rendait donc une erreur 500 opaque là où le cas est parfaitement connu.
+        if (! $disk->exists($version->s3_key)) {
+            Log::warning('Document introuvable sur le disque', [
+                'version_id' => $version->id,
+                'key' => $version->s3_key,
+                'disk' => config('filesystems.documents_disk', 'local'),
+            ]);
+
+            abort(404, "Ce fichier n'est plus disponible sur l'espace de stockage. Demandez à l'exploitant de le déposer à nouveau.");
+        }
+
+        return $disk->download($version->s3_key, $version->original_filename);
     }
 
     /** POST /v1/documents/{id}/archive */
