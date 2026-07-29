@@ -69,3 +69,20 @@ it('ne valide pas deux fois la même cotation', function (): void {
     $this->withToken($token)->postJson("/api/v1/quotes/{$quoteId}/approve")
         ->assertStatus(422)->assertJsonPath('message', fn (string $m) => str_contains($m, 'déjà validée'));
 });
+
+it('interdit au commercial de valider sa propre cotation', function (): void {
+    // La validation engage un prix : elle reste au directeur, à l'administration
+    // et au responsable commercial. Le commercial la prépare, il ne la valide pas.
+    $ids = seedCore();
+    $quoteId = seedDraftQuote($ids);
+    $sales = seedUserWithRole($ids, 'sales', 'commercial@test.local');
+
+    $this->withToken(tokenFor($sales))
+        ->postJson("/api/v1/quotes/{$quoteId}/approve")->assertForbidden();
+
+    // Il peut néanmoins la reprendre : préparer le prix reste son travail.
+    freshAuth();
+    $this->withToken(tokenFor($sales))->patchJson("/api/v1/quotes/{$quoteId}", [
+        'lines' => [['service_code' => 'FREIGHT', 'description' => 'Fret', 'quantity' => 1, 'unit' => 'container', 'unit_price' => 750_000, 'currency_code' => 'XOF']],
+    ])->assertOk();
+});
