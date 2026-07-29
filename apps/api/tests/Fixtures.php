@@ -43,7 +43,7 @@ function seedCore(): array
     }
 
     $roles = DB::table('roles')->whereNull('tenant_id')->pluck('id', 'key');
-    foreach (['admin', 'transit_agent', 'accountant', 'driver', 'director', 'ops_manager', 'service_manager', 'sales_manager'] as $roleKey) {
+    foreach (['admin', 'transit_agent', 'accountant', 'driver', 'director', 'ops_manager', 'service_manager', 'sales_manager', 'finance_manager'] as $roleKey) {
         $userId = (string) Str::uuid7();
         $ids["user_{$roleKey}"] = $userId;
         DB::table('users')->insert(['id' => $userId, 'tenant_id' => $ids['tenant'], 'email' => "{$roleKey}@test.local", 'password_hash' => Hash::make('Str0ng!Passw0rd'), 'first_name' => ucfirst($roleKey), 'last_name' => 'Test', 'password_changed_at' => now(), 'created_at' => now(), 'updated_at' => now()]);

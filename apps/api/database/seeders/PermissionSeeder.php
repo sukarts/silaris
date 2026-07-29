@@ -34,6 +34,7 @@ class PermissionSeeder extends Seeder
         'quotes' => ['read', 'create', 'update', 'delete', 'approve', 'send', 'accept'],
         'tariffs' => ['read', 'create', 'update', 'delete', 'import'],
         'invoices' => ['read', 'create', 'update', 'validate', 'credit', 'export', 'sync_odoo'],
+        'payments' => ['read', 'create', 'cancel'],
         'documents' => ['read', 'create', 'update', 'delete', 'download', 'archive'],
         'notifications' => ['read', 'manage_templates'],
         'reports' => ['read', 'export', 'schedule'],
@@ -106,6 +107,9 @@ class PermissionSeeder extends Seeder
         ]],
         'accountant' => ['label' => 'Comptable', 'perms' => [
             'invoices.read', 'invoices.export', 'invoices.sync_odoo',
+            // Il encaisse et impute ; l'annulation d'un règlement déjà porté en
+            // caisse relève du responsable financier.
+            'payments.read', 'payments.create',
             // Il tient les données de facturation du client — RCCM, adresse,
             // conditions de règlement — et doit donc pouvoir les corriger.
             'quotes.read', 'crm.read', 'crm.create', 'crm.update', 'shipments.read',
@@ -113,7 +117,7 @@ class PermissionSeeder extends Seeder
         ]],
         'finance_manager' => ['label' => 'Responsable financier', 'perms' => [
             'packages.force_delivery',
-            'invoices.*', 'quotes.read', 'tariffs.read', 'crm.read', 'crm.create', 'crm.update',
+            'invoices.*', 'payments.*', 'quotes.read', 'tariffs.read', 'crm.read', 'crm.create', 'crm.update',
             'shipments.read', 'odoo.*', 'reports.*', 'dashboard.*', 'audit.read',
             'documents.read', 'documents.download', 'notifications.read',
         ]],
