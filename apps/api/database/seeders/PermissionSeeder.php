@@ -106,12 +106,14 @@ class PermissionSeeder extends Seeder
         ]],
         'accountant' => ['label' => 'Comptable', 'perms' => [
             'invoices.read', 'invoices.export', 'invoices.sync_odoo',
-            'quotes.read', 'crm.read', 'shipments.read',
+            // Il tient les données de facturation du client — RCCM, adresse,
+            // conditions de règlement — et doit donc pouvoir les corriger.
+            'quotes.read', 'crm.read', 'crm.create', 'crm.update', 'shipments.read',
             'odoo.*', 'reports.read', 'reports.export', 'dashboard.read', 'documents.read', 'documents.download',
         ]],
         'finance_manager' => ['label' => 'Responsable financier', 'perms' => [
             'packages.force_delivery',
-            'invoices.*', 'quotes.read', 'tariffs.read', 'crm.read', 'crm.update',
+            'invoices.*', 'quotes.read', 'tariffs.read', 'crm.read', 'crm.create', 'crm.update',
             'shipments.read', 'odoo.*', 'reports.*', 'dashboard.*', 'audit.read',
             'documents.read', 'documents.download', 'notifications.read',
         ]],
