@@ -161,7 +161,12 @@ class OrganizationController
             'tenants/%s/branding/logo-%s.%s',
             $this->tenant->id(), Str::random(16), $file->getClientOriginalExtension(),
         );
-        Storage::disk(config('filesystems.documents_disk', 'local'))->put($key, $file->getContent());
+        // Même précaution que pour la GED : le disque ne lève pas, il renvoie
+        // false. Enregistrer la clé d'un objet absent afficherait un logo cassé
+        // sur tous les PDF et sur le portail.
+        if (Storage::disk(config('filesystems.documents_disk', 'local'))->put($key, $file->getContent()) === false) {
+            abort(503, "Le logo n'a pas pu être enregistré sur l'espace de stockage.");
+        }
 
         $previous = $company->logo_document_id;
         $company->update(['logo_document_id' => $key]);
