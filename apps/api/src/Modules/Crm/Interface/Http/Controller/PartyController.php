@@ -8,6 +8,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
+use Silaris\Modules\Crm\Application\Service\PartyCodeGenerator;
 use Silaris\Modules\Crm\Infrastructure\Persistence\Model\PartyModel;
 use Silaris\Modules\Crm\Infrastructure\Persistence\Model\PortalAccountModel;
 use Silaris\Modules\Shared\Infrastructure\Tenancy\TenantContext;
@@ -65,15 +66,11 @@ class PartyController
             'address.country_code' => ['required_with:address', 'size:2', 'exists:countries,code2'],
         ]);
 
-        // Code interne : généré si absent — préfixe par type + séquence sans trou.
-        if (($data['code'] ?? '') === '') {
-            $prefixes = ['client' => 'CLI', 'prospect' => 'PRO', 'supplier' => 'FOU'];
-            $prefix = $prefixes[$data['type']] ?? 'TRS';
-            $sequence = DB::selectOne('SELECT next_sequence(?, ?) AS value', [
-                $this->tenant->id(), 'party:'.$data['type'],
-            ])->value;
-            $data['code'] = sprintf('%s-%04d', $prefix, $sequence);
-        }
+        // Le code interne n'est jamais saisi : il part sur les factures, les
+        // cotations et la synchronisation comptable, où il doit rester stable et
+        // reconnaissable. Laissé à la main, il produisait des fiches hors
+        // nomenclature — « DAI », « D&F » — impossibles à trier ou à rapprocher.
+        $data['code'] = PartyCodeGenerator::next($this->tenant->id(), (string) $data['type']);
 
         $party = DB::transaction(function () use ($data, $nested) {
             $party = PartyModel::create($data);
@@ -134,7 +131,6 @@ class PartyController
             'type' => [$existing ? 'sometimes' : 'required', Rule::in(['client', 'prospect', 'supplier'])],
             'kind' => ['sometimes', Rule::in(['company', 'individual'])],
             'supplier_kind' => ['nullable', Rule::in(['ocean_carrier', 'airline', 'trucker', 'customs_agent', 'handler', 'insurer', 'port_agent', 'overseas_agent'])],
-            'code' => ['sometimes', 'nullable', 'string', 'max:24'],
             'name' => [$existing ? 'sometimes' : 'required', 'string', 'max:255'],
             'tax_id' => ['nullable', 'string', 'max:64'],
             'industry' => ['nullable', 'string', 'max:100'],
