@@ -67,6 +67,7 @@ export default function QuoteDetailPage() {
   const canSend = useCan("quotes.send");
   const canAccept = useCan("quotes.accept");
   const canUpdate = useCan("quotes.update");
+  const canInvoice = useCan("invoices.create");
 
   const [error, setError] = useState<string | null>(null);
   const [editing, setEditing] = useState(false);
@@ -106,6 +107,18 @@ export default function QuoteDetailPage() {
       if (problem) throw problem;
     },
     onSuccess: () => { setError(null); invalidate(); },
+    onError: (problem) => setError(problemMessage(problem)),
+  });
+
+  // Déverser la cotation acceptée dans un brouillon de facture, à l'identique :
+  // la facture transcrit l'accord client, elle ne le réinvente pas.
+  const invoice = useMutation({
+    mutationFn: async () => {
+      const { data, error: problem } = await rawApi.POST(`/v1/invoices/from-quote/${quoteId}`);
+      if (problem) throw problem;
+      return data as { id: string };
+    },
+    onSuccess: () => { setError(null); router.push("/billing"); },
     onError: (problem) => setError(problemMessage(problem)),
   });
 
@@ -207,6 +220,11 @@ export default function QuoteDetailPage() {
                 Marquer refusée
               </button>
             </>
+          )}
+          {quote.status === "accepted" && canInvoice && (
+            <button onClick={() => invoice.mutate()} disabled={invoice.isPending} className={buttonPrimary}>
+              {invoice.isPending ? "…" : "Facturer"}
+            </button>
           )}
           {isDraft && canUpdate && (
             <button onClick={startEdit} className={buttonSecondary}>Modifier</button>

@@ -1,8 +1,10 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import Link from "next/link";
 import { useState } from "react";
 import { downloadFile, problemMessage, rawApi } from "@/lib/api";
+import { buttonPrimary } from "@/components/Field";
 import { useCan } from "@/stores/auth";
 
 interface Invoice {
@@ -37,6 +39,7 @@ const PAYMENT_LABEL: Record<string, [string, string]> = {
 export default function BillingPage() {
   const queryClient = useQueryClient();
   const canValidate = useCan("invoices.validate");
+  const canCreate = useCan("invoices.create");
   const [error, setError] = useState<string | null>(null);
 
   const { data, isLoading } = useQuery({
@@ -61,11 +64,16 @@ export default function BillingPage() {
 
   return (
     <div className="flex flex-col gap-4">
-      <div>
-        <h1 className="text-xl font-bold">Facturation</h1>
-        <p className="text-[13px] text-ink-3">
-          Devis, proformas, factures, avoirs — la comptabilité reste dans Odoo.
-        </p>
+      <div className="flex items-start">
+        <div>
+          <h1 className="text-xl font-bold">Facturation</h1>
+          <p className="text-[13px] text-ink-3">
+            Proformas, factures et avoirs — établis, numérotés et validés dans SILARIS.
+          </p>
+        </div>
+        {canCreate && (
+          <Link href="/billing/new" className={`ml-auto ${buttonPrimary}`}>+ Nouvelle facture</Link>
+        )}
       </div>
       {error && <p className="rounded-lg bg-crit-soft px-4 py-2.5 text-[13px] text-crit">{error}</p>}
       <div className="overflow-x-auto rounded-xl border border-line bg-surface shadow-sm">
@@ -96,7 +104,7 @@ export default function BillingPage() {
                   <td className="mono px-3 py-2.5 text-ink-2">{invoice.shipment?.reference ?? "—"}</td>
                   <td className="px-3 py-2.5">
                     <span className={`rounded-full px-2.5 py-0.5 text-[11px] font-semibold ${STATUS_TONE[invoice.status]}`}>
-                      {invoice.status === "draft" ? "Brouillon" : invoice.status === "validated" ? "Validée" : invoice.status === "synced" ? "Sync Odoo" : "Échec sync"}
+                      {invoice.status === "draft" ? "Brouillon" : invoice.status === "validated" ? "Validée" : invoice.status === "synced" ? "Exportée compta" : "Export à reprendre"}
                     </span>
                   </td>
                   <td className={`px-3 py-2.5 text-xs font-semibold ${paymentTone}`}>{paymentLabel}</td>

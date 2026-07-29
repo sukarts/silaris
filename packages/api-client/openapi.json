@@ -3705,6 +3705,54 @@
                 }
             }
         },
+        "/v1/invoices/from-quote/{quoteId}": {
+            "post": {
+                "operationId": "invoice.fromQuote",
+                "description": "Seule une cotation accept\u00e9e par le client se facture : c'est elle qui fait\naccord sur le prix. Ses lignes deviennent celles de la facture, \u00e0\nl'identique \u2014 la facture ne r\u00e9invente pas le devis, elle le transcrit.\nLe brouillon reste modifiable et n'engage rien avant sa validation.",
+                "summary": "POST /v1/invoices/from-quote/{quoteId} \u2014 d\u00e9verse une cotation dans un\nbrouillon de facture",
+                "tags": [
+                    "Invoice"
+                ],
+                "parameters": [
+                    {
+                        "name": "quoteId",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "anyOf": [
+                                        {
+                                            "$ref": "#/components/schemas/InvoiceModel"
+                                        },
+                                        {
+                                            "type": "null"
+                                        }
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/ModelNotFoundException"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/AuthorizationException"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            }
+        },
         "/v1/invoices/{invoiceId}": {
             "get": {
                 "operationId": "invoice.show",
@@ -3912,6 +3960,36 @@
                     },
                     "422": {
                         "$ref": "#/components/responses/ValidationException"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/AuthorizationException"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            }
+        },
+        "/v1/tax-rates": {
+            "get": {
+                "operationId": "invoice.taxRates",
+                "summary": "GET /v1/tax-rates \u2014 bar\u00e8me actif, pour le choix de la TVA \u00e0 la ligne",
+                "tags": [
+                    "Invoice"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "array",
+                                    "items": {
+                                        "$ref": "#/components/schemas/TaxRateModel"
+                                    }
+                                }
+                            }
+                        }
                     },
                     "403": {
                         "$ref": "#/components/responses/AuthorizationException"
@@ -14948,6 +15026,57 @@
                     "updated_at"
                 ],
                 "title": "TariffModel"
+            },
+            "TaxRateModel": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string"
+                    },
+                    "tenant_id": {
+                        "type": "string"
+                    },
+                    "name": {
+                        "type": "string"
+                    },
+                    "rate_percent": {
+                        "type": "string"
+                    },
+                    "odoo_id": {
+                        "type": [
+                            "integer",
+                            "null"
+                        ]
+                    },
+                    "is_active": {
+                        "type": "boolean"
+                    },
+                    "created_at": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "format": "date-time"
+                    },
+                    "updated_at": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "format": "date-time"
+                    }
+                },
+                "required": [
+                    "id",
+                    "tenant_id",
+                    "name",
+                    "rate_percent",
+                    "odoo_id",
+                    "is_active",
+                    "created_at",
+                    "updated_at"
+                ],
+                "title": "TaxRateModel"
             },
             "TimelineEventResource": {
                 "type": "object",
