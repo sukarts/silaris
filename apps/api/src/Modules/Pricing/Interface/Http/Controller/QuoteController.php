@@ -133,6 +133,54 @@ class QuoteController
         return response()->json($quote->fresh(['lines']), 201);
     }
 
+    /**
+     * PATCH /v1/quotes/{id} — reprise d'un brouillon.
+     *
+     * Réservée au brouillon : une cotation transmise ou acceptée est figée, sa
+     * reprise passe par une nouvelle version. Toute modification remet la
+     * validation à zéro — sans quoi on pourrait relever le prix après l'aval du
+     * responsable et transmettre au client un montant que personne n'a validé.
+     */
+    public function update(Request $request, string $quoteId): JsonResponse
+    {
+        $quote = QuoteModel::where('status', 'draft')->findOrFail($quoteId);
+
+        $data = $request->validate([
+            'incoterm_code' => ['sometimes', 'size:3', 'exists:incoterms,code'],
+            'valid_until' => ['sometimes', 'date', 'after:today'],
+            'lines' => ['required', 'array', 'min:1'],
+            'lines.*.service_code' => ['required', 'string', 'max:32'],
+            'lines.*.description' => ['required', 'string', 'max:255'],
+            'lines.*.quantity' => ['required', 'numeric', 'min:0.001'],
+            'lines.*.unit' => ['required', Rule::in(['container', 'kg', 'm3', 'wm', 'flat', 'percent', 'unit'])],
+            'lines.*.unit_price' => ['required', 'numeric', 'min:0'],
+            'lines.*.currency_code' => ['required', 'size:3', 'exists:currencies,code'],
+            'lines.*.buy_price' => ['nullable', 'numeric', 'min:0'],
+            'lines.*.category' => ['sometimes', Rule::in(['customs', 'other'])],
+        ]);
+
+        DB::transaction(function () use ($quote, $data): void {
+            $lines = $data['lines'];
+            unset($data['lines']);
+
+            $quote->update([
+                ...$data,
+                'total_amount' => collect($lines)->sum(fn ($l) => round($l['quantity'] * $l['unit_price'], 2)),
+                'total_buy_amount' => collect($lines)->whereNotNull('buy_price')->sum(fn ($l) => round($l['quantity'] * $l['buy_price'], 2)),
+                // La reprise invalide l'aval précédent : le prix a changé.
+                'approved_by' => null,
+                'approved_at' => null,
+            ]);
+
+            $quote->lines()->delete();
+            foreach ($lines as $i => $line) {
+                $quote->lines()->create([...$line, 'position' => $i + 1]);
+            }
+        });
+
+        return response()->json($quote->fresh(['lines']));
+    }
+
     /** POST /v1/quotes/{id}/send */
     public function send(string $quoteId): JsonResponse
     {

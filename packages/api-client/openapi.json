@@ -8721,6 +8721,129 @@
                         "$ref": "#/components/responses/AuthenticationException"
                     }
                 }
+            },
+            "patch": {
+                "operationId": "quote.update",
+                "description": "R\u00e9serv\u00e9e au brouillon : une cotation transmise ou accept\u00e9e est fig\u00e9e, sa\nreprise passe par une nouvelle version. Toute modification remet la\nvalidation \u00e0 z\u00e9ro \u2014 sans quoi on pourrait relever le prix apr\u00e8s l'aval du\nresponsable et transmettre au client un montant que personne n'a valid\u00e9.",
+                "summary": "PATCH /v1/quotes/{id} \u2014 reprise d'un brouillon",
+                "tags": [
+                    "Quote"
+                ],
+                "parameters": [
+                    {
+                        "name": "quoteId",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "incoterm_code": {
+                                        "type": "string"
+                                    },
+                                    "valid_until": {
+                                        "type": "string",
+                                        "format": "date-time"
+                                    },
+                                    "lines": {
+                                        "type": "array",
+                                        "items": {
+                                            "type": "object",
+                                            "properties": {
+                                                "service_code": {
+                                                    "type": "string",
+                                                    "maxLength": 32
+                                                },
+                                                "description": {
+                                                    "type": "string",
+                                                    "maxLength": 255
+                                                },
+                                                "quantity": {
+                                                    "type": "number",
+                                                    "minimum": 0.001
+                                                },
+                                                "unit": {
+                                                    "type": "string",
+                                                    "enum": [
+                                                        "container",
+                                                        "kg",
+                                                        "m3",
+                                                        "wm",
+                                                        "flat",
+                                                        "percent",
+                                                        "unit"
+                                                    ]
+                                                },
+                                                "unit_price": {
+                                                    "type": "number",
+                                                    "minimum": 0
+                                                },
+                                                "currency_code": {
+                                                    "type": "string"
+                                                },
+                                                "buy_price": {
+                                                    "type": [
+                                                        "number",
+                                                        "null"
+                                                    ],
+                                                    "minimum": 0
+                                                },
+                                                "category": {
+                                                    "type": "string",
+                                                    "enum": [
+                                                        "customs",
+                                                        "other"
+                                                    ]
+                                                }
+                                            },
+                                            "required": [
+                                                "service_code",
+                                                "description",
+                                                "quantity",
+                                                "unit",
+                                                "unit_price",
+                                                "currency_code"
+                                            ]
+                                        },
+                                        "minItems": 1
+                                    }
+                                },
+                                "required": [
+                                    "lines"
+                                ]
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationException"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/AuthorizationException"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
             }
         },
         "/v1/quotes/{quoteId}/pdf": {

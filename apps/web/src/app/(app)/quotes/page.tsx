@@ -18,6 +18,7 @@ interface Quote {
   total_amount: string;
   total_buy_amount: string | null;
   valid_until: string;
+  approved_at: string | null;
   party: { name: string };
 }
 
@@ -75,13 +76,22 @@ export default function QuotesPage() {
                 : null;
               return (
                 <tr key={quote.id} className="border-b border-line last:border-0 hover:bg-sea/5">
-                  <td className="mono px-3 py-2.5 font-semibold text-sea">{quote.number}</td>
+                  <td className="mono px-3 py-2.5 font-semibold">
+                    <Link href={`/quotes/${quote.id}`} className="text-sea hover:underline">{quote.number}</Link>
+                  </td>
                   <td className="px-3 py-2.5">{quote.party.name}</td>
                   <td className="mono px-3 py-2.5 text-ink-2">{quote.origin_locode} → {quote.destination_locode}</td>
                   <td className="px-3 py-2.5">
                     <span className={`rounded-full px-2.5 py-0.5 text-[11px] font-semibold ${STATUS_TONE[quote.status]}`}>
                       {STATUS_LABEL[quote.status]}
                     </span>
+                    {/* Une cotation validée reste « brouillon » jusqu'à l'envoi :
+                        sans ce repère, elle est indiscernable d'un devis à valider. */}
+                    {quote.status === "draft" && (
+                      <span className={`ml-1.5 rounded-full px-2 py-0.5 text-[10px] font-semibold ${quote.approved_at ? "bg-ok-soft text-ok" : "bg-warn-soft text-warn"}`}>
+                        {quote.approved_at ? "validée" : "à valider"}
+                      </span>
+                    )}
                   </td>
                   <td className="mono px-3 py-2.5 text-right">
                     {Number(quote.total_amount).toLocaleString("fr-FR")} {quote.currency_code}

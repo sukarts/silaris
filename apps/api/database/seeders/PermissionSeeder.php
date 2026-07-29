@@ -100,7 +100,13 @@ class PermissionSeeder extends Seeder
             'notifications.read', 'dashboard.read', 'dashboard.customize',
         ]],
         'sales' => ['label' => 'Commercial', 'perms' => [
-            'crm.*', 'complaints.read', 'complaints.create', 'quotes.*', 'tariffs.read',
+            // Le commercial prépare, reprend et transmet ses cotations, et
+            // enregistre la décision du client — mais ne les valide pas :
+            // l'aval interne (quotes.approve) reste au directeur, à
+            // l'administration et au responsable commercial, pour qu'un prix
+            // ne parte pas au client sur la seule signature de celui qui l'a fait.
+            'crm.*', 'complaints.read', 'complaints.create', 'tariffs.read',
+            'quotes.read', 'quotes.create', 'quotes.update', 'quotes.delete', 'quotes.send', 'quotes.accept',
             'shipments.read', 'tracking.read', 'invoices.read',
             'documents.read', 'documents.download', 'notifications.read', 'dashboard.read', 'dashboard.customize',
             'reports.read',

@@ -1761,7 +1761,14 @@ export interface paths {
         delete?: never;
         options?: never;
         head?: never;
-        patch?: never;
+        /**
+         * PATCH /v1/quotes/{id} — reprise d'un brouillon
+         * @description Réservée au brouillon : une cotation transmise ou acceptée est figée, sa
+         *     reprise passe par une nouvelle version. Toute modification remet la
+         *     validation à zéro — sans quoi on pourrait relever le prix après l'aval du
+         *     responsable et transmettre au client un montant que personne n'a validé.
+         */
+        patch: operations["quote.update"];
         trace?: never;
     };
     "/v1/quotes/{quoteId}/pdf": {
@@ -7021,6 +7028,50 @@ export interface operations {
             401: components["responses"]["AuthenticationException"];
             403: components["responses"]["AuthorizationException"];
             404: components["responses"]["ModelNotFoundException"];
+        };
+    };
+    "quote.update": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                quoteId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    incoterm_code?: string;
+                    /** Format: date-time */
+                    valid_until?: string;
+                    lines: {
+                        service_code: string;
+                        description: string;
+                        quantity: number;
+                        /** @enum {string} */
+                        unit: "container" | "kg" | "m3" | "wm" | "flat" | "percent" | "unit";
+                        unit_price: number;
+                        currency_code: string;
+                        buy_price?: number | null;
+                        /** @enum {string} */
+                        category?: "customs" | "other";
+                    }[];
+                };
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": string;
+                };
+            };
+            401: components["responses"]["AuthenticationException"];
+            403: components["responses"]["AuthorizationException"];
+            422: components["responses"]["ValidationException"];
         };
     };
     "quote.pdf": {
