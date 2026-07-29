@@ -51,3 +51,4 @@ jobs:
           cache-to: type=gha,scope=${{ matrix.image }},mode=max
           build-args: |
             NEXT_PUBLIC_API_URL=${{ vars.NEXT_PUBLIC_API_URL }}
+            APP_RELEASE=${{ github.sha }}

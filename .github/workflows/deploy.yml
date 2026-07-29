@@ -1,46 +1,88 @@
 name: Deploy
 
+# Mise en service sur Render.
+#
+# Render héberge quatre services qui tirent tous une image publiée par
+# « Build & Push Images ». Le tag `latest` ne réveille personne : sans appel
+# explicite, une image poussée reste ignorée et la production continue de
+# tourner sur la version précédente sans que rien ne le signale.
+#
+# L'API part en premier, seule : sa commande de pré-déploiement applique les
+# migrations. Worker et planificateur ne suivent qu'une fois la nouvelle version
+# confirmée en service, sinon ils démarreraient sur un schéma qui n'existe pas
+# encore. La confirmation se lit sur /health, qui renvoie l'empreinte du commit
+# gravée dans l'image — c'est la différence entre vérifier et supposer.
+
 on:
   workflow_run:
     workflows: ["Build & Push Images"]
     types: [completed]
     branches: [main]
   workflow_dispatch:
-    inputs:
-      environment:
-        type: choice
-        options: [staging, production]
-        required: true
+
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
 
 jobs:
-  staging:
-    if: github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success'
+  render:
+    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-latest
-    environment: staging  # secrets + URL par environnement GitHub
     steps:
-      - uses: actions/checkout@v4
-      - uses: azure/setup-kubectl@v4
-      - name: Déploiement staging (kustomize, image = SHA du commit)
+      - name: API — déclencher le déploiement (migrations comprises)
         env:
-          KUBECONFIG_DATA: ${{ secrets.KUBECONFIG }}
+          HOOK: ${{ secrets.RENDER_DEPLOY_HOOK_API }}
         run: |
-          echo "$KUBECONFIG_DATA" | base64 -d > kubeconfig && export KUBECONFIG=./kubeconfig
-          cd docker/k8s/overlays/staging
-          kubectl kustomize . | sed "s|:latest|:${GITHUB_SHA::7}|g" | kubectl apply -f -
-          kubectl -n silaris-staging rollout status deploy/silaris-api --timeout=180s
+          set -euo pipefail
+          if [ -z "${HOOK}" ]; then
+            echo "::error::RENDER_DEPLOY_HOOK_API absent — déploiement impossible."
+            exit 1
+          fi
+          curl -fsS -X POST "${HOOK}" > /dev/null
+          echo "Déploiement de l'API demandé."
 
-  production:
-    if: github.event_name == 'workflow_dispatch' && inputs.environment == 'production'
-    runs-on: ubuntu-latest
-    environment: production  # approbation manuelle exigée (protection d'environnement GitHub)
-    steps:
-      - uses: actions/checkout@v4
-      - uses: azure/setup-kubectl@v4
-      - name: Déploiement production
+      - name: Attendre que la nouvelle version soit en service
         env:
-          KUBECONFIG_DATA: ${{ secrets.KUBECONFIG_PROD }}
+          # Empreinte attendue : celle du commit qui a produit l'image. Sur
+          # workflow_run, github.sha désigne le commit du workflow déclencheur.
+          EXPECTED: ${{ github.event.workflow_run.head_sha || github.sha }}
+          HEALTH_URL: ${{ vars.API_HEALTH_URL || 'https://api.silaris.co/api/v1/health' }}
         run: |
-          echo "$KUBECONFIG_DATA" | base64 -d > kubeconfig && export KUBECONFIG=./kubeconfig
-          cd docker/k8s/overlays/production
-          kubectl kustomize . | sed "s|:latest|:${GITHUB_SHA::7}|g" | kubectl apply -f -
-          kubectl -n silaris-production rollout status deploy/silaris-api --timeout=300s
+          set -uo pipefail
+          echo "Version attendue : ${EXPECTED}"
+          for attempt in $(seq 1 60); do
+            release=$(curl -fsS --max-time 10 "${HEALTH_URL}" 2>/dev/null | jq -r '.release // empty' || true)
+            if [ "${release}" = "${EXPECTED}" ]; then
+              echo "En service depuis la tentative ${attempt}."
+              exit 0
+            fi
+            echo "  tentative ${attempt}/60 — version en service : ${release:-injoignable}"
+            sleep 15
+          done
+          echo "::error::L'API n'a pas rendu la version ${EXPECTED} après 15 minutes."
+          exit 1
+
+      # Un service dont le hook n'est pas renseigné est ignoré sans faire échouer
+      # le tout : la configuration se complète service par service.
+      - name: Worker, planificateur et frontend
+        env:
+          WORKER: ${{ secrets.RENDER_DEPLOY_HOOK_WORKER }}
+          SCHEDULER: ${{ secrets.RENDER_DEPLOY_HOOK_SCHEDULER }}
+          WEB: ${{ secrets.RENDER_DEPLOY_HOOK_WEB }}
+        run: |
+          set -uo pipefail
+          status=0
+          for service in WORKER SCHEDULER WEB; do
+            hook="${!service}"
+            if [ -z "${hook}" ]; then
+              echo "::warning::${service} — hook absent, service non redéployé."
+              continue
+            fi
+            if curl -fsS -X POST "${hook}" > /dev/null; then
+              echo "${service} : déploiement demandé."
+            else
+              echo "::error::${service} — appel du hook en échec."
+              status=1
+            fi
+          done
+          exit $status
