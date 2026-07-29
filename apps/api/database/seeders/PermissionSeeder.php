@@ -16,7 +16,7 @@ class PermissionSeeder extends Seeder
 {
     /** module => actions disponibles */
     private const MODULES = [
-        'shipments' => ['read', 'create', 'update', 'delete', 'export', 'advance', 'approve_step', 'approve_step_all', 'close', 'reopen', 'archive'],
+        'shipments' => ['read', 'create', 'update', 'delete', 'export', 'advance', 'approve_step', 'approve_step_all', 'assign', 'close', 'reopen', 'archive'],
         'bookings' => ['read', 'create', 'update', 'delete'],
         'containers' => ['read', 'create', 'update', 'delete'],
         // Dérogations : volontairement hors du module concerné, pour qu'aucun
@@ -73,7 +73,7 @@ class PermissionSeeder extends Seeder
             // passages d'étape — bornée à son service par le contrôle d'accès.
             'packages.*',
             'shipments.read', 'shipments.create', 'shipments.update', 'shipments.advance',
-            'shipments.approve_step', 'shipments.export',
+            'shipments.approve_step', 'shipments.assign', 'shipments.export',
             'bookings.*', 'containers.*', 'bl.*', 'consolidations.*', 'awb.*',
             'road.*', 'pod.*', 'tracking.*', 'crm.read', 'complaints.*',
             'quotes.read', 'invoices.read', 'invoices.create',

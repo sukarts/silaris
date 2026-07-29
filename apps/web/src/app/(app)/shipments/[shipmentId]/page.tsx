@@ -109,6 +109,32 @@ export default function ShipmentDetailPage({ params }: { params: Promise<{ shipm
   // compagnie en déduit les conteneurs.
   const [watch, setWatch] = useState({ number: "", subject_type: "bl", carrier_scac: "" });
   const [watchInfo, setWatchInfo] = useState<string | null>(null);
+  const [assignError, setAssignError] = useState<string | null>(null);
+  const canAssign = useCan("shipments.assign");
+
+  // L'équipe du chef : le serveur ne rend que les agents de son service.
+  const { data: agents } = useQuery({
+    queryKey: ["assignable-agents"],
+    enabled: canAssign,
+    queryFn: async () => {
+      const { data } = await rawApi.GET("/v1/shipments/assignable-agents");
+      return (data as { data: { id: string; first_name: string; last_name: string }[] }).data;
+    },
+  });
+
+  const assign = useMutation({
+    mutationFn: async (agentId: string) => {
+      const { error: problem } = await rawApi.POST(`/v1/shipments/${shipmentId}/assign`, {
+        body: { agent_id: agentId },
+      });
+      if (problem) throw problem;
+    },
+    onSuccess: () => {
+      setAssignError(null);
+      queryClient.invalidateQueries({ queryKey: ["shipment", shipmentId] });
+    },
+    onError: (problem) => setAssignError(problemMessage(problem)),
+  });
 
   const refreshTracking = useMutation({
     mutationFn: async () => {
@@ -249,7 +275,6 @@ export default function ShipmentDetailPage({ params }: { params: Promise<{ shipm
             <div className="grid grid-cols-2 gap-x-5 gap-y-3 p-4 md:grid-cols-3">
               {[
                 ["Client", shipment.client?.name],
-                ["Agent", shipment.agent?.name],
                 ["Agence", shipment.branch ? `${shipment.branch.name} (${shipment.branch.code})` : "—"],
                 ["Incoterm", shipment.incoterm_code],
                 ["ETD", formatDate(shipment.schedule.etd)],
@@ -263,6 +288,27 @@ export default function ShipmentDetailPage({ params }: { params: Promise<{ shipm
                   <div className="mt-0.5 text-[13px] font-semibold">{value ?? "—"}</div>
                 </div>
               ))}
+            </div>
+
+            {/* Le chef de service répartit la charge de son équipe. */}
+            <div className="flex flex-wrap items-center gap-3 border-t border-line px-4 py-3">
+              <span className="text-[10px] uppercase tracking-wider text-ink-3">Agent en charge</span>
+              {canAssign ? (
+                <select
+                  value={shipment.agent?.id ?? ""}
+                  onChange={(event) => assign.mutate(event.target.value)}
+                  disabled={assign.isPending}
+                  className={`${inputClass} w-auto min-w-[12rem]`}
+                >
+                  <option value="">— Non affecté —</option>
+                  {agents?.map((agent) => (
+                    <option key={agent.id} value={agent.id}>{agent.last_name} {agent.first_name}</option>
+                  ))}
+                </select>
+              ) : (
+                <span className="text-[13px] font-semibold">{shipment.agent?.name ?? "—"}</span>
+              )}
+              {assignError && <span className="text-xs text-crit">{assignError}</span>}
             </div>
           </div>
 
