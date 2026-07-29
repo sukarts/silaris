@@ -1,6 +1,6 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { problemMessage, rawApi } from "@/lib/api";
@@ -21,7 +21,11 @@ interface CalculatedLine {
 }
 
 /** Ligne éditable du devis — issue de la simulation ou saisie à la main. */
+/** Deux familles de débours, deux sous-totaux — comme sur l'offre type. */
+type LineCategory = "customs" | "other";
+
 interface QuoteLine {
+  category: LineCategory;
   service_code: string;
   description: string;
   unit: string;
@@ -49,11 +53,54 @@ const UNITS = [
   ["unit", "unité"],
 ] as const;
 
-function blankLine(currency: string): QuoteLine {
+function blankLine(currency: string, category: LineCategory = "other"): QuoteLine {
   return {
-    service_code: "", description: "", unit: "flat", quantity: "1",
+    category, service_code: "", description: "", unit: "flat", quantity: "1",
     unit_price: "", buy_price: "", currency_code: currency,
   };
+}
+
+/**
+ * Trame de l'offre de transit maritime import, reprise de l'offre type du
+ * transitaire. Proposée d'emblée pour qu'aucun poste ne soit oublié : un débours
+ * omis à la cotation se facture ensuite sans avoir été annoncé.
+ */
+const IMPORT_TEMPLATE: { category: LineCategory; code: string; label: string }[] = [
+  { category: "customs", code: "DD", label: "Droit de douane" },
+  { category: "customs", code: "RSTA", label: "RSTA" },
+  { category: "customs", code: "PCS", label: "PCS" },
+  { category: "customs", code: "PUA", label: "PUA" },
+  { category: "customs", code: "PCC", label: "PCC" },
+  { category: "customs", code: "RPI", label: "RPI" },
+  { category: "customs", code: "TVA", label: "TVA" },
+  { category: "customs", code: "TS_SYDAM", label: "TS + Sydam" },
+  { category: "other", code: "OUVERTURE", label: "Ouverture" },
+  { category: "other", code: "FDI_RFCV", label: "FDI/RFCV" },
+  { category: "other", code: "ASSURANCE", label: "Assurance" },
+  { category: "other", code: "TIRAGE", label: "Tirage" },
+  { category: "other", code: "PASSAGE", label: "Passage" },
+  { category: "other", code: "AGIO", label: "Agio/Gestion crédit" },
+  { category: "other", code: "AMENDE_BSC", label: "Amende BSC" },
+  { category: "other", code: "VISITE", label: "Visite" },
+  { category: "other", code: "ACCONAGE", label: "Acconage" },
+  { category: "other", code: "CAUTION", label: "Caution" },
+  { category: "other", code: "ECHANGE_BL", label: "Echange BL" },
+  { category: "other", code: "LIVRAISON", label: "Livraison" },
+  { category: "other", code: "COMMISSION", label: "Commission de facilitation" },
+  { category: "other", code: "PRESTATIONS", label: "Prestations" },
+];
+
+const CATEGORY_LABEL: Record<LineCategory, string> = {
+  customs: "Débours douane",
+  other: "Débours divers",
+};
+
+function templateLines(currency: string): QuoteLine[] {
+  return IMPORT_TEMPLATE.map((entry) => ({
+    ...blankLine(currency, entry.category),
+    service_code: entry.code,
+    description: entry.label,
+  }));
 }
 
 function inNinetyDays(): string {
@@ -85,6 +132,10 @@ export default function NewQuotePage() {
     valid_until: inNinetyDays(),
   });
   const [lines, setLines] = useState<QuoteLine[]>([]);
+  // Position tarifaire, valeur en douane et régime : de quoi chiffrer les
+  // débours douane au lieu de les saisir.
+  const [customs, setCustoms] = useState({ hs_code: "", customs_value: "", customs_regime: "IM4" });
+  const [customsInfo, setCustomsInfo] = useState<string | null>(null);
   const [calculated, setCalculated] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -104,6 +155,14 @@ export default function NewQuotePage() {
       return (data as { data: { code: string; label: string }[] }).data;
     },
   });
+  const { data: regimes } = useQuery({
+    queryKey: ["customs-regimes"],
+    queryFn: async () => {
+      const { data } = await rawApi.GET("/v1/customs-regimes");
+      return (data as { data: { code: string; name: string; note: string | null; is_suspensive: boolean }[] }).data;
+    },
+  });
+
   const { data: currencies } = useQuery({
     queryKey: ["currencies"],
     queryFn: async () => {
@@ -133,6 +192,15 @@ export default function NewQuotePage() {
     setForm((state) => ({ ...state, [key]: value }));
   }
 
+  // Le maritime FCL à l'import suit une trame connue : la proposer d'emblée
+  // évite d'oublier un poste, sans empêcher d'en ajouter ou d'en retirer.
+  useEffect(() => {
+    const applies = form.mode === "sea_fcl" && form.direction === "import";
+    if (applies && lines.length === 0 && !calculated) {
+      setLines(templateLines(deal.currency_code));
+    }
+  }, [form.mode, form.direction, lines.length, calculated, deal.currency_code]);
+
   function setLine(index: number, key: keyof QuoteLine, value: string) {
     setLines((state) => state.map((line, i) => (i === index ? { ...line, [key]: value } : line)));
   }
@@ -158,6 +226,8 @@ export default function NewQuotePage() {
     const computed = (data as { lines: CalculatedLine[] }).lines;
     setCalculated(true);
     setLines(computed.map((line) => ({
+      // La grille tarifaire chiffre des prestations, pas des droits de douane.
+      category: "other" as const,
       service_code: line.serviceCode,
       description: line.description,
       unit: line.unit,
@@ -168,6 +238,33 @@ export default function NewQuotePage() {
       minimumApplied: line.minimumApplied,
     })));
   }
+
+  /** Chiffre les huit lignes de débours douane depuis le tarif officiel. */
+  const computeDuties = useMutation({
+    mutationFn: async () => {
+      const { data, error: problem } = await rawApi.POST("/v1/customs-tariffs/compute", {
+        body: {
+          hs_code: customs.hs_code,
+          customs_value: Number(customs.customs_value) || 0,
+          customs_regime: customs.customs_regime,
+        },
+      });
+      if (problem) throw problem;
+      return data as {
+        hs_code: string; description: string; regime_name: string | null;
+        lines: Record<string, number>; total: number;
+      };
+    },
+    onSuccess: (result) => {
+      // Les montants remplacent les lignes douane ; celles saisies à la main
+      // dans les débours divers ne bougent pas.
+      setLines((state) => state.map((line) => line.category === "customs" && result.lines[line.service_code] !== undefined
+        ? { ...line, unit_price: String(result.lines[line.service_code]), quantity: "1" }
+        : line));
+      setCustomsInfo(`${result.hs_code} — ${result.description.slice(0, 70)}${result.regime_name ? ` · ${result.regime_name}` : ""}`);
+    },
+    onError: (problem) => setCustomsInfo(problemMessage(problem)),
+  });
 
   async function submit(event: React.FormEvent) {
     event.preventDefault();
@@ -191,7 +288,11 @@ export default function NewQuotePage() {
           gross_weight_kg: Number(form.gross_weight_kg) || 0,
           volume_m3: Number(form.volume_m3) || 0,
         },
+        hs_code: customs.hs_code || null,
+        customs_value: Number(customs.customs_value) || null,
+        customs_regime: customs.customs_regime || null,
         lines: lines.map((line) => ({
+          category: line.category,
           service_code: line.service_code || "SERVICE",
           description: line.description,
           quantity: Number(line.quantity) || 0,
@@ -208,6 +309,11 @@ export default function NewQuotePage() {
   }
 
   const money = (value: number) => value.toLocaleString("fr-FR", { maximumFractionDigits: 0 });
+
+  /** Sous-total d'une famille de débours — les deux blocs de l'offre type. */
+  const subtotal = (category: LineCategory) => lines
+    .filter((line) => line.category === category)
+    .reduce((sum, line) => sum + (Number(line.quantity) || 0) * (Number(line.unit_price) || 0), 0);
   const totals = lines.reduce<Record<string, { sell: number; buy: number }>>((acc, line) => {
     const quantity = Number(line.quantity) || 0;
     acc[line.currency_code] ??= { sell: 0, buy: 0 };
@@ -274,12 +380,72 @@ export default function NewQuotePage() {
       </form>
 
       <form onSubmit={submit} className="flex flex-col gap-5">
+        {form.direction === "import" && (
+          <section className="grid gap-4 rounded-xl border border-line bg-surface p-5 shadow-sm md:grid-cols-4">
+            <p className="text-[13px] font-bold md:col-span-4">
+              2 · Douane
+              <span className="ml-2 font-normal text-ink-3">
+                le tarif chiffre les droits, le régime dit s&apos;ils sont dus
+              </span>
+            </p>
+            <Field label="Position tarifaire">
+              <input
+                value={customs.hs_code}
+                onChange={(event) => setCustoms({ ...customs, hs_code: event.target.value })}
+                placeholder="8703.23.00.00"
+                className={`${inputClass} mono`}
+              />
+            </Field>
+            <Field label="Valeur en douane (CAF)">
+              <input
+                type="number"
+                min={0}
+                value={customs.customs_value}
+                onChange={(event) => setCustoms({ ...customs, customs_value: event.target.value })}
+                className={`${inputClass} mono`}
+              />
+            </Field>
+            <Field label="Régime douanier">
+              <select
+                value={customs.customs_regime}
+                onChange={(event) => setCustoms({ ...customs, customs_regime: event.target.value })}
+                className={inputClass}
+              >
+                {regimes?.map((regime) => (
+                  <option key={regime.code} value={regime.code}>{regime.code} — {regime.name}</option>
+                ))}
+              </select>
+            </Field>
+            <div className="flex items-end">
+              <button
+                type="button"
+                onClick={() => computeDuties.mutate()}
+                disabled={computeDuties.isPending || customs.hs_code === "" || customs.customs_value === ""}
+                className={`w-full ${buttonSecondary}`}
+              >
+                {computeDuties.isPending ? "Calcul…" : "Chiffrer les droits"}
+              </button>
+            </div>
+            {customsInfo && <p className="text-xs text-ink-3 md:col-span-4">{customsInfo}</p>}
+            {regimes?.find((regime) => regime.code === customs.customs_regime)?.note && (
+              <p className="rounded-lg bg-paper px-3 py-2 text-xs text-ink-2 md:col-span-4">
+                {regimes.find((regime) => regime.code === customs.customs_regime)?.note}
+              </p>
+            )}
+          </section>
+        )}
+
         <section className="rounded-xl border border-line bg-surface p-5 shadow-sm">
           <div className="flex items-center pb-3">
-            <p className="text-[13px] font-bold">2 · Lignes du devis</p>
-            <button type="button" onClick={() => setLines((state) => [...state, blankLine(deal.currency_code)])} className="ml-auto text-xs font-semibold text-sea hover:underline">
-              + Ajouter une ligne
-            </button>
+            <p className="text-[13px] font-bold">3 · Lignes du devis</p>
+            <div className="ml-auto flex gap-3">
+              <button type="button" onClick={() => setLines((state) => [...state, blankLine(deal.currency_code, "customs")])} className="text-xs font-semibold text-sea hover:underline">
+                + Débours douane
+              </button>
+              <button type="button" onClick={() => setLines((state) => [...state, blankLine(deal.currency_code, "other")])} className="text-xs font-semibold text-sea hover:underline">
+                + Débours divers
+              </button>
+            </div>
           </div>
 
           {calculated && lines.length === 0 && (
@@ -299,7 +465,7 @@ export default function NewQuotePage() {
               <table className="w-full text-[13px]">
                 <thead>
                   <tr className="border-b border-line text-left text-[10px] uppercase tracking-wider text-ink-3">
-                    <th className="py-2 pr-2">Prestation</th>
+                    <th className="py-2 pr-2">Désignation</th>
                     <th className="px-2 py-2">Unité</th>
                     <th className="px-2 py-2 text-right">Qté</th>
                     <th className="px-2 py-2 text-right">PU vente</th>
@@ -309,8 +475,20 @@ export default function NewQuotePage() {
                     <th className="py-2" />
                   </tr>
                 </thead>
-                <tbody>
-                  {lines.map((line, index) => (
+                {(["customs", "other"] as LineCategory[]).map((category) => {
+                  const indexes = lines
+                    .map((line, index) => ({ line, index }))
+                    .filter((entry) => entry.line.category === category);
+                  if (indexes.length === 0) return null;
+
+                  return (
+                <tbody key={category}>
+                  <tr>
+                    <td colSpan={8} className="pt-4 pb-1 text-[11px] font-bold uppercase tracking-wider text-ink-2">
+                      {CATEGORY_LABEL[category]}
+                    </td>
+                  </tr>
+                  {indexes.map(({ line, index }) => (
                     <tr key={index} className="border-b border-line last:border-0">
                       <td className="py-1.5 pr-2">
                         <input required value={line.description} onChange={(e) => setLine(index, "description", e.target.value)} placeholder="Fret maritime" className={`${inputClass} w-full`} />
@@ -345,8 +523,26 @@ export default function NewQuotePage() {
                       </td>
                     </tr>
                   ))}
+                  <tr className="border-t border-line-strong">
+                    <td colSpan={6} className="py-2 text-right text-[11px] font-bold uppercase tracking-wider text-ink-2">
+                      Total {CATEGORY_LABEL[category].toLowerCase()}
+                    </td>
+                    <td className="mono px-2 py-2 text-right font-bold">
+                      {money(subtotal(category))}
+                    </td>
+                    <td />
+                  </tr>
                 </tbody>
+                  );
+                })}
               </table>
+              <div className="mt-3 flex flex-wrap items-center gap-5 rounded-lg bg-paper px-4 py-3 text-[13px]">
+                <span className="text-[11px] font-bold uppercase tracking-wider text-ink-2">Net à payer</span>
+                <span className="mono text-base font-bold">
+                  {money(subtotal("customs") + subtotal("other"))} {deal.currency_code}
+                </span>
+              </div>
+
               <div className="flex flex-wrap gap-5 border-t border-line pt-3 text-[13px]">
                 {Object.entries(totals).map(([currency, total]) => (
                   <span key={currency}>
@@ -361,7 +557,7 @@ export default function NewQuotePage() {
         </section>
 
         <section className="grid gap-4 rounded-xl border border-line bg-surface p-5 shadow-sm md:grid-cols-4">
-          <p className="text-[13px] font-bold md:col-span-4">3 · Client et validité</p>
+          <p className="text-[13px] font-bold md:col-span-4">4 · Client et validité</p>
           <Field label="Client" className="md:col-span-2">
             <select required value={deal.party_id} onChange={(e) => setDeal({ ...deal, party_id: e.target.value })} className={inputClass}>
               <option value="">— Sélectionner —</option>
