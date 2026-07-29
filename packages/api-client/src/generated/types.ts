@@ -343,6 +343,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/public/companies/{companyId}/logo": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["controller.companyLogo"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/complaints": {
         parameters: {
             query?: never;
@@ -442,6 +458,113 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/customs-tariffs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** GET /v1/customs-tariffs?search= — recherche par position ou libellé */
+        get: operations["customsTariff.index"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/customs-tariffs/compute": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * POST /v1/customs-tariffs/compute — droits et taxes d'une valeur CAF.
+         *     Rend les montants ligne à ligne, prêts à garnir les débours douane
+         */
+        post: operations["customsTariff.compute"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/customs-regimes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** GET /v1/customs-regimes — régimes déclarables et leur effet sur les droits */
+        get: operations["customsTariff.regimes"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/dashboard": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["dashboard.show"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/demurrage": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** GET /v1/demurrage — conteneurs en cours, triés par urgence */
+        get: operations["demurrage.index"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/demurrage/free-time": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * PATCH /v1/demurrage/free-time — franchise négociée du dossier.
+         *     Elle se porte sur le connaissement à l'import, sur le booking à l'export
+         */
+        patch: operations["demurrage.updateFreeTime"];
+        trace?: never;
+    };
     "/v1/public/documents/download/{versionId}": {
         parameters: {
             query?: never;
@@ -523,6 +646,10 @@ export interface paths {
         };
         get: operations["fleet.trucks"];
         put?: never;
+        /**
+         * @description ⚠️ Cannot generate request documentation: Cannot evaluate validation rules (1 evaluators failed):
+         *       [NodeRulesEvaluator] Cannot access private constant Silaris\Modules\Road\Interface\Http\Controller\FleetController::CARRIER_RULES (at /Users/rahim/SILARIS/apps/api/vendor/dedoc/scramble/src/Support/OperationExtensions/RulesEvaluator/ConstFetchEvaluator.php:42)
+         */
         post: operations["fleet.storeTruck"];
         delete?: never;
         options?: never;
@@ -539,6 +666,10 @@ export interface paths {
         };
         get: operations["fleet.trailers"];
         put?: never;
+        /**
+         * @description ⚠️ Cannot generate request documentation: Cannot evaluate validation rules (1 evaluators failed):
+         *       [NodeRulesEvaluator] Cannot access private constant Silaris\Modules\Road\Interface\Http\Controller\FleetController::CARRIER_RULES (at /Users/rahim/SILARIS/apps/api/vendor/dedoc/scramble/src/Support/OperationExtensions/RulesEvaluator/ConstFetchEvaluator.php:42)
+         */
         post: operations["fleet.storeTrailer"];
         delete?: never;
         options?: never;
@@ -555,6 +686,10 @@ export interface paths {
         };
         get: operations["fleet.drivers"];
         put?: never;
+        /**
+         * @description ⚠️ Cannot generate request documentation: Cannot evaluate validation rules (1 evaluators failed):
+         *       [NodeRulesEvaluator] Cannot access private constant Silaris\Modules\Road\Interface\Http\Controller\FleetController::CARRIER_RULES (at /Users/rahim/SILARIS/apps/api/vendor/dedoc/scramble/src/Support/OperationExtensions/RulesEvaluator/ConstFetchEvaluator.php:42)
+         */
         post: operations["fleet.storeDriver"];
         delete?: never;
         options?: never;
@@ -594,6 +729,23 @@ export interface paths {
         head?: never;
         /** PATCH — brouillon uniquement (le trigger pg protège de toute façon) */
         patch: operations["invoice.update"];
+        trace?: never;
+    };
+    "/v1/invoices/{invoiceId}/pdf": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** GET /v1/invoices/{id}/pdf — document imprimable (facture, proforma ou avoir) */
+        get: operations["invoice.pdf"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
     "/v1/invoices/{invoiceId}/validate": {
@@ -734,6 +886,60 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/missions/{missionId}/delivery-note": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * GET /v1/missions/{id}/delivery-note — bon de livraison signé, à remettre
+         *     au destinataire et à joindre au dossier
+         */
+        get: operations["mission.deliveryNote"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/odoo/status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** GET /v1/odoo/status — santé, backlog, derniers échanges */
+        get: operations["odoo.status"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/odoo/config": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** PUT /v1/odoo/config — configuration de la connexion (credentials chiffrés) */
+        put: operations["odoo.configure"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/opportunities": {
         parameters: {
             query?: never;
@@ -798,6 +1004,64 @@ export interface paths {
         patch: operations["organization.updateCompany"];
         trace?: never;
     };
+    "/v1/admin/companies/{companyId}/logo": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * POST /v1/admin/companies/{id}/logo — logo de la société (en-têtes PDF, portail)
+         * @description ⚠️ Cannot generate request documentation: Cannot evaluate validation rules (1 evaluators failed):
+         *       [NodeRulesEvaluator] Cannot access private constant Silaris\Modules\Tenancy\Interface\Http\Controller\OrganizationController::LOGO_MAX_KB (at /Users/rahim/SILARIS/apps/api/vendor/dedoc/scramble/src/Support/OperationExtensions/RulesEvaluator/ConstFetchEvaluator.php:42)
+         */
+        post: operations["organization.uploadLogo"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/companies/{companyId}/logo-url": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** GET /v1/admin/companies/{id}/logo-url — URL signée temporaire du logo */
+        get: operations["organization.logoUrlFor"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/companies/{companyId}/reference-preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * GET /v1/admin/companies/{id}/reference-preview — aperçu du format de
+         *     référence dossier, sans consommer de séquence
+         */
+        get: operations["organization.referencePreview"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/admin/companies/{companyId}/branches": {
         parameters: {
             query?: never;
@@ -808,6 +1072,44 @@ export interface paths {
         get?: never;
         put?: never;
         post: operations["organization.storeBranch"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/services": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** GET /v1/admin/services — services du transitaire (import, export, livraison…) */
+        get: operations["organization.services"];
+        put?: never;
+        /** POST /v1/admin/services */
+        post: operations["organization.storeService"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/branches/code-preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * GET /v1/admin/branches/code-preview — code proposé pour un pays/ville,
+         *     sans créer l'agence
+         */
+        get: operations["organization.branchCodePreview"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -828,6 +1130,99 @@ export interface paths {
         options?: never;
         head?: never;
         patch: operations["organization.updateBranch"];
+        trace?: never;
+    };
+    "/v1/packages": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["package.index"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/packages/scan": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * POST /v1/packages/scan — jalon par référence (pistolet scanner ou saisie).
+         *     Actions : stuffed (exige container_id), unstuffed, delivered (exige delivered_to)
+         */
+        post: operations["package.scan"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/packages/request-delivery-otp": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * POST /v1/packages/request-delivery-otp — génère le code de retrait et l'envoie AU CLIENT.
+         *     Le magasinier ne voit jamais le code : la réponse ne contient que le destinataire masqué
+         */
+        post: operations["package.requestDeliveryOtp"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/shipments/{shipmentId}/packages": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * POST /v1/shipments/{id}/packages — réception entrepôt.
+         *     Crée N colis d'un coup, références séquencées sur le dossier, timeline mise à jour
+         */
+        post: operations["package.store"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/shipments/{shipmentId}/packages/labels": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** GET /v1/shipments/{id}/packages/labels — planche d'étiquettes PDF (QR → suivi public) */
+        get: operations["package.labels"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
     "/v1/parties": {
@@ -946,6 +1341,116 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/payments": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** GET /v1/payments — journal des encaissements */
+        get: operations["payment.index"];
+        put?: never;
+        /**
+         * POST /v1/payments — enregistre un encaissement
+         * @description Sans imputations explicites, le règlement solde les factures de la plus
+         *     ancienne à la plus récente : c'est l'usage, et c'est ce qui contient
+         *     l'ancienneté de la créance.
+         */
+        post: operations["payment.store"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/payments/{paymentId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["payment.show"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/payments/{paymentId}/cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** POST /v1/payments/{id}/cancel — chèque impayé, saisie erronée */
+        post: operations["payment.cancel"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/receivables": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * GET /v1/receivables — balance âgée
+         * @description Le total dû se lit partout ; c'est son ancienneté qui décide s'il faut
+         *     relancer, bloquer un dossier ou provisionner.
+         */
+        get: operations["payment.aged"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/receivables/{partyId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** GET /v1/receivables/{partyId} — ce qu'un client doit encore, facture par facture */
+        get: operations["payment.outstanding"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/parties/{partyId}/portal-account": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["portalAccount.invite"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/portal/auth/login": {
         parameters: {
             query?: never;
@@ -991,6 +1496,202 @@ export interface paths {
         put?: never;
         /** POST /portal/auth/logout */
         post: operations["portalAuth.logout"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/portal/shipments/{shipmentId}/delivery-notes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** GET /portal/shipments/{id}/delivery-notes — livraisons signées du dossier */
+        get: operations["portalDeliveryNote.index"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/portal/missions/{missionId}/delivery-note": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** GET /portal/missions/{id}/delivery-note — le PDF signé */
+        get: operations["portalDeliveryNote.pdf"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/portal/documents": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["portalDocument.index"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/portal/documents/{documentId}/download-url": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["portalDocument.downloadUrl"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/portal/invoices": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["portalInvoice.index"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/portal/invoices/{invoiceId}/pdf": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** GET /portal/invoices/{id}/pdf — facture du client connecté uniquement */
+        get: operations["portalInvoice.pdf"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/portal/quotes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["portalQuote.index"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/portal/quotes/{quoteId}/pdf": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** GET /portal/quotes/{id}/pdf — cotation du client connecté uniquement */
+        get: operations["portalQuote.pdf"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/portal/quotes/{quoteId}/accept": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["portalQuote.accept"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/portal/quotes/{quoteId}/reject": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["portalQuote.reject"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/portal/shipments": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["portalShipment.index"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/portal/shipments/{shipmentId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["portalShipment.show"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -1062,6 +1763,43 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/quotes/{quoteId}/pdf": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** GET /v1/quotes/{id}/pdf — cotation imprimable */
+        get: operations["quote.pdf"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/quotes/{quoteId}/approve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * POST /v1/quotes/{id}/approve — validation interne du prix proposé.
+         *     Réservée au directeur, à l'administration et au responsable commercial
+         */
+        post: operations["quote.approve"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/quotes/{quoteId}/send": {
         parameters: {
             query?: never;
@@ -1107,6 +1845,40 @@ export interface paths {
         put?: never;
         /** POST /v1/quotes/{id}/reject */
         post: operations["quote.reject"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/shipments/waivers": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** GET /v1/shipments/waivers — file d'attente de la direction */
+        get: operations["quoteWaiver.index"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/shipments/{shipmentId}/waiver/decide": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** POST /v1/shipments/{id}/waiver/decide — accorder ou refuser */
+        post: operations["quoteWaiver.decide"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1181,6 +1953,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/search": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["controller.search"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/shipments": {
         parameters: {
             query?: never;
@@ -1206,7 +1994,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** GET /api/v1/shipments/{shipment} */
+        /** GET /api/v1/shipments/{shipment} — détail + étapes workflow + transitions autorisées */
         get: operations["shipment.show"];
         put?: never;
         post?: never;
@@ -1267,6 +2055,124 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/shipments/{shipmentId}/segments": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** POST /api/v1/shipments/{shipment}/segments — ajoute un segment à la chaîne multimodale */
+        post: operations["shipment.storeSegment"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/shipments/{shipmentId}/segments/{segmentId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** PATCH /api/v1/shipments/{shipment}/segments/{segment} — jalons réels (ATD/ATA) */
+        patch: operations["shipment.updateSegment"];
+        trace?: never;
+    };
+    "/v1/shipments/assignable-agents": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** GET /v1/shipments/assignable-agents — l'équipe du chef */
+        get: operations["shipmentAssignment.agents"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/shipments/{shipmentId}/assign": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** POST /v1/shipments/{id}/assign — confie le dossier à un agent */
+        post: operations["shipmentAssignment.assign"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/webhooks/shipsgo": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["controller.shipsGoWebhook"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/shipments/step-requests": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** GET /v1/shipments/step-requests — ce que le responsable doit trancher */
+        get: operations["stepRequest.index"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/shipments/step-requests/{requestId}/decide": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** POST /v1/shipments/step-requests/{requestId}/decide */
+        post: operations["stepRequest.decide"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/tariffs": {
         parameters: {
             query?: never;
@@ -1294,6 +2200,111 @@ export interface paths {
         put?: never;
         post?: never;
         delete: operations["tariff.destroy"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/telematics/positions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * @description ⚠️ Cannot generate request documentation: Cannot evaluate validation rules (1 evaluators failed):
+         *       [NodeRulesEvaluator] Cannot access private constant Silaris\Modules\Road\Interface\Http\Controller\TelematicsController::MAX_POINTS (at /Users/rahim/SILARIS/apps/api/vendor/dedoc/scramble/src/Support/OperationExtensions/RulesEvaluator/ConstFetchEvaluator.php:42)
+         */
+        post: operations["telematics.store"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/missions/{missionId}/positions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** GET /v1/missions/{id}/positions — trace de la mission pour l'exploitation */
+        get: operations["telematics.missionTrack"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/road/devices": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** GET /v1/road/devices — parc de balises et dernier contact */
+        get: operations["telematics.devices"];
+        put?: never;
+        /** POST /v1/road/devices — enrôle une balise, renvoie sa clé UNE seule fois */
+        post: operations["telematics.storeDevice"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/road/devices/{deviceId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** PATCH /v1/road/devices/{id} — affectation véhicule, activation */
+        patch: operations["telematics.updateDevice"];
+        trace?: never;
+    };
+    "/v1/shipments/{shipmentId}/tracking/refresh": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["controller.trackingRefresh"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/shipments/{shipmentId}/tracking/subscribe": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** POST /v1/shipments/{id}/tracking/subscribe */
+        post: operations["controller.trackingSubscribe"];
+        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
@@ -1423,6 +2434,7 @@ export interface components {
             created_at: string | null;
             /** Format: date-time */
             updated_at: string | null;
+            free_time_days: number | null;
         };
         /** BookingModel */
         BookingModel: {
@@ -1446,6 +2458,7 @@ export interface components {
             created_at: string | null;
             /** Format: date-time */
             updated_at: string | null;
+            free_time_days: number | null;
         };
         /** BranchModel */
         BranchModel: {
@@ -1463,6 +2476,11 @@ export interface components {
             created_at: string | null;
             /** Format: date-time */
             updated_at: string | null;
+            kind: string;
+            partner_name: string | null;
+            country_code: string | null;
+            city: string | null;
+            locode: string | null;
         };
         /** CalculatedLine */
         CalculatedLine: {
@@ -1492,6 +2510,7 @@ export interface components {
             created_at: string | null;
             /** Format: date-time */
             updated_at: string | null;
+            shipment_settings: unknown[];
         };
         /** ComplaintModel */
         ComplaintModel: {
@@ -1550,13 +2569,29 @@ export interface components {
             id: string;
             tenant_id: string;
             number: string;
-            size_type: string;
+            size_type: string | null;
             tare_kg: string | null;
             max_payload_kg: string | null;
             /** Format: date-time */
             created_at: string | null;
             /** Format: date-time */
             updated_at: string | null;
+        };
+        /** CursorPaginator */
+        CursorPaginator: {
+            data: string[];
+            /** @description Base path for paginator generated URLs. */
+            path: string | null;
+            /** @description Number of items shown per page. */
+            per_page: number;
+            /** @description The "cursor" that points to the next set of items. */
+            next_cursor: string | null;
+            /** Format: uri */
+            next_page_url: string | null;
+            /** @description The "cursor" that points to the previous set of items. */
+            prev_cursor: string | null;
+            /** Format: uri */
+            prev_page_url: string | null;
         };
         /** DocumentModel */
         DocumentModel: {
@@ -1610,6 +2645,7 @@ export interface components {
             created_at: string | null;
             /** Format: date-time */
             updated_at: string | null;
+            carrier_party_id: string | null;
         };
         /** InvoiceModel */
         InvoiceModel: {
@@ -1692,6 +2728,8 @@ export interface components {
             created_at: string | null;
             /** Format: date-time */
             updated_at: string | null;
+            carrier_party_id: string | null;
+            carrier_reference: string | null;
         };
         /** OpportunityModel */
         OpportunityModel: {
@@ -1707,6 +2745,33 @@ export interface components {
             /** Format: date-time */
             expected_close_date: string | null;
             lost_reason: string | null;
+            /** Format: date-time */
+            created_at: string | null;
+            /** Format: date-time */
+            updated_at: string | null;
+        };
+        /** PackageModel */
+        PackageModel: {
+            id: string;
+            tenant_id: string;
+            shipment_id: string;
+            reference: string;
+            description: string | null;
+            weight_kg: string | null;
+            volume_m3: string | null;
+            status: string;
+            container_id: string | null;
+            consolidation_id: string | null;
+            /** Format: date-time */
+            received_at: string | null;
+            received_by: string | null;
+            /** Format: date-time */
+            stuffed_at: string | null;
+            /** Format: date-time */
+            unstuffed_at: string | null;
+            /** Format: date-time */
+            delivered_at: string | null;
+            delivered_to: string | null;
             /** Format: date-time */
             created_at: string | null;
             /** Format: date-time */
@@ -1751,6 +2816,32 @@ export interface components {
             created_at: string | null;
             /** Format: date-time */
             updated_at: string | null;
+            kind: string;
+            industry: string | null;
+        };
+        /** PaymentModel */
+        PaymentModel: {
+            id: string;
+            tenant_id: string;
+            company_id: string;
+            party_id: string;
+            reference: string;
+            method: string;
+            method_reference: string | null;
+            currency_code: string;
+            amount: string;
+            /** Format: date-time */
+            received_on: string;
+            note: string | null;
+            recorded_by: string | null;
+            /** Format: date-time */
+            cancelled_at: string | null;
+            cancelled_by: string | null;
+            cancel_reason: string | null;
+            /** Format: date-time */
+            created_at: string | null;
+            /** Format: date-time */
+            updated_at: string | null;
         };
         /** QuoteModel */
         QuoteModel: {
@@ -1785,6 +2876,11 @@ export interface components {
             created_at: string | null;
             /** Format: date-time */
             updated_at: string | null;
+            approved_by: string | null;
+            approved_at: string | null;
+            hs_code: string | null;
+            customs_value: string | null;
+            customs_regime: string | null;
         };
         /** RoleModel */
         RoleModel: {
@@ -1794,6 +2890,18 @@ export interface components {
             name: string;
             description: string | null;
             is_system: boolean;
+            /** Format: date-time */
+            created_at: string | null;
+            /** Format: date-time */
+            updated_at: string | null;
+        };
+        /** ServiceModel */
+        ServiceModel: {
+            id: string;
+            tenant_id: string;
+            code: string;
+            name: string;
+            is_active: boolean;
             /** Format: date-time */
             created_at: string | null;
             /** Format: date-time */
@@ -1860,6 +2968,7 @@ export interface components {
                 code: string;
                 name: string;
             };
+            segments?: string;
             cargo_items?: string;
             estimated_cost: string;
             estimated_revenue: string;
@@ -1882,21 +2991,30 @@ export interface components {
             agent_id: string;
             /** Format: uuid */
             supervisor_id?: string | null;
+            /**
+             * @description Repris de la cotation quand elle existe ; déclarés par
+             *     l'exploitant lors d'une ouverture dérogatoire.
+             * @enum {string}
+             */
+            direction?: "import" | "export" | "transit";
             /** @enum {string} */
-            direction: "import" | "export";
-            /** @enum {string} */
-            mode: "sea_fcl" | "sea_lcl" | "air" | "road" | "multimodal";
-            incoterm_code: string;
-            origin_locode: string;
-            destination_locode: string;
+            mode?: "sea_fcl" | "sea_lcl" | "air" | "road" | "multimodal";
+            incoterm_code?: string;
+            origin_locode?: string;
+            destination_locode?: string;
             /** @enum {string} */
             priority?: "low" | "normal" | "high" | "critical";
             /** Format: date-time */
             etd?: string | null;
             /** Format: date-time */
             eta?: string | null;
-            /** Format: uuid */
+            /**
+             * Format: uuid
+             * @description Un dossier repose sur l'accord du client. À défaut, l'exploitant
+             *     motive l'urgence et la direction tranchera.
+             */
             quote_id?: string | null;
+            waiver_reason?: string | null;
             /** Format: uuid */
             workflow_definition_id?: string | null;
             notes?: string | null;
@@ -1945,6 +3063,29 @@ export interface components {
             created_at: string | null;
             /** Format: date-time */
             updated_at: string | null;
+            carrier_party_id: string | null;
+        };
+        /** TransportSegmentModel */
+        TransportSegmentModel: {
+            id: string;
+            tenant_id: string;
+            shipment_id: string;
+            position: number;
+            mode: string;
+            origin_locode: string;
+            destination_locode: string;
+            /** Format: date-time */
+            etd: string | null;
+            /** Format: date-time */
+            eta: string | null;
+            /** Format: date-time */
+            atd: string | null;
+            /** Format: date-time */
+            ata: string | null;
+            /** Format: date-time */
+            created_at: string | null;
+            /** Format: date-time */
+            updated_at: string | null;
         };
         /** TruckModel */
         TruckModel: {
@@ -1962,6 +3103,7 @@ export interface components {
             created_at: string | null;
             /** Format: date-time */
             updated_at: string | null;
+            carrier_party_id: string | null;
         };
         /** UserModel */
         UserModel: {
@@ -1984,6 +3126,7 @@ export interface components {
             created_at: string | null;
             /** Format: date-time */
             updated_at: string | null;
+            service_id: string | null;
         };
     };
     responses: {
@@ -2015,8 +3158,8 @@ export interface components {
                 };
             };
         };
-        /** @description Authorization error */
-        AuthorizationException: {
+        /** @description Not found */
+        ModelNotFoundException: {
             headers: {
                 [name: string]: unknown;
             };
@@ -2027,8 +3170,8 @@ export interface components {
                 };
             };
         };
-        /** @description Not found */
-        ModelNotFoundException: {
+        /** @description Authorization error */
+        AuthorizationException: {
             headers: {
                 [name: string]: unknown;
             };
@@ -2305,7 +3448,18 @@ export interface operations {
                             name: string;
                         }[];
                         permissions: unknown[];
-                        branches: components["schemas"]["BranchModel"][];
+                        /**
+                         * @description Les agences de rattachement portent leur société : c'est le
+                         *     périmètre dans lequel l'utilisateur ouvre ses dossiers, sans
+                         *     qu'il ait besoin d'accéder à l'administration.
+                         */
+                        branches: {
+                            id: string;
+                            code: string;
+                            name: string;
+                            company_id: string;
+                            company_name: string;
+                        }[];
                         must_change_password: boolean;
                     };
                 };
@@ -2719,6 +3873,29 @@ export interface operations {
             422: components["responses"]["ValidationException"];
         };
     };
+    "controller.companyLogo": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                companyId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    "Cache-Control"?: "public, max-age=86400";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": string | null;
+                };
+            };
+            404: components["responses"]["ModelNotFoundException"];
+        };
+    };
     "complaint.index": {
         parameters: {
             query?: {
@@ -3010,6 +4187,228 @@ export interface operations {
             422: components["responses"]["ValidationException"];
         };
     };
+    "customsTariff.index": {
+        parameters: {
+            query?: {
+                search?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: Record<string, never>[];
+                    };
+                };
+            };
+            401: components["responses"]["AuthenticationException"];
+            403: components["responses"]["AuthorizationException"];
+            422: components["responses"]["ValidationException"];
+        };
+    };
+    "customsTariff.compute": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /**
+                     * @description L'exploitant saisit souvent la position pointée (8703.23.00.00),
+                     *     plus longue que le code brut.
+                     */
+                    hs_code: string;
+                    customs_value: number;
+                    customs_regime?: string | null;
+                };
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        hs_code: string;
+                        requested_hs_code: string;
+                        description: string;
+                        duty_rate: number;
+                        vat_rate: number;
+                        customs_value: number;
+                        customs_regime: string | null;
+                        regime_name: string | null;
+                        regime_note: string | null;
+                        lines: {
+                            DD: number;
+                            RSTA: string;
+                            PCS: string;
+                            PUA: string;
+                            PCC: string;
+                            /** @description Le RPI ne frappe que certaines marchandises : laissé à la saisie. */
+                            RPI: number;
+                            TVA: number;
+                            TS_SYDAM: number;
+                        };
+                        taxable_base: number;
+                        total: number;
+                    };
+                };
+            };
+            401: components["responses"]["AuthenticationException"];
+            403: components["responses"]["AuthorizationException"];
+            422: components["responses"]["ValidationException"];
+        };
+    };
+    "customsTariff.regimes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: Record<string, never>[];
+                    };
+                };
+            };
+            401: components["responses"]["AuthenticationException"];
+            403: components["responses"]["AuthorizationException"];
+        };
+    };
+    "dashboard.show": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        kpis: {
+                            active_shipments: number;
+                            import: number;
+                            export: number;
+                            containers_active: number;
+                            delays: number;
+                            missing_documents: number;
+                            revenue_month: number;
+                        };
+                        volumes: {
+                            month: string;
+                            import: number;
+                            export: number;
+                        }[];
+                        alerts: unknown[];
+                        recent_shipments: Record<string, never>[];
+                        generated_at: string;
+                    };
+                };
+            };
+            401: components["responses"]["AuthenticationException"];
+            403: components["responses"]["AuthorizationException"];
+        };
+    };
+    "demurrage.index": {
+        parameters: {
+            query?: {
+                within_days?: number;
+                client_id?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: {
+                            assignment_id: string;
+                            container_number: string;
+                            size_type: string;
+                            shipment_id: string;
+                            reference: string;
+                            direction: string;
+                            client_name: string;
+                            free_time_days: string;
+                            free_time_ends_at: string;
+                            days_remaining: number;
+                            /** @enum {string} */
+                            severity: "overdue" | "critical" | "warning";
+                        }[];
+                        summary: {
+                            overdue: number;
+                            critical: number;
+                            warning: number;
+                        };
+                    };
+                };
+            };
+            401: components["responses"]["AuthenticationException"];
+            403: components["responses"]["AuthorizationException"];
+            422: components["responses"]["ValidationException"];
+        };
+    };
+    "demurrage.updateFreeTime": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** Format: uuid */
+                    shipment_id: string;
+                    free_time_days: number;
+                };
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        containers_refreshed: number;
+                    };
+                };
+            };
+            401: components["responses"]["AuthenticationException"];
+            403: components["responses"]["AuthorizationException"];
+            422: components["responses"]["ValidationException"];
+        };
+    };
     "documents.download": {
         parameters: {
             query?: never;
@@ -3044,6 +4443,7 @@ export interface operations {
                     };
                 };
             };
+            404: components["responses"]["ModelNotFoundException"];
         };
     };
     "document.index": {
@@ -3177,21 +4577,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        data: components["schemas"]["TruckModel"][];
-                        /** @description Base path for paginator generated URLs. */
-                        path: string | null;
-                        /** @description Number of items shown per page. */
-                        per_page: number;
-                        /** @description The "cursor" that points to the next set of items. */
-                        next_cursor: string | null;
-                        /** Format: uri */
-                        next_page_url: string | null;
-                        /** @description The "cursor" that points to the previous set of items. */
-                        prev_cursor: string | null;
-                        /** Format: uri */
-                        prev_page_url: string | null;
-                    };
+                    "application/json": components["schemas"]["CursorPaginator"];
                 };
             };
             401: components["responses"]["AuthenticationException"];
@@ -3205,19 +4591,7 @@ export interface operations {
             path?: never;
             cookie?: never;
         };
-        requestBody: {
-            content: {
-                "application/json": {
-                    plate_number: string;
-                    type?: string | null;
-                    capacity_kg?: number | null;
-                    /** Format: date-time */
-                    inspection_due?: string | null;
-                    /** Format: date-time */
-                    insurance_due?: string | null;
-                };
-            };
-        };
+        requestBody?: never;
         responses: {
             201: {
                 headers: {
@@ -3246,21 +4620,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        data: components["schemas"]["TrailerModel"][];
-                        /** @description Base path for paginator generated URLs. */
-                        path: string | null;
-                        /** @description Number of items shown per page. */
-                        per_page: number;
-                        /** @description The "cursor" that points to the next set of items. */
-                        next_cursor: string | null;
-                        /** Format: uri */
-                        next_page_url: string | null;
-                        /** @description The "cursor" that points to the previous set of items. */
-                        prev_cursor: string | null;
-                        /** Format: uri */
-                        prev_page_url: string | null;
-                    };
+                    "application/json": components["schemas"]["CursorPaginator"];
                 };
             };
             401: components["responses"]["AuthenticationException"];
@@ -3274,14 +4634,7 @@ export interface operations {
             path?: never;
             cookie?: never;
         };
-        requestBody: {
-            content: {
-                "application/json": {
-                    plate_number: string;
-                    type?: string | null;
-                };
-            };
-        };
+        requestBody?: never;
         responses: {
             201: {
                 headers: {
@@ -3310,21 +4663,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        data: components["schemas"]["DriverModel"][];
-                        /** @description Base path for paginator generated URLs. */
-                        path: string | null;
-                        /** @description Number of items shown per page. */
-                        per_page: number;
-                        /** @description The "cursor" that points to the next set of items. */
-                        next_cursor: string | null;
-                        /** Format: uri */
-                        next_page_url: string | null;
-                        /** @description The "cursor" that points to the previous set of items. */
-                        prev_cursor: string | null;
-                        /** Format: uri */
-                        prev_page_url: string | null;
-                    };
+                    "application/json": components["schemas"]["CursorPaginator"];
                 };
             };
             401: components["responses"]["AuthenticationException"];
@@ -3338,20 +4677,7 @@ export interface operations {
             path?: never;
             cookie?: never;
         };
-        requestBody: {
-            content: {
-                "application/json": {
-                    name: string;
-                    /** Format: uuid */
-                    user_id?: string | null;
-                    phone?: string | null;
-                    license_number?: string | null;
-                    license_categories?: string | null;
-                    /** Format: date-time */
-                    license_expiry?: string | null;
-                };
-            };
-        };
+        requestBody?: never;
         responses: {
             201: {
                 headers: {
@@ -3474,6 +4800,30 @@ export interface operations {
             };
             401: components["responses"]["AuthenticationException"];
             403: components["responses"]["AuthorizationException"];
+        };
+    };
+    "invoice.pdf": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                invoiceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": Record<string, never>;
+                };
+            };
+            401: components["responses"]["AuthenticationException"];
+            403: components["responses"]["AuthorizationException"];
+            404: components["responses"]["ModelNotFoundException"];
         };
     };
     "invoice.validateInvoice": {
@@ -3665,6 +5015,9 @@ export interface operations {
                     /** Format: uuid */
                     shipment_id?: string | null;
                     /** Format: uuid */
+                    carrier_party_id?: string | null;
+                    carrier_reference?: string | null;
+                    /** Format: uuid */
                     truck_id?: string | null;
                     /** Format: uuid */
                     trailer_id?: string | null;
@@ -3754,6 +5107,90 @@ export interface operations {
         };
         responses: {
             201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": string;
+                };
+            };
+            401: components["responses"]["AuthenticationException"];
+            403: components["responses"]["AuthorizationException"];
+            422: components["responses"]["ValidationException"];
+        };
+    };
+    "mission.deliveryNote": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                missionId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": Record<string, never>;
+                };
+            };
+            401: components["responses"]["AuthenticationException"];
+            403: components["responses"]["AuthorizationException"];
+            404: components["responses"]["ModelNotFoundException"];
+        };
+    };
+    "odoo.status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        connection: Record<string, never> | null;
+                        health: Record<string, never>[];
+                        dead_letters: Record<string, never>[];
+                        recent: Record<string, never>[];
+                    };
+                };
+            };
+            401: components["responses"]["AuthenticationException"];
+            403: components["responses"]["AuthorizationException"];
+        };
+    };
+    "odoo.configure": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** Format: uri */
+                    base_url: string;
+                    database: string;
+                    username: string;
+                    api_key: string;
+                    /** @enum {string} */
+                    odoo_version?: "16" | "17" | "18";
+                };
+            };
+        };
+        responses: {
+            200: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -3886,6 +5323,7 @@ export interface operations {
                     currency_code: string;
                     address?: string[];
                     invoice_settings?: string[];
+                    shipment_settings?: string[];
                 };
             };
         };
@@ -3917,8 +5355,13 @@ export interface operations {
                 "application/json": {
                     legal_name?: string;
                     tax_id?: string | null;
+                    currency_code?: string;
                     address?: string[];
                     invoice_settings?: string[];
+                    shipment_settings?: {
+                        reference_format?: string | null;
+                        reference_prefix?: string | null;
+                    };
                     is_active?: boolean;
                 };
             };
@@ -3937,6 +5380,112 @@ export interface operations {
             422: components["responses"]["ValidationException"];
         };
     };
+    "organization.uploadLogo": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        logo_document_id: string;
+                        logo_url: string;
+                    };
+                };
+            };
+            401: components["responses"]["AuthenticationException"];
+            403: components["responses"]["AuthorizationException"];
+            422: components["responses"]["ValidationException"];
+            /** @description An error */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /**
+                         * @description Error overview.
+                         * @example Le logo n'a pas pu être enregistré sur l'espace de stockage.
+                         */
+                        message: string;
+                    };
+                };
+            };
+        };
+    };
+    "organization.logoUrlFor": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                companyId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        logo_url: string;
+                    } | {
+                        logo_url: null;
+                    };
+                };
+            };
+            401: components["responses"]["AuthenticationException"];
+            403: components["responses"]["AuthorizationException"];
+        };
+    };
+    "organization.referencePreview": {
+        parameters: {
+            query?: {
+                format?: string;
+                prefix?: string | null;
+                direction?: "import" | "export" | "transit";
+            };
+            header?: never;
+            path: {
+                companyId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        preview: string;
+                        /**
+                         * @description Les deux sens côte à côte : c'est là que le transitaire voit si
+                         *     son format les distingue vraiment.
+                         */
+                        previews: {
+                            import: string;
+                            export: string;
+                        };
+                    };
+                };
+            };
+            401: components["responses"]["AuthenticationException"];
+            403: components["responses"]["AuthorizationException"];
+            404: components["responses"]["ModelNotFoundException"];
+            422: components["responses"]["ValidationException"];
+        };
+    };
     "organization.storeBranch": {
         parameters: {
             query?: never;
@@ -3950,7 +5499,17 @@ export interface operations {
             content: {
                 "application/json": {
                     name: string;
-                    code: string;
+                    code?: string | null;
+                    /** @enum {string} */
+                    kind?: "own" | "partner";
+                    partner_name?: string | null;
+                    /**
+                     * @description La localisation alimente le code : elle n'est exigée que lorsque
+                     *     le transitaire laisse SILARIS le générer.
+                     */
+                    country_code?: string | null;
+                    city?: string | null;
+                    locode?: string | null;
                     timezone?: string;
                     address?: string[];
                     phone?: string | null;
@@ -3973,6 +5532,84 @@ export interface operations {
             422: components["responses"]["ValidationException"];
         };
     };
+    "organization.services": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ServiceModel"][];
+                };
+            };
+            401: components["responses"]["AuthenticationException"];
+            403: components["responses"]["AuthorizationException"];
+        };
+    };
+    "organization.storeService": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    code: string;
+                    name: string;
+                };
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ServiceModel"];
+                };
+            };
+            401: components["responses"]["AuthenticationException"];
+            403: components["responses"]["AuthorizationException"];
+            422: components["responses"]["ValidationException"];
+        };
+    };
+    "organization.branchCodePreview": {
+        parameters: {
+            query: {
+                country_code: string;
+                city: string;
+                locode?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                    };
+                };
+            };
+            401: components["responses"]["AuthenticationException"];
+            403: components["responses"]["AuthorizationException"];
+            422: components["responses"]["ValidationException"];
+        };
+    };
     "organization.updateBranch": {
         parameters: {
             query?: never;
@@ -3986,6 +5623,11 @@ export interface operations {
             content: {
                 "application/json": {
                     name?: string;
+                    /** @enum {string} */
+                    kind?: "own" | "partner";
+                    partner_name?: string | null;
+                    country_code?: string;
+                    city?: string;
                     timezone?: string;
                     address?: string[];
                     phone?: string | null;
@@ -4007,6 +5649,177 @@ export interface operations {
             401: components["responses"]["AuthenticationException"];
             403: components["responses"]["AuthorizationException"];
             422: components["responses"]["ValidationException"];
+        };
+    };
+    "package.index": {
+        parameters: {
+            query?: {
+                shipment_id?: string;
+                container_id?: string;
+                status?: "received" | "stuffed" | "unstuffed" | "delivered";
+                search?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: components["schemas"]["PackageModel"][];
+                        /** @description Base path for paginator generated URLs. */
+                        path: string | null;
+                        /** @description Number of items shown per page. */
+                        per_page: number;
+                        /** @description The "cursor" that points to the next set of items. */
+                        next_cursor: string | null;
+                        /** Format: uri */
+                        next_page_url: string | null;
+                        /** @description The "cursor" that points to the previous set of items. */
+                        prev_cursor: string | null;
+                        /** Format: uri */
+                        prev_page_url: string | null;
+                    };
+                };
+            };
+            401: components["responses"]["AuthenticationException"];
+            403: components["responses"]["AuthorizationException"];
+            422: components["responses"]["ValidationException"];
+        };
+    };
+    "package.scan": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    reference: string;
+                    /** @enum {string} */
+                    action: "stuffed" | "unstuffed" | "delivered";
+                    /** Format: uuid */
+                    container_id?: string | null;
+                    /** Format: uuid */
+                    consolidation_id?: string | null;
+                    delivered_to?: string | null;
+                    force?: boolean;
+                    otp?: string | null;
+                };
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PackageModel"] | null;
+                };
+            };
+            401: components["responses"]["AuthenticationException"];
+            403: components["responses"]["AuthorizationException"];
+            422: components["responses"]["ValidationException"];
+        };
+    };
+    "package.requestDeliveryOtp": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    reference: string;
+                };
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        sent: boolean;
+                        sent_to: string;
+                        /** @constant */
+                        expires_in_minutes: 30;
+                    };
+                };
+            };
+            401: components["responses"]["AuthenticationException"];
+            403: components["responses"]["AuthorizationException"];
+            422: components["responses"]["ValidationException"];
+        };
+    };
+    "package.store": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                shipmentId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    count: number;
+                    description?: string | null;
+                    unit_weight_kg?: number | null;
+                    unit_volume_m3?: number | null;
+                };
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: components["schemas"]["PackageModel"][];
+                        labels_url: string;
+                    };
+                };
+            };
+            401: components["responses"]["AuthenticationException"];
+            403: components["responses"]["AuthorizationException"];
+            422: components["responses"]["ValidationException"];
+        };
+    };
+    "package.labels": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                shipmentId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": Record<string, never>;
+                };
+            };
+            401: components["responses"]["AuthenticationException"];
+            403: components["responses"]["AuthorizationException"];
+            404: components["responses"]["ModelNotFoundException"];
         };
     };
     "party.index": {
@@ -4057,18 +5870,37 @@ export interface operations {
             path?: never;
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody?: {
+            content: {
+                "application/json": {
+                    contact?: {
+                        name?: string;
+                        /** Format: email */
+                        email?: string | null;
+                        phone?: string | null;
+                    };
+                    address?: {
+                        line1?: string;
+                        line2?: string | null;
+                        city?: string;
+                        postal_code?: string | null;
+                        country_code?: string;
+                    };
+                };
+            };
+        };
         responses: {
             201: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["PartyModel"];
+                    "application/json": components["schemas"]["PartyModel"] | null;
                 };
             };
             401: components["responses"]["AuthenticationException"];
             403: components["responses"]["AuthorizationException"];
+            422: components["responses"]["ValidationException"];
         };
     };
     "party.show": {
@@ -4323,6 +6155,269 @@ export interface operations {
             422: components["responses"]["ValidationException"];
         };
     };
+    "payment.index": {
+        parameters: {
+            query?: {
+                party_id?: string;
+                invoice_id?: string;
+                method?: string;
+                from?: string;
+                to?: string;
+                include_cancelled?: boolean;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: components["schemas"]["PaymentModel"][];
+                        /** @description Base path for paginator generated URLs. */
+                        path: string | null;
+                        /** @description Number of items shown per page. */
+                        per_page: number;
+                        /** @description The "cursor" that points to the next set of items. */
+                        next_cursor: string | null;
+                        /** Format: uri */
+                        next_page_url: string | null;
+                        /** @description The "cursor" that points to the previous set of items. */
+                        prev_cursor: string | null;
+                        /** Format: uri */
+                        prev_page_url: string | null;
+                    };
+                };
+            };
+            401: components["responses"]["AuthenticationException"];
+            403: components["responses"]["AuthorizationException"];
+            422: components["responses"]["ValidationException"];
+        };
+    };
+    "payment.store": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** Format: uuid */
+                    company_id: string;
+                    /** Format: uuid */
+                    party_id: string;
+                    method: string;
+                    method_reference?: string | null;
+                    currency_code: string;
+                    amount: number;
+                    /** Format: date-time */
+                    received_on: string;
+                    note?: string | null;
+                    allocations?: {
+                        /** Format: uuid */
+                        invoice_id: string;
+                        amount: number;
+                    }[];
+                };
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaymentModel"];
+                };
+            };
+            401: components["responses"]["AuthenticationException"];
+            403: components["responses"]["AuthorizationException"];
+            422: components["responses"]["ValidationException"];
+        };
+    };
+    "payment.show": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                paymentId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": string;
+                };
+            };
+            401: components["responses"]["AuthenticationException"];
+            403: components["responses"]["AuthorizationException"];
+            404: components["responses"]["ModelNotFoundException"];
+        };
+    };
+    "payment.cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                paymentId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    reason: string;
+                };
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaymentModel"];
+                };
+            };
+            401: components["responses"]["AuthenticationException"];
+            403: components["responses"]["AuthorizationException"];
+            422: components["responses"]["ValidationException"];
+        };
+    };
+    "payment.aged": {
+        parameters: {
+            query?: {
+                party_id?: string;
+                as_of?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        as_of: string;
+                        rows: string[];
+                        totals: {
+                            current: number;
+                            "1_30": number;
+                            "31_60": number;
+                            "61_90": number;
+                            over_90: number;
+                            total: number;
+                        };
+                    };
+                };
+            };
+            401: components["responses"]["AuthenticationException"];
+            403: components["responses"]["AuthorizationException"];
+            422: components["responses"]["ValidationException"];
+        };
+    };
+    "payment.outstanding": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                partyId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        party: {
+                            id: string;
+                            code: string;
+                            name: string;
+                        };
+                        invoices: {
+                            invoice_id: string;
+                            /**
+                             * @description La société encaissante se déduit de la facture : c'est
+                             *     elle qui porte la séquence légale du reçu.
+                             */
+                            company_id: string;
+                            number: string;
+                            due_date: string;
+                            currency_code: string;
+                            total: number;
+                            allocated: number;
+                            outstanding: number;
+                        }[];
+                        total: number;
+                    };
+                };
+            };
+            401: components["responses"]["AuthenticationException"];
+            403: components["responses"]["AuthorizationException"];
+        };
+    };
+    "portalAccount.invite": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                partyId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": {
+                    /** Format: email */
+                    email?: string | null;
+                };
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        portal_account: {
+                            id: string;
+                            email: string;
+                            is_active: boolean;
+                        };
+                        invitation_sent: boolean;
+                        /**
+                         * @description Filet : montré à l'agent uniquement si l'email n'est pas parti.
+                         * @enum {string|null}
+                         */
+                        temporary_password: "" | null;
+                    };
+                };
+            };
+            401: components["responses"]["AuthenticationException"];
+            403: components["responses"]["AuthorizationException"];
+            422: components["responses"]["ValidationException"];
+        };
+    };
     "portalAuth.login": {
         parameters: {
             query?: never;
@@ -4378,6 +6473,10 @@ export interface operations {
                         email: string;
                         party: string;
                         notification_prefs: string;
+                        branding: {
+                            name: string | null;
+                            logo_url: string;
+                        };
                     };
                 };
             };
@@ -4406,6 +6505,304 @@ export interface operations {
             401: components["responses"]["AuthenticationException"];
         };
     };
+    "portalDeliveryNote.index": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                shipmentId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: {
+                            mission_id: string;
+                            reference: string;
+                            recipient_name: string;
+                            /** Format: date-time */
+                            delivered_at: string;
+                        }[];
+                    };
+                };
+            };
+            401: components["responses"]["AuthenticationException"];
+        };
+    };
+    "portalDeliveryNote.pdf": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                missionId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": Record<string, never>;
+                };
+            };
+            401: components["responses"]["AuthenticationException"];
+            404: components["responses"]["ModelNotFoundException"];
+        };
+    };
+    "portalDocument.index": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: components["schemas"]["DocumentModel"][];
+                    };
+                };
+            };
+            401: components["responses"]["AuthenticationException"];
+        };
+    };
+    "portalDocument.downloadUrl": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                documentId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        url: string;
+                        filename: string;
+                    };
+                };
+            };
+            401: components["responses"]["AuthenticationException"];
+        };
+    };
+    "portalInvoice.index": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: components["schemas"]["InvoiceModel"][];
+                    };
+                };
+            };
+            401: components["responses"]["AuthenticationException"];
+        };
+    };
+    "portalInvoice.pdf": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                invoiceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": Record<string, never>;
+                };
+            };
+            401: components["responses"]["AuthenticationException"];
+        };
+    };
+    "portalQuote.index": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: components["schemas"]["QuoteModel"][];
+                    };
+                };
+            };
+            401: components["responses"]["AuthenticationException"];
+        };
+    };
+    "portalQuote.pdf": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                quoteId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": Record<string, never>;
+                };
+            };
+            401: components["responses"]["AuthenticationException"];
+        };
+    };
+    "portalQuote.accept": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                quoteId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description La création du dossier reste une décision interne (Étape 17 — accept côté agence). */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": string;
+                };
+            };
+            401: components["responses"]["AuthenticationException"];
+        };
+    };
+    "portalQuote.reject": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                quoteId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": {
+                    reason?: string | null;
+                };
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": string;
+                };
+            };
+            401: components["responses"]["AuthenticationException"];
+            422: components["responses"]["ValidationException"];
+        };
+    };
+    "portalShipment.index": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: Record<string, never>[];
+                    };
+                };
+            };
+            401: components["responses"]["AuthenticationException"];
+        };
+    };
+    "portalShipment.show": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                shipmentId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        id: string;
+                        reference: string;
+                        direction: string;
+                        mode: string;
+                        status: string;
+                        origin_locode: string;
+                        destination_locode: string;
+                        etd: string | null;
+                        eta: string | null;
+                        ata: string | null;
+                        containers: Record<string, never>[];
+                        packages: Record<string, never>[];
+                        events: Record<string, never>[];
+                    };
+                };
+            };
+            401: components["responses"]["AuthenticationException"];
+        };
+    };
     "publicTracking.show": {
         parameters: {
             query?: never;
@@ -4421,11 +6818,38 @@ export interface operations {
                 };
                 content: {
                     "application/json": {
+                        package: {
+                            reference: string;
+                            status: string;
+                            status_label: string;
+                            container_number: unknown;
+                            received_at: string;
+                            stuffed_at: string;
+                            unstuffed_at: string;
+                            delivered_at: string;
+                        };
+                        delivery: {
+                            /** @constant */
+                            status: "in_delivery";
+                            latitude: number;
+                            longitude: number;
+                            updated_at: string;
+                            destination: {
+                                label: string;
+                                latitude: number;
+                                longitude: number;
+                            } | null;
+                        } | null;
                         reference: string;
                         status: string;
                         mode: string;
                         origin_locode: string;
                         destination_locode: string;
+                        origin_name: string | null;
+                        destination_name: string | null;
+                        vessel_name: string | null;
+                        tenant_name: unknown;
+                        logo_url: string;
                         eta: string;
                         ata: string;
                         events: Record<string, never>[];
@@ -4492,7 +6916,7 @@ export interface operations {
                     /** @enum {string} */
                     mode: "sea_fcl" | "sea_lcl" | "air" | "road" | "multimodal";
                     /** @enum {string} */
-                    direction: "import" | "export";
+                    direction: "import" | "export" | "transit";
                     origin_locode: string;
                     destination_locode: string;
                     incoterm_code: string;
@@ -4509,7 +6933,15 @@ export interface operations {
                         unit_price: number;
                         currency_code: string;
                         buy_price?: number | null;
+                        /** @enum {string} */
+                        category?: "customs" | "other";
                     }[];
+                    /**
+                     * @description Position tarifaire et valeur CAF : conservées pour que les droits
+                     *     restent recalculables à l'identique.
+                     */
+                    hs_code?: string | null;
+                    customs_value?: number | null;
                 };
             };
         };
@@ -4588,6 +7020,63 @@ export interface operations {
             401: components["responses"]["AuthenticationException"];
             403: components["responses"]["AuthorizationException"];
             404: components["responses"]["ModelNotFoundException"];
+        };
+    };
+    "quote.pdf": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                quoteId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": Record<string, never>;
+                };
+            };
+            401: components["responses"]["AuthenticationException"];
+            403: components["responses"]["AuthorizationException"];
+            404: components["responses"]["ModelNotFoundException"];
+        };
+    };
+    "quote.approve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                quoteId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": string;
+                };
+            };
+            401: components["responses"]["AuthenticationException"];
+            403: components["responses"]["AuthorizationException"];
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        message: string;
+                    };
+                };
+            };
         };
     };
     "quote.send": {
@@ -4678,6 +7167,75 @@ export interface operations {
             };
             401: components["responses"]["AuthenticationException"];
             403: components["responses"]["AuthorizationException"];
+            422: components["responses"]["ValidationException"];
+        };
+    };
+    "quoteWaiver.index": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: Record<string, never>[];
+                    };
+                };
+            };
+            401: components["responses"]["AuthenticationException"];
+            403: components["responses"]["AuthorizationException"];
+        };
+    };
+    "quoteWaiver.decide": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                shipmentId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** @enum {string} */
+                    decision: "approved" | "rejected";
+                    /** @description Un refus s'explique : l'exploitant doit savoir quoi corriger. */
+                    note?: string | null;
+                };
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        status: string;
+                    };
+                };
+            };
+            401: components["responses"]["AuthenticationException"];
+            403: components["responses"]["AuthorizationException"];
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @constant */
+                        message: "Dossier introuvable.";
+                    };
+                };
+            };
             422: components["responses"]["ValidationException"];
         };
     };
@@ -4813,12 +7371,73 @@ export interface operations {
             403: components["responses"]["AuthorizationException"];
         };
     };
+    "controller.search": {
+        parameters: {
+            query: {
+                q: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        query: string;
+                        groups: {
+                            shipments: {
+                                id: string;
+                                label: string;
+                                sub: string;
+                                url: string;
+                            }[];
+                            parties: {
+                                id: string;
+                                label: string;
+                                sub: string;
+                                /** @constant */
+                                url: "/crm";
+                            }[];
+                            containers: {
+                                id: string;
+                                label: string;
+                                sub: string | null;
+                                /** @constant */
+                                url: "/containers";
+                            }[];
+                            bookings: {
+                                id: string;
+                                label: string | null;
+                                sub: null;
+                                /** @constant */
+                                url: "/bookings";
+                            }[];
+                            invoices: {
+                                id: string;
+                                label: string | null;
+                                sub: null;
+                                /** @constant */
+                                url: "/billing";
+                            }[];
+                        };
+                    };
+                };
+            };
+            401: components["responses"]["AuthenticationException"];
+            422: components["responses"]["ValidationException"];
+        };
+    };
     "shipment.index": {
         parameters: {
             query?: {
                 "filter[status][]"?: string[];
                 "filter[mode][]"?: "sea_fcl" | "sea_lcl" | "air" | "road" | "multimodal";
-                "filter[direction]"?: "import" | "export";
+                "filter[direction]"?: "import" | "export" | "transit";
                 "filter[client_id]"?: string;
                 "filter[agent_id]"?: string;
                 "filter[delayed]"?: boolean;
@@ -4898,6 +7517,16 @@ export interface operations {
                 content: {
                     "application/json": {
                         data: components["schemas"]["ShipmentResource"];
+                        workflow: {
+                            steps: unknown[];
+                            current: string;
+                            allowed_transitions: string[];
+                        };
+                        /**
+                         * @description Les conteneurs affectés et l'état de leur suivi : c'est depuis le
+                         *     dossier que l'exploitant vérifie que la marchandise remonte.
+                         */
+                        containers: Record<string, never>[];
                     };
                 };
             };
@@ -4963,6 +7592,20 @@ export interface operations {
                     };
                 };
             };
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @constant */
+                        status: "pending_approval";
+                        request_id: string;
+                        /** @constant */
+                        message: "Passage proposé — en attente de validation du responsable exploitation.";
+                    };
+                };
+            };
             401: components["responses"]["AuthenticationException"];
             403: components["responses"]["AuthorizationException"];
             422: components["responses"]["ValidationException"];
@@ -4992,6 +7635,265 @@ export interface operations {
             };
             401: components["responses"]["AuthenticationException"];
             403: components["responses"]["AuthorizationException"];
+        };
+    };
+    "shipment.storeSegment": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                shipmentId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** @enum {string} */
+                    mode: "sea" | "air" | "road";
+                    origin_locode: string;
+                    destination_locode: string;
+                    /** Format: date-time */
+                    etd?: string | null;
+                    /** Format: date-time */
+                    eta?: string | null;
+                };
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TransportSegmentModel"];
+                };
+            };
+            401: components["responses"]["AuthenticationException"];
+            403: components["responses"]["AuthorizationException"];
+            422: components["responses"]["ValidationException"];
+        };
+    };
+    "shipment.updateSegment": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                shipmentId: string;
+                segmentId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": {
+                    /** Format: date-time */
+                    etd?: string | null;
+                    /** Format: date-time */
+                    eta?: string | null;
+                    /** Format: date-time */
+                    atd?: string | null;
+                    /** Format: date-time */
+                    ata?: string | null;
+                };
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": string;
+                };
+            };
+            401: components["responses"]["AuthenticationException"];
+            403: components["responses"]["AuthorizationException"];
+            422: components["responses"]["ValidationException"];
+        };
+    };
+    "shipmentAssignment.agents": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: Record<string, never>[];
+                    };
+                };
+            };
+            401: components["responses"]["AuthenticationException"];
+            403: components["responses"]["AuthorizationException"];
+        };
+    };
+    "shipmentAssignment.assign": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                shipmentId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** Format: uuid */
+                    agent_id: string;
+                };
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        agent_id: string;
+                    };
+                };
+            };
+            401: components["responses"]["AuthenticationException"];
+            403: components["responses"]["AuthorizationException"];
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @constant */
+                        message: "Dossier introuvable.";
+                    };
+                };
+            };
+            422: components["responses"]["ValidationException"];
+        };
+    };
+    "controller.shipsGoWebhook": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @constant */
+                        status: "ok";
+                        new_events: number;
+                    };
+                };
+            };
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @constant */
+                        status: "unknown";
+                    } | {
+                        /** @constant */
+                        status: "ignored";
+                    };
+                };
+            };
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @constant */
+                        message: "Signature invalide.";
+                    };
+                };
+            };
+        };
+    };
+    "stepRequest.index": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: Record<string, never>[];
+                    };
+                };
+            };
+            401: components["responses"]["AuthenticationException"];
+            403: components["responses"]["AuthorizationException"];
+        };
+    };
+    "stepRequest.decide": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                requestId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** @enum {string} */
+                    decision: "approved" | "rejected";
+                    note?: string | null;
+                };
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        status: string;
+                        step: string;
+                    };
+                };
+            };
+            401: components["responses"]["AuthenticationException"];
+            403: components["responses"]["AuthorizationException"];
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @constant */
+                        message: "Demande introuvable.";
+                    };
+                };
+            };
+            422: components["responses"]["ValidationException"];
         };
     };
     "tariff.index": {
@@ -5139,6 +8041,241 @@ export interface operations {
             403: components["responses"]["AuthorizationException"];
         };
     };
+    "telematics.store": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        stored: number;
+                        duplicates: number;
+                        mission_id: string | null;
+                        arrivals: number;
+                    };
+                };
+            };
+            422: components["responses"]["ValidationException"];
+        };
+    };
+    "telematics.missionTrack": {
+        parameters: {
+            query?: {
+                limit?: number;
+            };
+            header?: never;
+            path: {
+                missionId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        mission: {
+                            id: string;
+                            reference: string;
+                            status: string;
+                        };
+                        last_position: Record<string, never> | null;
+                        distance_to_next_stop_m: number | null;
+                        positions: Record<string, never>[];
+                        stops: Record<string, never>[];
+                    };
+                };
+            };
+            401: components["responses"]["AuthenticationException"];
+            403: components["responses"]["AuthorizationException"];
+            422: components["responses"]["ValidationException"];
+        };
+    };
+    "telematics.devices": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: Record<string, never>[];
+                    };
+                };
+            };
+            401: components["responses"]["AuthenticationException"];
+            403: components["responses"]["AuthorizationException"];
+        };
+    };
+    "telematics.storeDevice": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    identifier: string;
+                    label: string;
+                    /** @enum {string} */
+                    kind?: "beacon" | "phone" | "gateway";
+                    /** Format: uuid */
+                    truck_id?: string | null;
+                };
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        id: string;
+                        identifier: string;
+                        /** @description Affichée une seule fois : seul le haché est conservé. */
+                        api_key: string;
+                        ingest_url: string;
+                    };
+                };
+            };
+            401: components["responses"]["AuthenticationException"];
+            403: components["responses"]["AuthorizationException"];
+            422: components["responses"]["ValidationException"];
+        };
+    };
+    "telematics.updateDevice": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                deviceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": {
+                    label?: string;
+                    /** Format: uuid */
+                    truck_id?: string | null;
+                    is_active?: boolean;
+                };
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": Record<string, never> | null;
+                };
+            };
+            401: components["responses"]["AuthenticationException"];
+            403: components["responses"]["AuthorizationException"];
+            404: components["responses"]["ModelNotFoundException"];
+            422: components["responses"]["ValidationException"];
+        };
+    };
+    "controller.trackingRefresh": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                shipmentId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        subscriptions: number;
+                        pending_carrier: number;
+                        polled: number;
+                        new_events: number;
+                        errors: string[];
+                    };
+                };
+            };
+            401: components["responses"]["AuthenticationException"];
+            403: components["responses"]["AuthorizationException"];
+        };
+    };
+    "controller.trackingSubscribe": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                shipmentId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** @enum {string} */
+                    subject_type: "bl" | "container";
+                    number: string;
+                    carrier_scac?: string | null;
+                };
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        subscription_id: string | null;
+                        carrier_known: boolean;
+                        new_events: number;
+                        containers: string;
+                        containers_busy: string;
+                    } | {
+                        subscription_id: string | null;
+                        carrier_known: boolean;
+                        new_events: number;
+                        message: string;
+                    } | {
+                        subscription_id: string | null;
+                        carrier_known: boolean;
+                        /** @constant */
+                        message: "Abonnement enregistré. Précisez la compagnie pour lancer l'interrogation.";
+                    };
+                };
+            };
+            401: components["responses"]["AuthenticationException"];
+            403: components["responses"]["AuthorizationException"];
+            422: components["responses"]["ValidationException"];
+        };
+    };
     "user.index": {
         parameters: {
             query?: {
@@ -5196,6 +8333,8 @@ export interface operations {
                     /** @enum {string} */
                     locale?: "fr" | "en";
                     role_ids: string[];
+                    /** Format: uuid */
+                    service_id?: string | null;
                     branch_ids: string[];
                 };
             };
@@ -5208,7 +8347,12 @@ export interface operations {
                 content: {
                     "application/json": {
                         user: components["schemas"]["UserModel"] | null;
-                        temporary_password: string;
+                        /**
+                         * @description Filet : affiché à l'admin si l'email n'est pas parti (SMTP down, adresse invalide…).
+                         * @enum {string|null}
+                         */
+                        temporary_password: "" | null;
+                        invitation_sent: boolean;
                     };
                 };
             };
@@ -5237,6 +8381,11 @@ export interface operations {
                     is_active?: boolean;
                     role_ids?: string[];
                     branch_ids?: string[];
+                    /**
+                     * Format: uuid
+                     * @description Le service détermine quel chef valide ses dossiers.
+                     */
+                    service_id?: string | null;
                 };
             };
         };
