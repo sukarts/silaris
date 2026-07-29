@@ -20,7 +20,14 @@ use Silaris\Modules\Tracking\Interface\Http\Controller\ShipsGoWebhookController;
 */
 
 Route::prefix('v1')->group(function (): void {
-    Route::get('/health', fn () => response()->json(['status' => 'ok', 'time' => now()->toIso8601String()]));
+    // La version en service est publique à dessein : c'est la seule façon de
+    // savoir du dehors quel commit tourne réellement, et donc de distinguer un
+    // déploiement effectif d'un conteneur resté sur l'image précédente.
+    Route::get('/health', fn () => response()->json([
+        'status' => 'ok',
+        'release' => config('app.release'),
+        'time' => now()->toIso8601String(),
+    ]));
     Route::get('/ready', function () {
         $checks = ['database' => false];
         try {

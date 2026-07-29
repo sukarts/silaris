@@ -37,6 +37,13 @@ COPY docker/prod/api-serve.sh /usr/local/bin/api-serve
 COPY docker/prod/nginx-render-main.conf /etc/nginx/nginx-render-main.conf
 COPY docker/prod/nginx-render.conf.template /etc/nginx/nginx-render.conf.template
 RUN chmod +x /usr/local/bin/api-entrypoint /usr/local/bin/api-serve
+
+# Empreinte du commit, gravée en toute fin pour ne pas invalider les couches
+# coûteuses au-dessus. /health la renvoie : c'est ce qui permet de vérifier
+# qu'un déploiement a bien été tiré, au lieu de le supposer.
+ARG APP_RELEASE=dev
+ENV APP_RELEASE=${APP_RELEASE}
+
 USER www-data
 EXPOSE 10000
 ENTRYPOINT ["api-entrypoint"]

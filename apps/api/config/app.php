@@ -19,6 +19,20 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Version en service
+    |--------------------------------------------------------------------------
+    |
+    | Empreinte du commit inscrite dans l'image au moment de sa construction.
+    | Sans elle, rien ne distingue de l'extérieur un conteneur à jour d'un
+    | conteneur resté sur une version ancienne — et une correction déployée
+    | mais jamais tirée passe pour un correctif qui ne marche pas.
+    |
+    */
+
+    'release' => env('APP_RELEASE', 'dev'),
+
+    /*
+    |--------------------------------------------------------------------------
     | Application Environment
     |--------------------------------------------------------------------------
     |
