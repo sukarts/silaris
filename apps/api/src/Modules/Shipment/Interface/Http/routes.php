@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use Illuminate\Support\Facades\Route;
 use Silaris\Modules\Shipment\Interface\Http\Controller\QuoteWaiverController;
+use Silaris\Modules\Shipment\Interface\Http\Controller\ShipmentAssignmentController;
 use Silaris\Modules\Shipment\Interface\Http\Controller\ShipmentController;
 use Silaris\Modules\Shipment\Interface\Http\Controller\StepRequestController;
 
@@ -21,6 +22,11 @@ Route::prefix('shipments')->group(function (): void {
     Route::get('/step-requests', [StepRequestController::class, 'index'])->can('shipments.approve_step');
     Route::post('/step-requests/{requestId}/decide', [StepRequestController::class, 'decide'])
         ->whereUuid('requestId')->can('shipments.approve_step');
+
+    // Répartition de la charge : le chef de service confie ses dossiers.
+    Route::get('/assignable-agents', [ShipmentAssignmentController::class, 'agents'])->can('shipments.assign');
+    Route::post('/{shipmentId}/assign', [ShipmentAssignmentController::class, 'assign'])
+        ->whereUuid('shipmentId')->can('shipments.assign');
 
     Route::post('/{shipmentId}/advance', [ShipmentController::class, 'advance'])->whereUuid('shipmentId')->can('shipments.advance');
     Route::post('/{shipmentId}/close', [ShipmentController::class, 'close'])->whereUuid('shipmentId')->can('shipments.close');

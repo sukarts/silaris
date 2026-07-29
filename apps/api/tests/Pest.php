@@ -113,3 +113,39 @@ function seedUserWithRole(array $ids, string $roleKey, string $email): string
 
     return $userId;
 }
+
+/** Dossier ouvert sur cotation, prêt à franchir sa première étape. */
+function shipmentReadyToAdvance(array $ids): string
+{
+    // Seul un chef de service ouvre un dossier ; l'agent le tient ensuite.
+    $shipmentId = test()->withToken(tokenFor($ids['user_service_manager']))->postJson('/api/v1/shipments', [
+        'client_id' => $ids['client'], 'branch_id' => $ids['branch'], 'company_id' => $ids['company'],
+        'agent_id' => $ids['user_transit_agent'], 'quote_id' => seedAcceptedQuote($ids),
+    ])->json('data.id');
+    freshAuth();
+
+    // Le document exigé à l'étape suivante, pour n'éprouver que la validation.
+    DB::table('documents')->insert([
+        'id' => (string) Str::uuid7(), 'tenant_id' => $ids['tenant'], 'shipment_id' => $shipmentId,
+        'type' => 'commercial_invoice', 'status' => 'received', 'title' => 'Facture commerciale',
+        'visibility' => 'internal', 'created_at' => now(), 'updated_at' => now(),
+    ]);
+
+    return $shipmentId;
+}
+
+/** Rattache un utilisateur à un service, et renvoie l'identifiant du service. */
+function assignService(array $ids, string $userId, string $code): string
+{
+    $serviceId = DB::table('services')->where('tenant_id', $ids['tenant'])->where('code', $code)->value('id');
+    if ($serviceId === null) {
+        $serviceId = (string) Str::uuid7();
+        DB::table('services')->insert([
+            'id' => $serviceId, 'tenant_id' => $ids['tenant'], 'code' => $code,
+            'name' => $code, 'is_active' => true, 'created_at' => now(), 'updated_at' => now(),
+        ]);
+    }
+    DB::table('users')->where('id', $userId)->update(['service_id' => $serviceId]);
+
+    return (string) $serviceId;
+}

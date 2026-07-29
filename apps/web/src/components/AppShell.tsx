@@ -5,7 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { rawApi } from "@/lib/api";
 import { SearchPalette } from "@/components/SearchPalette";
-import { useAuth, useCan } from "@/stores/auth";
+import { useAuth, useCanAny } from "@/stores/auth";
 
 // `soon: true` = écran pas encore construit : entrée visible mais désactivée
 // (jamais de lien mort).
@@ -15,6 +15,8 @@ const NAV = [
     section: "Opérations",
     items: [
       { href: "/shipments", label: "Dossiers", perm: "shipments.read" },
+      // Chefs de service et direction y viennent pour des files différentes.
+      { href: "/validations", label: "Validations", perm: ["shipments.approve_step", "derogations.open_shipment_without_quote"] },
       { href: "/bookings", label: "Bookings", perm: "bookings.read" },
       { href: "/demurrage", label: "Surestaries", perm: "containers.read" },
       { href: "/air", label: "Aérien", perm: "awb.read" },
@@ -39,9 +41,9 @@ const NAV = [
   },
 ];
 
-function NavLink({ href, label, perm, soon }: { href: string; label: string; perm: string; soon?: boolean }) {
+function NavLink({ href, label, perm, soon }: { href: string; label: string; perm: string | string[]; soon?: boolean }) {
   const pathname = usePathname();
-  const allowed = useCan(perm);
+  const allowed = useCanAny(Array.isArray(perm) ? perm : [perm]);
   if (!allowed) return null;
   if (soon) {
     return (

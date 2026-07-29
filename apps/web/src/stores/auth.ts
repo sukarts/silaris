@@ -41,3 +41,12 @@ export const useAuth = create<AuthState>()(
 export function useCan(permission: string): boolean {
   return useAuth((state) => state.permissions.includes(permission));
 }
+
+/**
+ * Un écran servant plusieurs rôles s'ouvre au premier droit reconnu — la file
+ * de validation, par exemple, réunit chefs de service et direction, qui n'y
+ * viennent pas pour la même chose.
+ */
+export function useCanAny(permissions: string[]): boolean {
+  return useAuth((state) => permissions.some((permission) => state.permissions.includes(permission)));
+}

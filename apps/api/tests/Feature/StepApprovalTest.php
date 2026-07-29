@@ -4,29 +4,8 @@ declare(strict_types=1);
 
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Str;
 
 uses(RefreshDatabase::class);
-
-/** Dossier ouvert sur cotation, prêt à franchir sa première étape. */
-function shipmentReadyToAdvance(array $ids): string
-{
-    // Seul un chef de service ouvre un dossier ; l'agent le tient ensuite.
-    $shipmentId = test()->withToken(tokenFor($ids['user_service_manager']))->postJson('/api/v1/shipments', [
-        'client_id' => $ids['client'], 'branch_id' => $ids['branch'], 'company_id' => $ids['company'],
-        'agent_id' => $ids['user_transit_agent'], 'quote_id' => seedAcceptedQuote($ids),
-    ])->json('data.id');
-    freshAuth();
-
-    // Le document exigé à l'étape suivante, pour n'éprouver que la validation.
-    DB::table('documents')->insert([
-        'id' => (string) Str::uuid7(), 'tenant_id' => $ids['tenant'], 'shipment_id' => $shipmentId,
-        'type' => 'commercial_invoice', 'status' => 'received', 'title' => 'Facture commerciale',
-        'visibility' => 'internal', 'created_at' => now(), 'updated_at' => now(),
-    ]);
-
-    return $shipmentId;
-}
 
 it('transforme l\'avancement de l\'agent en demande de validation', function (): void {
     $ids = seedCore();
@@ -130,22 +109,6 @@ it('présente au responsable les demandes en attente', function (): void {
         ->and($queue[0]['to_step'])->toBe('booking')
         ->and($queue[0]['requested_by'])->not->toBe('—');
 });
-
-/** Rattache un utilisateur à un service, et renvoie l'identifiant du service. */
-function assignService(array $ids, string $userId, string $code): string
-{
-    $serviceId = DB::table('services')->where('tenant_id', $ids['tenant'])->where('code', $code)->value('id');
-    if ($serviceId === null) {
-        $serviceId = (string) Str::uuid7();
-        DB::table('services')->insert([
-            'id' => $serviceId, 'tenant_id' => $ids['tenant'], 'code' => $code,
-            'name' => $code, 'is_active' => true, 'created_at' => now(), 'updated_at' => now(),
-        ]);
-    }
-    DB::table('users')->where('id', $userId)->update(['service_id' => $serviceId]);
-
-    return (string) $serviceId;
-}
 
 it('laisse le chef de service valider les dossiers de son service', function (): void {
     $ids = seedCore();
