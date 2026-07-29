@@ -15,6 +15,7 @@ use Silaris\Modules\Tenancy\Application\Service\BranchCodeGenerator;
 use Silaris\Modules\Tenancy\Application\Service\BrandingResolver;
 use Silaris\Modules\Tenancy\Infrastructure\Persistence\Model\BranchModel;
 use Silaris\Modules\Tenancy\Infrastructure\Persistence\Model\CompanyModel;
+use Silaris\Modules\Tenancy\Infrastructure\Persistence\Model\ServiceModel;
 
 class OrganizationController
 {
@@ -90,6 +91,23 @@ class OrganizationController
         }
 
         return response()->json(BranchModel::create([...$data, 'company_id' => $companyId]), 201);
+    }
+
+    /** GET /v1/admin/services — services du transitaire (import, export, livraison…). */
+    public function services(): JsonResponse
+    {
+        return response()->json(
+            ServiceModel::where('is_active', true)->orderBy('name')->get(['id', 'code', 'name']),
+        );
+    }
+
+    /** POST /v1/admin/services */
+    public function storeService(Request $request): JsonResponse
+    {
+        return response()->json(ServiceModel::create($request->validate([
+            'code' => ['required', 'string', 'max:16', 'alpha_num:ascii'],
+            'name' => ['required', 'string', 'max:120'],
+        ])), 201);
     }
 
     /**

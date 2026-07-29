@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Silaris\Modules\Identity\Infrastructure\Persistence\Model;
 
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
@@ -13,6 +14,7 @@ use Illuminate\Support\Str;
 use Laravel\Sanctum\HasApiTokens;
 use Silaris\Modules\Shared\Infrastructure\Persistence\Concerns\BelongsToTenant;
 use Silaris\Modules\Tenancy\Infrastructure\Persistence\Model\BranchModel;
+use Silaris\Modules\Tenancy\Infrastructure\Persistence\Model\ServiceModel;
 
 class UserModel extends Authenticatable
 {
@@ -73,6 +75,12 @@ class UserModel extends Authenticatable
     private const ALL_BRANCH_ROLES = ['super_admin', 'admin', 'director'];
 
     /** @return list<string> Permissions effectives (union des rôles), cache 60 s. */
+    /** Service de rattachement — désigne le chef compétent sur ses dossiers. */
+    public function service(): BelongsTo
+    {
+        return $this->belongsTo(ServiceModel::class, 'service_id');
+    }
+
     public function permissionKeys(): array
     {
         return Cache::remember(

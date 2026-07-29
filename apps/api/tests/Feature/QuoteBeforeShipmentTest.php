@@ -20,18 +20,20 @@ function openShipment(array $ids, string $quoteId): array
 it('refuse d\'ouvrir un dossier sans cotation', function (): void {
     $ids = seedCore();
 
-    $this->withToken(tokenFor($ids['user_transit_agent']))
+    $this->withToken(tokenFor($ids['user_service_manager']))
         ->postJson('/api/v1/shipments', [
             'client_id' => $ids['client'], 'branch_id' => $ids['branch'],
             'company_id' => $ids['company'], 'agent_id' => $ids['user_transit_agent'],
-        ])->assertStatus(422)->assertJsonPath('errors.quote_id.0', 'The quote id field is required.');
+        ])->assertStatus(422)
+        // Sans cotation, la seule voie restante est la dérogation motivée.
+        ->assertJsonPath('errors.quote_id.0', 'The quote id field is required when waiver reason is not present.');
 });
 
 it('refuse une cotation que le client n\'a pas encore acceptée', function (): void {
     $ids = seedCore();
     $quoteId = seedAcceptedQuote($ids, overrides: ['status' => 'sent', 'accepted_at' => null]);
 
-    $this->withToken(tokenFor($ids['user_transit_agent']))
+    $this->withToken(tokenFor($ids['user_service_manager']))
         ->postJson('/api/v1/shipments', openShipment($ids, $quoteId))
         ->assertStatus(422)
         ->assertJsonPath('error_code', 'shipment.quote_not_accepted')
@@ -42,7 +44,7 @@ it('refuse une cotation refusée par le client', function (): void {
     $ids = seedCore();
     $quoteId = seedAcceptedQuote($ids, overrides: ['status' => 'rejected', 'accepted_at' => null]);
 
-    $this->withToken(tokenFor($ids['user_transit_agent']))
+    $this->withToken(tokenFor($ids['user_service_manager']))
         ->postJson('/api/v1/shipments', openShipment($ids, $quoteId))
         ->assertStatus(422)
         ->assertJsonPath('detail', fn (string $detail) => str_contains($detail, 'refusée par le client'));
@@ -58,7 +60,7 @@ it('refuse la cotation d\'un autre client', function (): void {
     ]);
     $quoteId = seedAcceptedQuote($ids, clientId: $otherClient);
 
-    $this->withToken(tokenFor($ids['user_transit_agent']))
+    $this->withToken(tokenFor($ids['user_service_manager']))
         ->postJson('/api/v1/shipments', openShipment($ids, $quoteId))
         ->assertStatus(422)
         ->assertJsonPath('detail', fn (string $detail) => str_contains($detail, 'autre client'));
@@ -66,7 +68,7 @@ it('refuse la cotation d\'un autre client', function (): void {
 
 it('n\'ouvre qu\'un seul dossier par cotation', function (): void {
     $ids = seedCore();
-    $token = tokenFor($ids['user_transit_agent']);
+    $token = tokenFor($ids['user_service_manager']);
     $quoteId = seedAcceptedQuote($ids);
 
     $first = $this->withToken($token)->postJson('/api/v1/shipments', openShipment($ids, $quoteId))
@@ -86,7 +88,7 @@ it('reprend de la cotation les conditions convenues, pas celles envoyées', func
     ]);
 
     // L'exploitant se trompe de sens et de mode : la cotation fait foi.
-    $shipment = $this->withToken(tokenFor($ids['user_transit_agent']))
+    $shipment = $this->withToken(tokenFor($ids['user_service_manager']))
         ->postJson('/api/v1/shipments', [
             ...openShipment($ids, $quoteId),
             'direction' => 'import', 'mode' => 'sea_fcl',

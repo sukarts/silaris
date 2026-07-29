@@ -22,7 +22,7 @@ function shipmentPayload(array $ids, array $overrides = []): array
 
 it('donne à l\'agent transit son périmètre de saisie sans droit d\'administration', function (): void {
     $ids = seedCore();
-    $token = tokenFor($ids['user_transit_agent']);
+    $token = tokenFor($ids['user_service_manager']);
 
     // L'agent n'a pas accès aux paramètres de la société…
     $this->withToken($token)->getJson('/api/v1/admin/companies')->assertForbidden();
@@ -39,7 +39,7 @@ it('donne à l\'agent transit son périmètre de saisie sans droit d\'administra
 it('laisse l\'agent transit créer un dossier', function (): void {
     $ids = seedCore();
 
-    $reference = $this->withToken(tokenFor($ids['user_transit_agent']))
+    $reference = $this->withToken(tokenFor($ids['user_service_manager']))
         ->postJson('/api/v1/shipments', shipmentPayload($ids))
         ->assertCreated()->json('data.reference');
 

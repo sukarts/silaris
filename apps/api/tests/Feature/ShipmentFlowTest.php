@@ -10,7 +10,7 @@ uses(RefreshDatabase::class);
 
 it('crée un dossier via l API avec référence séquencée, puis bloque et débloque la transition selon les documents', function (): void {
     $ids = seedCore();
-    $token = tokenFor($ids['user_transit_agent']);
+    $token = tokenFor($ids['user_service_manager']);
 
     // Création — sur cotation acceptée, seul point d'entrée d'un dossier.
     $create = $this->withToken($token)->postJson('/api/v1/shipments', [

@@ -45,6 +45,7 @@ class UserController
             'locale' => ['sometimes', 'in:fr,en'],
             'role_ids' => ['required', 'array', 'min:1'],
             'role_ids.*' => ['uuid', 'exists:roles,id'],
+            'service_id' => ['sometimes', 'nullable', 'uuid', 'exists:services,id'],
             'branch_ids' => ['required', 'array', 'min:1'],
             'branch_ids.*' => ['uuid', 'exists:branches,id'],
         ]);
@@ -109,6 +110,8 @@ class UserController
             'role_ids.*' => ['uuid', 'exists:roles,id'],
             'branch_ids' => ['sometimes', 'array', 'min:1'],
             'branch_ids.*' => ['uuid', 'exists:branches,id'],
+            // Le service détermine quel chef valide ses dossiers.
+            'service_id' => ['sometimes', 'nullable', 'uuid', 'exists:services,id'],
         ]);
 
         DB::transaction(function () use ($user, $data): void {
