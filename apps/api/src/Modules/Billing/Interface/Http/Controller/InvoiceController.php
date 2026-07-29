@@ -72,6 +72,71 @@ class InvoiceController
         return response()->json($invoice->fresh('lines'), 201);
     }
 
+    /**
+     * POST /v1/invoices/from-quote/{quoteId} — déverse une cotation dans un
+     * brouillon de facture.
+     *
+     * Seule une cotation acceptée par le client se facture : c'est elle qui fait
+     * accord sur le prix. Ses lignes deviennent celles de la facture, à
+     * l'identique — la facture ne réinvente pas le devis, elle le transcrit.
+     * Le brouillon reste modifiable et n'engage rien avant sa validation.
+     */
+    public function fromQuote(string $quoteId): JsonResponse
+    {
+        // Lecture inter-module par le query builder, pas par le modèle du module
+        // Pricing : la facturation ne dépend pas des entités de la cotation.
+        $quote = DB::table('quotes')->where('id', $quoteId)->where('status', 'accepted')
+            ->first(['id', 'company_id', 'party_id', 'currency_code', 'total_amount']);
+
+        abort_if($quote === null, 404, 'Cotation introuvable ou non acceptée : seule une cotation validée par le client se facture.');
+
+        $lines = DB::table('quote_lines')->where('quote_id', $quote->id)->orderBy('position')
+            ->get(['service_code', 'description', 'quantity', 'unit', 'unit_price']);
+
+        // Le dossier ouvert sur la cotation, s'il existe : la facture s'y
+        // rattache pour que règlement et recouvrement retombent sur le dossier.
+        $shipmentId = DB::table('shipments')->where('quote_id', $quote->id)->value('id');
+
+        $invoice = DB::transaction(function () use ($quote, $lines, $shipmentId) {
+            $invoice = InvoiceModel::create([
+                'company_id' => $quote->company_id,
+                'type' => 'invoice',
+                'party_id' => $quote->party_id,
+                'shipment_id' => $shipmentId,
+                'quote_id' => $quote->id,
+                'currency_code' => $quote->currency_code,
+                'status' => 'draft',
+                'total_excl_tax' => $quote->total_amount,
+                'total_tax' => 0,
+                'total_incl_tax' => $quote->total_amount,
+            ]);
+
+            foreach ($lines->values() as $i => $line) {
+                $invoice->lines()->create([
+                    'position' => $i + 1,
+                    'service_code' => $line->service_code,
+                    'description' => $line->description,
+                    'quantity' => $line->quantity,
+                    'unit' => $line->unit,
+                    'unit_price' => $line->unit_price,
+                    'tax_rate_id' => null,
+                ]);
+            }
+
+            return $invoice;
+        });
+
+        return response()->json($invoice->fresh('lines'), 201);
+    }
+
+    /** GET /v1/tax-rates — barème actif, pour le choix de la TVA à la ligne. */
+    public function taxRates(): JsonResponse
+    {
+        return response()->json(
+            TaxRateModel::where('is_active', true)->orderBy('rate_percent')->get(['id', 'name', 'rate_percent']),
+        );
+    }
+
     /** PATCH — brouillon uniquement (le trigger pg protège de toute façon). */
     public function update(Request $request, string $invoiceId): JsonResponse
     {
