@@ -30,9 +30,10 @@ services:
     plan: standard
     healthCheckPath: /api/v1/health
     # Render exécute preDeployCommand sans shell (pas de && ni sh -c fiable) :
-    # une seule commande. Le seed des référentiels se fait une fois via le Shell
+    # une seule commande, d'où `silaris:deploy` qui enchaîne migrations et
+    # synchronisation des rôles. Le seed des référentiels se fait une fois via le Shell
     # (php artisan db:seed --force) — voir guide-deploiement-mvp.md.
-    preDeployCommand: "php artisan migrate --force"
+    preDeployCommand: "php artisan silaris:deploy"
     envVars: &api-env
       - key: APP_ENV
         value: production
