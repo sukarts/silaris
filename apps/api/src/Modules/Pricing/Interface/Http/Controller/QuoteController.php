@@ -104,6 +104,11 @@ class QuoteController
             'lines.*.unit_price' => ['required', 'numeric', 'min:0'],
             'lines.*.currency_code' => ['required', 'size:3', 'exists:currencies,code'],
             'lines.*.buy_price' => ['nullable', 'numeric', 'min:0'],
+            'lines.*.category' => ['sometimes', Rule::in(['customs', 'other'])],
+            // Position tarifaire et valeur CAF : conservées pour que les droits
+            // restent recalculables à l'identique.
+            'hs_code' => ['sometimes', 'nullable', 'string', 'max:12'],
+            'customs_value' => ['sometimes', 'nullable', 'numeric', 'min:0'],
         ]);
 
         $quote = DB::transaction(function () use ($data) {

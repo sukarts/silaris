@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Console\Commands;
 
+use Database\Seeders\CustomsTariffSeeder;
 use Database\Seeders\PermissionSeeder;
 use Illuminate\Console\Command;
 
@@ -37,6 +38,9 @@ class DeployRelease extends Command
 
         $this->info('Rôles et permissions…');
         $this->call('db:seed', ['--class' => PermissionSeeder::class, '--force' => true]);
+
+        $this->info('Tarif douanier…');
+        $this->call('db:seed', ['--class' => CustomsTariffSeeder::class, '--force' => true]);
 
         return self::SUCCESS;
     }

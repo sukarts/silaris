@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use Illuminate\Support\Facades\Route;
+use Silaris\Modules\Pricing\Interface\Http\Controller\CustomsTariffController;
 use Silaris\Modules\Pricing\Interface\Http\Controller\QuoteController;
 use Silaris\Modules\Pricing\Interface\Http\Controller\TariffController;
 
@@ -24,3 +25,11 @@ Route::prefix('tariffs')->group(function (): void {
     Route::get('/{tariffId}', [TariffController::class, 'show'])->whereUuid('tariffId')->can('tariffs.read');
     Route::delete('/{tariffId}', [TariffController::class, 'destroy'])->whereUuid('tariffId')->can('tariffs.delete');
 });
+
+// Tarif douanier — référentiel public, et calcul des débours douane.
+Route::prefix('customs-tariffs')->group(function (): void {
+    Route::get('/', [CustomsTariffController::class, 'index'])->can('quotes.read');
+    Route::post('/compute', [CustomsTariffController::class, 'compute'])->can('quotes.read');
+});
+
+Route::get('customs-regimes', [CustomsTariffController::class, 'regimes'])->can('quotes.read');
