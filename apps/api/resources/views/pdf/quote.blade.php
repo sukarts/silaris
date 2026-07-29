@@ -2,6 +2,23 @@
     $address = is_array($company->address ?? null) ? $company->address : (json_decode((string) ($company->address ?? '{}'), true) ?: []);
     $modeLabels = ['sea_fcl' => 'Maritime FCL', 'sea_lcl' => 'Maritime LCL', 'air' => 'Aérien', 'road' => 'Terrestre', 'multimodal' => 'Multimodal'];
     $fmt = fn ($n) => number_format((float) $n, 0, ',', ' ');
+
+    // Deux familles de débours, dans l'ordre de l'offre type : ce qui part à la
+    // douane d'abord, ce que le transitaire facture ensuite. Une cotation qui
+    // n'en compte qu'une — un fret aérien, un transport terrestre — se lit mieux
+    // à plat : les sous-totaux d'une seule famille répéteraient le total.
+    $byCategory = $quote->lines->sortBy('position')->groupBy(fn ($line) => $line->category ?? 'other');
+
+    $groups = collect([
+        ['key' => 'customs', 'title' => 'Débours douane', 'subtotal_label' => 'Total débours douane'],
+        ['key' => 'other', 'title' => 'Débours divers', 'subtotal_label' => 'Total débours divers'],
+    ])
+        ->map(fn ($group) => $group + ['lines' => $byCategory->get($group['key'], collect())])
+        ->filter(fn ($group) => $group['lines']->isNotEmpty())
+        ->map(fn ($group) => $group + ['subtotal' => $group['lines']->sum('line_total')])
+        ->values();
+
+    $grouped = $groups->count() > 1;
 @endphp
 <!DOCTYPE html>
 <html lang="fr">
@@ -9,7 +26,7 @@
 <meta charset="utf-8">
 <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
-    body { font-family: DejaVu Sans, sans-serif; font-size: 10px; color: #1f2430; padding: 28px 34px; }
+    body { font-family: DejaVu Sans, sans-serif; font-size: 10px; color: #1f2430; padding: 28px 34px 46px; }
     .brand { font-size: 16px; font-weight: bold; letter-spacing: 2px; }
     .brand span { color: #e8663d; }
     .muted { color: #6b7280; }
@@ -19,6 +36,15 @@
     .lines th { background: #f0f1f4; text-align: left; padding: 6px 8px; font-size: 9px; text-transform: uppercase; letter-spacing: .5px; border-bottom: 1.5px solid #1f2430; }
     .lines td { padding: 6px 8px; border-bottom: 0.5px solid #d9dce2; }
     .num { text-align: right; }
+    .lines td.section { background: #eef0f3; font-weight: bold; font-size: 9px; text-transform: uppercase; letter-spacing: .5px; padding: 5px 8px; }
+    .lines tr.subtotal td { font-weight: bold; border-bottom: 1px solid #1f2430; background: #fafbfc; }
+    /* Les réserves ne valent que lues d'un bloc : une coupure de page en
+       plein milieu laisserait le client signer sur une moitié de conditions. */
+    .conditions { margin-top: 18px; color: #c0392b; font-size: 9px; page-break-inside: avoid; }
+    .conditions-title { font-weight: bold; text-transform: uppercase; letter-spacing: .5px; margin-bottom: 4px; }
+    .conditions ul { margin: 0 0 8px 14px; }
+    .conditions li { margin-bottom: 2px; }
+    .conditions-sign { font-weight: bold; }
     .badge { display: inline-block; padding: 2px 8px; background: #f0f1f4; border-radius: 8px; font-size: 8px; margin-right: 4px; }
     .footer { position: fixed; bottom: 18px; left: 34px; right: 34px; font-size: 8px; color: #6b7280; border-top: 0.5px solid #d9dce2; padding-top: 6px; text-align: center; }
 </style>
@@ -63,7 +89,7 @@
     <table class="lines">
         <thead>
             <tr>
-                <th style="width: 46%;">Prestation</th>
+                <th style="width: 46%;">Désignation</th>
                 <th class="num" style="width: 12%;">Quantité</th>
                 <th style="width: 10%;">Unité</th>
                 <th class="num" style="width: 16%;">P.U.</th>
@@ -71,14 +97,27 @@
             </tr>
         </thead>
         <tbody>
-            @foreach ($quote->lines->sortBy('position') as $line)
-            <tr>
-                <td>{{ $line->description }}</td>
-                <td class="num">{{ rtrim(rtrim(number_format((float) $line->quantity, 3, ',', ' '), '0'), ',') }}</td>
-                <td>{{ $line->unit }}</td>
-                <td class="num">{{ $fmt($line->unit_price) }}</td>
-                <td class="num">{{ $fmt($line->line_total) }}</td>
-            </tr>
+            @foreach ($groups as $group)
+                @if ($grouped)
+                <tr>
+                    <td colspan="5" class="section">{{ $group['title'] }}</td>
+                </tr>
+                @endif
+                @foreach ($group['lines'] as $line)
+                <tr>
+                    <td>{{ $line->description }}</td>
+                    <td class="num">{{ rtrim(rtrim(number_format((float) $line->quantity, 3, ',', ' '), '0'), ',') }}</td>
+                    <td>{{ $line->unit }}</td>
+                    <td class="num">{{ $fmt($line->unit_price) }}</td>
+                    <td class="num">{{ $fmt($line->line_total) }}</td>
+                </tr>
+                @endforeach
+                @if ($grouped)
+                <tr class="subtotal">
+                    <td colspan="4">{{ $group['subtotal_label'] }}</td>
+                    <td class="num">{{ $fmt($group['subtotal']) }}</td>
+                </tr>
+                @endif
             @endforeach
         </tbody>
     </table>
@@ -89,7 +128,7 @@
             <td>
                 <table>
                     <tr>
-                        <td style="padding: 6px 8px; font-size: 12px; font-weight: bold; border-top: 1.5px solid #1f2430;">Total</td>
+                        <td style="padding: 6px 8px; font-size: 12px; font-weight: bold; border-top: 1.5px solid #1f2430;">{{ $grouped ? 'Net à payer' : 'Total' }}</td>
                         <td class="num" style="padding: 6px 8px; font-size: 12px; font-weight: bold; border-top: 1.5px solid #1f2430;">{{ $fmt($quote->total_amount) }} {{ $quote->currency_code }}</td>
                     </tr>
                 </table>
@@ -97,10 +136,23 @@
         </tr>
     </table>
 
-    <p style="margin-top: 18px;" class="muted">
-        Offre valable jusqu'au {{ \Illuminate\Support\Carbon::parse($quote->valid_until)->format('d/m/Y') }}, sous réserve de disponibilité
-        d'espace et d'équipement. Taxes, surcharges et frais de destination selon conditions en vigueur au moment de l'expédition.
+    <p style="margin-top: 10px;">
+        Arrêtée la présente cotation à la somme de
+        <strong>{{ \Silaris\Modules\Shared\Domain\Service\AmountInWords::format((float) $quote->total_amount, $quote->currency_code) }}</strong>.
     </p>
+
+    <div class="conditions">
+        <div class="conditions-title">Réserves et conditions</div>
+        <ul>
+            <li>Le dédouanement est entamé après le paiement du client.</li>
+            <li>Les montants figurant sur cette facture pro-forma sont susceptibles de varier lors des règlements, notamment les Droits de Douane et les frais compagnies.</li>
+            <li>Les Commissions de Facilitation comprennent des frais payés auprès de la Douane, généralement sans pièces justificatives.</li>
+            <li>Les montants figurant sur cette facture ne prennent pas en compte l'amende BSC, dépôt douane…</li>
+            <li>Les tarifs proposés sont établis suivant les conditions économiques en vigueur, cependant, ils peuvent faire l'objet de changement en cas de modification officielle.</li>
+            <li>Offre valable jusqu'au {{ \Illuminate\Support\Carbon::parse($quote->valid_until)->format('d/m/Y') }}, sous réserve de disponibilité d'espace et d'équipement.</li>
+        </ul>
+        <div class="conditions-sign">Cachet et Signature — Mention « Bon pour Accord »</div>
+    </div>
 
     <div class="footer">{{ $company->legal_name }}</div>
 </body>
