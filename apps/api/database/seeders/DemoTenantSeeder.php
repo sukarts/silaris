@@ -185,15 +185,17 @@ class DemoTenantSeeder extends Seeder
         $now = now();
         $parties = [
             // key, type, supplier_kind, code, name, currency, credit
-            ['sicoa', 'client', null, 'SICOA', 'SICOA SARL', 'XOF', 50_000_000],
-            ['bernabe', 'client', null, 'BERNA', 'Groupe Bernabé CI', 'XOF', 80_000_000],
-            ['ivoire_negoce', 'client', null, 'IVNEG', 'Ivoire Négoce', 'XOF', 30_000_000],
-            ['palmci', 'client', null, 'PALM', 'Palmci SA', 'EUR', null],
-            ['prospect_cfao', 'prospect', null, 'CFAO', 'CFAO Motors CI', 'XOF', null],
-            ['msc_ci', 'supplier', 'ocean_carrier', 'MSCCI', 'MSC Côte d\'Ivoire', 'USD', null],
-            ['ek_cargo', 'supplier', 'airline', 'EKCGO', 'Emirates SkyCargo (GSA CI)', 'USD', null],
-            ['douane_ci', 'supplier', 'customs_agent', 'SDVCI', 'Transit Douane Plus', 'XOF', null],
-            ['trucker_ci', 'supplier', 'trucker', 'TRKCI', 'Ivoire Trans Route', 'XOF', null],
+            // Les codes suivent la nomenclature que l'application génère : un
+            // jeu de démonstration hors norme apprend la mauvaise habitude.
+            ['sicoa', 'client', null, 'CLI-0001', 'SICOA SARL', 'XOF', 50_000_000],
+            ['bernabe', 'client', null, 'CLI-0002', 'Groupe Bernabé CI', 'XOF', 80_000_000],
+            ['ivoire_negoce', 'client', null, 'CLI-0003', 'Ivoire Négoce', 'XOF', 30_000_000],
+            ['palmci', 'client', null, 'CLI-0004', 'Palmci SA', 'EUR', null],
+            ['prospect_cfao', 'prospect', null, 'PRO-0001', 'CFAO Motors CI', 'XOF', null],
+            ['msc_ci', 'supplier', 'ocean_carrier', 'FOU-0001', 'MSC Côte d\'Ivoire', 'USD', null],
+            ['ek_cargo', 'supplier', 'airline', 'FOU-0002', 'Emirates SkyCargo (GSA CI)', 'USD', null],
+            ['douane_ci', 'supplier', 'customs_agent', 'FOU-0003', 'Transit Douane Plus', 'XOF', null],
+            ['trucker_ci', 'supplier', 'trucker', 'FOU-0004', 'Ivoire Trans Route', 'XOF', null],
         ];
 
         foreach ($parties as [$key, $type, $kind, $code, $name, $cur, $credit]) {
@@ -208,6 +210,16 @@ class DemoTenantSeeder extends Seeder
                 'owner_id' => $this->ids['user_commercial'],
                 'created_at' => $now, 'updated_at' => $now,
             ]);
+        }
+
+        // Les codes ci-dessus sont posés en dur ; la séquence, elle, part de
+        // zéro. Sans ce rattrapage, la première fiche créée dans l'application
+        // réclamerait CLI-0001 — déjà pris — et se heurterait à l'unicité.
+        foreach (array_count_values(array_column($parties, 1)) as $type => $count) {
+            DB::table('sequences')->updateOrInsert(
+                ['tenant_id' => $this->tenantId, 'scope' => "party:{$type}"],
+                ['last_value' => $count],
+            );
         }
 
         DB::table('party_contacts')->insert([

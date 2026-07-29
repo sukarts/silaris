@@ -24,12 +24,16 @@
                                             "type": "string",
                                             "const": "ok"
                                         },
+                                        "release": {
+                                            "type": "string"
+                                        },
                                         "time": {
                                             "type": "string"
                                         }
                                     },
                                     "required": [
                                         "status",
+                                        "release",
                                         "time"
                                     ]
                                 }

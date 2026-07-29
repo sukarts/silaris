@@ -28,6 +28,7 @@ export interface paths {
                         "application/json": {
                             /** @constant */
                             status: "ok";
+                            release: string;
                             time: string;
                         };
                     };

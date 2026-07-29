@@ -61,7 +61,7 @@ export default function CrmPage() {
   const [search, setSearch] = useState("");
   const [showForm, setShowForm] = useState(false);
   const emptyForm = {
-    type: "client", kind: "company", supplier_kind: "trucker", code: "", name: "", tax_id: "", industry: "",
+    type: "client", kind: "company", supplier_kind: "trucker", name: "", tax_id: "", industry: "",
     currency_code: "XOF", payment_terms_days: "30",
     contact_name: "", contact_email: "", contact_dial: "+225", contact_phone: "",
     address_line1: "", address_city: "", address_country: "",
@@ -86,7 +86,6 @@ export default function CrmPage() {
           type: form.type,
           kind: form.kind,
           ...(form.type === "supplier" ? { supplier_kind: form.supplier_kind } : {}),
-          code: form.code || null,
           name: form.name,
           tax_id: form.tax_id || null,
           industry: form.industry || null,
@@ -175,8 +174,15 @@ export default function CrmPage() {
               <option value="individual">Personne physique</option>
             </select>
           </Field>
+          {/* Le code est une référence système : il part sur les factures, les
+              cotations et la synchronisation comptable. Le laisser saisir a
+              produit des fiches en « DAI » ou « D&F », hors nomenclature. */}
           <Field label="Code">
-            <input maxLength={24} value={form.code} onChange={(e) => setForm({ ...form, code: e.target.value.toUpperCase() })} placeholder="Automatique" className={`${inputClass} mono`} />
+            <input
+              disabled
+              placeholder={`Généré automatiquement (${{ client: "CLI", prospect: "PRO", supplier: "FOU" }[form.type] ?? "CLI"}-0001)`}
+              className={`${inputClass} mono opacity-60`}
+            />
           </Field>
           <Field label={form.kind === "company" ? "Raison sociale" : "Nom & prénom"} className="md:col-span-2">
             <input required value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} className={inputClass} />
