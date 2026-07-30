@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Silaris\Modules\Air\Infrastructure\Persistence\Model;
 
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Silaris\Modules\Referential\Infrastructure\Persistence\Model\AirlineModel;
@@ -14,7 +15,7 @@ use Silaris\Modules\Shipment\Infrastructure\Persistence\Model\ShipmentModel;
 /**
  * @property ShipmentModel|null $shipment
  * @property AirlineModel|null $airline
- * @property \Illuminate\Database\Eloquent\Collection<int, FlightLegModel> $legs
+ * @property Collection<int, FlightLegModel> $legs
  */
 class AirWaybillModel extends BaseModel
 {
