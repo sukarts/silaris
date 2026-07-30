@@ -10185,12 +10185,51 @@
                                             "items": {
                                                 "type": "object"
                                             }
+                                        },
+                                        "free_time": {
+                                            "type": "object",
+                                            "description": "Franchises n\u00e9goci\u00e9es du dossier \u2014 port\u00e9es par le document, \u00e9ditables\ndepuis l'\u00e9cran pour alimenter la surveillance surestaries/d\u00e9tention.",
+                                            "properties": {
+                                                "direction": {
+                                                    "type": "string",
+                                                    "enum": [
+                                                        "export",
+                                                        "import"
+                                                    ]
+                                                },
+                                                "document": {
+                                                    "type": "string",
+                                                    "enum": [
+                                                        "booking",
+                                                        "connaissement ma\u00eetre"
+                                                    ]
+                                                },
+                                                "demurrage_free_days": {
+                                                    "type": [
+                                                        "integer",
+                                                        "null"
+                                                    ]
+                                                },
+                                                "detention_free_days": {
+                                                    "type": [
+                                                        "integer",
+                                                        "null"
+                                                    ]
+                                                }
+                                            },
+                                            "required": [
+                                                "direction",
+                                                "document",
+                                                "demurrage_free_days",
+                                                "detention_free_days"
+                                            ]
                                         }
                                     },
                                     "required": [
                                         "data",
                                         "workflow",
-                                        "containers"
+                                        "containers",
+                                        "free_time"
                                     ]
                                 }
                             }

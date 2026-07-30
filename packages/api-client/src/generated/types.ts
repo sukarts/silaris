@@ -7766,6 +7766,18 @@ export interface operations {
                          *     dossier que l'exploitant vérifie que la marchandise remonte.
                          */
                         containers: Record<string, never>[];
+                        /**
+                         * @description Franchises négociées du dossier — portées par le document, éditables
+                         *     depuis l'écran pour alimenter la surveillance surestaries/détention.
+                         */
+                        free_time: {
+                            /** @enum {string} */
+                            direction: "export" | "import";
+                            /** @enum {string} */
+                            document: "booking" | "connaissement maître";
+                            demurrage_free_days: number | null;
+                            detention_free_days: number | null;
+                        };
                     };
                 };
             };
