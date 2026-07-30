@@ -319,6 +319,82 @@
                 }
             }
         },
+        "/v1/air-waybills/{awbId}": {
+            "get": {
+                "operationId": "airWaybill.show",
+                "tags": [
+                    "AirWaybill"
+                ],
+                "parameters": [
+                    {
+                        "name": "awbId",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/ModelNotFoundException"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/AuthorizationException"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            }
+        },
+        "/v1/air-waybills/{awbId}/lta": {
+            "get": {
+                "operationId": "airWaybill.lta",
+                "summary": "GET /v1/air-waybills/{id}/lta \u2014 la lettre de transport a\u00e9rien en PDF, \u00e0\nremettre \u00e0 la compagnie et \u00e0 joindre au dossier. Disponible d\u00e8s le\nbrouillon (marqu\u00e9e \u00ab proforma \u00bb), d\u00e9finitive une fois \u00e9mise",
+                "tags": [
+                    "AirWaybill"
+                ],
+                "parameters": [
+                    {
+                        "name": "awbId",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/AuthorizationException"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            }
+        },
         "/v1/air-waybills/{awbId}/issue": {
             "post": {
                 "operationId": "airWaybill.issue",

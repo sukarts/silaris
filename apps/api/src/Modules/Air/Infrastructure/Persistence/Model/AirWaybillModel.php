@@ -6,10 +6,16 @@ namespace Silaris\Modules\Air\Infrastructure\Persistence\Model;
 
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Silaris\Modules\Referential\Infrastructure\Persistence\Model\AirlineModel;
 use Silaris\Modules\Shared\Infrastructure\Persistence\BaseModel;
 use Silaris\Modules\Shared\Infrastructure\Persistence\Concerns\BelongsToTenant;
 use Silaris\Modules\Shipment\Infrastructure\Persistence\Model\ShipmentModel;
 
+/**
+ * @property ShipmentModel|null $shipment
+ * @property AirlineModel|null $airline
+ * @property \Illuminate\Database\Eloquent\Collection<int, FlightLegModel> $legs
+ */
 class AirWaybillModel extends BaseModel
 {
     use BelongsToTenant;
@@ -28,6 +34,11 @@ class AirWaybillModel extends BaseModel
     public function shipment(): BelongsTo
     {
         return $this->belongsTo(ShipmentModel::class, 'shipment_id');
+    }
+
+    public function airline(): BelongsTo
+    {
+        return $this->belongsTo(AirlineModel::class, 'airline_id');
     }
 
     public function master(): BelongsTo

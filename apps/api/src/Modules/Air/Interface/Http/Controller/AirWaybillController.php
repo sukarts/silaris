@@ -4,10 +4,15 @@ declare(strict_types=1);
 
 namespace Silaris\Modules\Air\Interface\Http\Controller;
 
+use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response;
 use Illuminate\Validation\Rule;
+use Silaris\Modules\Air\Application\Service\AwbBuilder;
 use Silaris\Modules\Air\Infrastructure\Persistence\Model\AirWaybillModel;
+use Silaris\Modules\Tenancy\Application\Service\BrandingResolver;
+use Silaris\Modules\Tenancy\Infrastructure\Persistence\Model\CompanyModel;
 
 class AirWaybillController
 {
@@ -19,11 +24,19 @@ class AirWaybillController
         ]);
 
         return response()->json(
-            AirWaybillModel::with(['legs', 'shipment:id,reference'])
+            AirWaybillModel::with(['legs', 'shipment:id,reference', 'airline:id,name,iata,awb_prefix'])
                 ->when($validated['shipment_id'] ?? null, fn ($q, $s) => $q->where('shipment_id', $s))
                 ->when($validated['type'] ?? null, fn ($q, $t) => $q->where('type', $t))
                 ->orderByDesc('created_at')
                 ->cursorPaginate(25),
+        );
+    }
+
+    public function show(string $awbId): JsonResponse
+    {
+        return response()->json(
+            AirWaybillModel::with(['legs', 'shipment:id,reference', 'airline:id,name,iata,awb_prefix', 'houses'])
+                ->findOrFail($awbId),
         );
     }
 
@@ -68,5 +81,24 @@ class AirWaybillController
         $awb->update(['status' => 'issued', 'issued_at' => now(), 'issued_by' => $request->user()?->id]);
 
         return response()->json($awb->fresh('legs'));
+    }
+
+    /**
+     * GET /v1/air-waybills/{id}/lta — la lettre de transport aérien en PDF, à
+     * remettre à la compagnie et à joindre au dossier. Disponible dès le
+     * brouillon (marquée « proforma »), définitive une fois émise.
+     */
+    public function lta(string $awbId, AwbBuilder $builder): Response
+    {
+        $awb = AirWaybillModel::findOrFail($awbId);
+        $data = $builder->build($awb);
+        $company = CompanyModel::findOrFail($data['company_id']);
+
+        return Pdf::loadView('pdf.air-waybill', [
+            ...$data,
+            'number' => AwbBuilder::formatNumber($awb),
+            'company' => $company,
+            'logo' => app(BrandingResolver::class)->logoDataUri($company),
+        ])->download(AwbBuilder::fileName($awb));
     }
 }
