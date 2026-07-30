@@ -133,6 +133,7 @@ class PartyController
             'supplier_kind' => ['nullable', Rule::in(['ocean_carrier', 'airline', 'trucker', 'customs_agent', 'handler', 'insurer', 'port_agent', 'overseas_agent'])],
             'name' => [$existing ? 'sometimes' : 'required', 'string', 'max:255'],
             'tax_id' => ['nullable', 'string', 'max:64'],
+            'ncc' => ['nullable', 'string', 'max:32'],
             'industry' => ['nullable', 'string', 'max:100'],
             'currency_code' => ['nullable', 'size:3', 'exists:currencies,code'],
             'payment_terms_days' => ['nullable', 'integer', 'min:0', 'max:365'],

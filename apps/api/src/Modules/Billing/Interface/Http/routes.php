@@ -15,6 +15,7 @@ Route::prefix('invoices')->group(function (): void {
     Route::patch('/{invoiceId}', [InvoiceController::class, 'update'])->whereUuid('invoiceId')->can('invoices.update');
     Route::post('/{invoiceId}/validate', [InvoiceController::class, 'validateInvoice'])->whereUuid('invoiceId')->can('invoices.validate');
     Route::post('/{invoiceId}/credit-note', [InvoiceController::class, 'creditNote'])->whereUuid('invoiceId')->can('invoices.credit');
+    Route::post('/{invoiceId}/fne-certify', [InvoiceController::class, 'certifyFne'])->whereUuid('invoiceId')->can('invoices.certify_fne');
 });
 
 Route::get('tax-rates', [InvoiceController::class, 'taxRates'])->can('invoices.read');

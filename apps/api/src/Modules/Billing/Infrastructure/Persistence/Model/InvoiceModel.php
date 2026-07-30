@@ -26,6 +26,7 @@ class InvoiceModel extends BaseModel
         'issue_date' => 'immutable_date',
         'due_date' => 'immutable_date',
         'validated_at' => 'immutable_datetime',
+        'fne_certified_at' => 'immutable_datetime',
     ];
 
     public function party(): BelongsTo

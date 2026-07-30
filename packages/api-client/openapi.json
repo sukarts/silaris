@@ -3970,6 +3970,64 @@
                 }
             }
         },
+        "/v1/invoices/{invoiceId}/fne-certify": {
+            "post": {
+                "operationId": "invoice.certifyFne",
+                "description": "Le taux de change n'est exig\u00e9 que pour une facture en devise \u00e9trang\u00e8re\n(B2F) ; ailleurs il est ignor\u00e9. La facture doit \u00eatre valid\u00e9e : on ne\ncertifie pas un brouillon.",
+                "summary": "POST /v1/invoices/{id}/fne-certify \u2014 fait certifier la facture par la DGI",
+                "tags": [
+                    "Invoice"
+                ],
+                "parameters": [
+                    {
+                        "name": "invoiceId",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "foreign_currency_rate": {
+                                        "type": [
+                                            "number",
+                                            "null"
+                                        ]
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/InvoiceModel"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationException"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/AuthorizationException"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            }
+        },
         "/v1/tax-rates": {
             "get": {
                 "operationId": "invoice.taxRates",
@@ -5085,6 +5143,43 @@
                                     },
                                     "is_active": {
                                         "type": "boolean"
+                                    },
+                                    "fne_settings": {
+                                        "type": "object",
+                                        "description": "Identifiants FNE de la soci\u00e9t\u00e9. La cl\u00e9 d'API n'est accept\u00e9e que si\nelle est fournie \u2014 omise, elle reste inchang\u00e9e ; elle ne ressort\njamais (chiffr\u00e9e et masqu\u00e9e \u00e0 la s\u00e9rialisation).",
+                                        "properties": {
+                                            "ncc": {
+                                                "type": [
+                                                    "string",
+                                                    "null"
+                                                ],
+                                                "maxLength": 32
+                                            },
+                                            "point_of_sale": {
+                                                "type": [
+                                                    "string",
+                                                    "null"
+                                                ],
+                                                "maxLength": 64
+                                            },
+                                            "establishment": {
+                                                "type": [
+                                                    "string",
+                                                    "null"
+                                                ],
+                                                "maxLength": 120
+                                            },
+                                            "enabled": {
+                                                "type": "boolean"
+                                            }
+                                        }
+                                    },
+                                    "fne_api_key": {
+                                        "type": [
+                                            "string",
+                                            "null"
+                                        ],
+                                        "maxLength": 255
                                     }
                                 }
                             }
@@ -12744,6 +12839,13 @@
                     "shipment_settings": {
                         "type": "array",
                         "items": {}
+                    },
+                    "fne_settings": {
+                        "type": "array",
+                        "items": {}
+                    },
+                    "fne_api_key_set": {
+                        "type": "string"
                     }
                 },
                 "required": [
@@ -12759,7 +12861,9 @@
                     "is_active",
                     "created_at",
                     "updated_at",
-                    "shipment_settings"
+                    "shipment_settings",
+                    "fne_settings",
+                    "fne_api_key_set"
                 ],
                 "title": "CompanyModel"
             },
@@ -13451,6 +13555,37 @@
                             "null"
                         ],
                         "format": "date-time"
+                    },
+                    "fne_reference": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "fne_token": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "fne_balance_sticker": {
+                        "type": [
+                            "integer",
+                            "null"
+                        ]
+                    },
+                    "fne_template": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "fne_certified_at": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "format": "date-time"
                     }
                 },
                 "required": [
@@ -13476,7 +13611,12 @@
                     "odoo_id",
                     "credit_reason",
                     "created_at",
-                    "updated_at"
+                    "updated_at",
+                    "fne_reference",
+                    "fne_token",
+                    "fne_balance_sticker",
+                    "fne_template",
+                    "fne_certified_at"
                 ],
                 "title": "InvoiceModel"
             },
@@ -14107,6 +14247,12 @@
                             "string",
                             "null"
                         ]
+                    },
+                    "ncc": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
                     }
                 },
                 "required": [
@@ -14129,7 +14275,8 @@
                     "created_at",
                     "updated_at",
                     "kind",
-                    "industry"
+                    "industry",
+                    "ncc"
                 ],
                 "title": "PartyModel"
             },

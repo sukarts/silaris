@@ -103,6 +103,25 @@
     <p style="margin-top: 6px;" class="muted">Document provisoire — ne vaut pas facture définitive.</p>
     @endif
 
+    {{-- Certification FNE : QR, numéro fiscal et mention obligatoires dès que la
+         DGI a certifié la facture. Un document non certifié ne les porte pas. --}}
+    @if (($fneQr ?? null) && ($invoice->fne_reference ?? null))
+    <table style="margin-top: 20px; border-top: 1px solid #d9dce2; padding-top: 10px;">
+        <tr>
+            <td style="width: 90px; vertical-align: top;">
+                <img src="{{ $fneQr }}" alt="QR FNE" style="width: 84px; height: 84px;">
+            </td>
+            <td style="vertical-align: top; padding-left: 10px; font-size: 9px;">
+                <div style="font-weight: bold; letter-spacing: 1px; color: #e8663d;">FACTURE NORMALISÉE ÉLECTRONIQUE</div>
+                <div style="margin-top: 3px;">Numéro fiscal : <strong>{{ $invoice->fne_reference }}</strong></div>
+                <div>Certifiée le {{ \Illuminate\Support\Carbon::parse($invoice->fne_certified_at)->format('d/m/Y à H:i') }}
+                    @if ($invoice->fne_template) · {{ $invoice->fne_template }}@endif</div>
+                <div class="muted" style="margin-top: 3px;">Facture certifiée par la Direction Générale des Impôts de Côte d'Ivoire. Scannez le QR code pour la vérifier.</div>
+            </td>
+        </tr>
+    </table>
+    @endif
+
     <div class="footer">{{ $settings['footer'] ?? $company->legal_name }}</div>
 </body>
 </html>
