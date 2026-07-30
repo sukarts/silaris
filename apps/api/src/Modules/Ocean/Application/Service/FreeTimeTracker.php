@@ -8,29 +8,37 @@ use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 
 /**
- * Franchise et surestaries.
+ * Surestaries et détention.
  *
- * La compagnie accorde un nombre de jours pendant lesquels l'immobilisation de
- * son conteneur n'est pas facturée. Passé ce délai, chaque jour coûte, et la
- * facture tombe sur le transitaire ou sur son client. Détecter l'échéance
- * avant qu'elle tombe vaut mieux que la constater après.
+ * La compagnie facture deux immobilisations, avec pour chacune sa franchise :
  *
- * Le compteur ne mesure pas la même chose selon le sens :
+ *  - la SURESTARIE, tant que le conteneur reste au terminal — à l'import du
+ *    déchargement à la sortie du port, à l'export de l'entrée du plein à son
+ *    chargement sur le navire ;
+ *  - la DÉTENTION, tant que le conteneur est chez le client — à l'import de la
+ *    sortie du port à la restitution du vide, à l'export de l'enlèvement du vide
+ *    à l'entrée du plein.
  *
- *  - à l'import, il part du déchargement du conteneur et s'arrête à la
- *    restitution du vide ;
- *  - à l'export, il part de la mise à disposition du vide et s'arrête à
- *    l'entrée du plein au terminal.
- *
- * Les jalons proviennent du suivi transporteur ; la franchise, elle, est
- * négociée par document — connaissement à l'import, booking à l'export.
+ * Chaque compteur a son jalon d'ouverture, son jalon de fermeture et sa
+ * franchise. Les jalons viennent du suivi transporteur ; les franchises se
+ * négocient par document — connaissement à l'import, booking à l'export.
  */
 final readonly class FreeTimeTracker
 {
-    /** Événement DCSA ouvrant puis fermant le décompte, par sens de trafic. */
+    /**
+     * Jalons DCSA ouvrant et fermant chaque compteur, par sens.
+     *
+     * @var array<string, array<string, array{start: string, stop: string}>>
+     */
     private const METER = [
-        'import' => ['start' => 'DISC', 'stop' => 'RETU'],
-        'export' => ['start' => 'GTOT', 'stop' => 'GTIN'],
+        'demurrage' => [
+            'import' => ['start' => 'DISC', 'stop' => 'GTOT'],
+            'export' => ['start' => 'GTIN', 'stop' => 'LOAD'],
+        ],
+        'detention' => [
+            'import' => ['start' => 'GTOT', 'stop' => 'RETU'],
+            'export' => ['start' => 'GTOT', 'stop' => 'GTIN'],
+        ],
     ];
 
     /** Colonne d'horodatage de l'affectation, par code DCSA. */
@@ -42,10 +50,13 @@ final readonly class FreeTimeTracker
         'RETU' => 'returned_at',
     ];
 
+    /** @var list<string> */
+    public const KINDS = ['demurrage', 'detention'];
+
     /**
-     * Reporte un jalon de suivi sur l'affectation du conteneur, puis recalcule
-     * l'échéance. Sans ce report, la franchise resterait une donnée saisie que
-     * rien ne confronte à la réalité du terrain.
+     * Reporte un jalon de suivi sur l'affectation, puis recalcule les échéances.
+     * Un même jalon peut fermer un compteur et en ouvrir un autre — la sortie du
+     * port arrête la surestarie et démarre la détention.
      */
     public function recordMilestone(string $shipmentId, ?string $containerNumber, string $dcsaCode, Carbon $occurredAt): void
     {
@@ -61,8 +72,8 @@ final readonly class FreeTimeTracker
             ->get(['container_assignments.id', 'container_assignments.'.$column.' AS current']);
 
         foreach ($assignments as $assignment) {
-            // Le premier passage fait foi : un relevé rejoué ne doit pas
-            // repousser une échéance déjà courue.
+            // Le premier passage fait foi : un relevé rejoué ne repousse pas une
+            // échéance déjà courue.
             if ($assignment->current !== null) {
                 continue;
             }
@@ -70,23 +81,17 @@ final readonly class FreeTimeTracker
             DB::table('container_assignments')->where('id', $assignment->id)
                 ->update([$column => $occurredAt, 'updated_at' => now()]);
 
-            $this->refreshDeadline((string) $assignment->id);
+            $this->refreshDeadlines((string) $assignment->id);
         }
     }
 
-    /** Recalcule `free_time_ends_at` d'une affectation depuis son document. */
-    public function refreshDeadline(string $assignmentId): void
+    /** Recalcule les deux échéances d'une affectation depuis ses franchises. */
+    public function refreshDeadlines(string $assignmentId): void
     {
-        $row = DB::table('container_assignments')
-            ->join('shipments', 'shipments.id', '=', 'container_assignments.shipment_id')
-            ->where('container_assignments.id', $assignmentId)
-            ->first([
-                'container_assignments.id',
-                'container_assignments.shipment_id',
-                'container_assignments.discharged_at',
-                'container_assignments.gate_out_at',
-                'shipments.direction',
-            ]);
+        $row = DB::table('container_assignments AS ca')
+            ->join('shipments AS s', 's.id', '=', 'ca.shipment_id')
+            ->where('ca.id', $assignmentId)
+            ->first(['ca.id', 'ca.shipment_id', 'ca.discharged_at', 'ca.gate_out_at', 'ca.gate_in_at', 'ca.loaded_at', 's.direction']);
 
         if ($row === null) {
             return;
@@ -94,53 +99,63 @@ final readonly class FreeTimeTracker
 
         $direction = $row->direction === 'export' ? 'export' : 'import';
         $days = $this->freeTimeDaysOf($row->shipment_id, $direction);
-        $startedAt = $row->{self::startColumn($direction)};
 
-        DB::table('container_assignments')->where('id', $row->id)->update([
-            'free_time_days' => $days,
-            'free_time_ends_at' => $days === null || $startedAt === null
+        $update = ['updated_at' => now()];
+        foreach (self::KINDS as $kind) {
+            $startColumn = self::MILESTONE_COLUMNS[self::METER[$kind][$direction]['start']];
+            $startedAt = $row->{$startColumn} ?? null;
+            $free = $days[$kind];
+
+            $update["{$kind}_days"] = $free;
+            $update["{$kind}_ends_at"] = $free === null || $startedAt === null
                 ? null
-                : Carbon::parse($startedAt)->addDays($days),
-            'updated_at' => now(),
-        ]);
+                : Carbon::parse($startedAt)->addDays($free);
+        }
+
+        DB::table('container_assignments')->where('id', $row->id)->update($update);
     }
 
     /**
-     * Franchise du document porteur : le connaissement maître à l'import, le
-     * booking à l'export — c'est là qu'elle se négocie.
+     * Franchises du document porteur — connaissement maître à l'import, booking
+     * à l'export.
+     *
+     * @return array{demurrage: ?int, detention: ?int}
      */
-    public function freeTimeDaysOf(string $shipmentId, string $direction): ?int
+    public function freeTimeDaysOf(string $shipmentId, string $direction): array
     {
-        $days = $direction === 'export'
+        $row = $direction === 'export'
             ? DB::table('bookings')->where('shipment_id', $shipmentId)
-                ->orderByDesc('created_at')->value('free_time_days')
+                ->orderByDesc('created_at')->first(['demurrage_free_days', 'detention_free_days'])
             : DB::table('bills_of_lading')->where('shipment_id', $shipmentId)
-                ->where('type', 'master')->orderByDesc('created_at')->value('free_time_days');
+                ->where('type', 'master')->orderByDesc('created_at')->first(['demurrage_free_days', 'detention_free_days']);
 
-        return $days === null ? null : (int) $days;
+        return [
+            'demurrage' => $row?->demurrage_free_days === null ? null : (int) $row->demurrage_free_days,
+            'detention' => $row?->detention_free_days === null ? null : (int) $row->detention_free_days,
+        ];
     }
 
-    /** Colonne ouvrant le décompte : déchargement à l'import, sortie du vide à l'export. */
-    public static function startColumn(string $direction): string
+    /** Colonne ouvrant un compteur, par sens. */
+    public static function startColumn(string $kind, string $direction): string
     {
-        return self::MILESTONE_COLUMNS[self::METER[$direction === 'export' ? 'export' : 'import']['start']];
+        return self::MILESTONE_COLUMNS[self::METER[$kind][$direction === 'export' ? 'export' : 'import']['start']];
     }
 
     /**
-     * Colonne fermant le décompte. Tant qu'elle est nulle, le conteneur est
-     * encore chez le client et la franchise continue de courir.
+     * Colonne fermant un compteur, par sens. Tant qu'elle est nulle, le compteur
+     * court encore.
      */
-    public static function stopColumn(string $direction): string
+    public static function stopColumn(string $kind, string $direction): string
     {
-        return self::MILESTONE_COLUMNS[self::METER[$direction === 'export' ? 'export' : 'import']['stop']];
+        return self::MILESTONE_COLUMNS[self::METER[$kind][$direction === 'export' ? 'export' : 'import']['stop']];
     }
 
-    /** Recalcule tout un dossier — appelé quand la franchise du document change. */
+    /** Recalcule tout un dossier — appelé quand une franchise change. */
     public function refreshShipment(string $shipmentId): int
     {
         $ids = DB::table('container_assignments')->where('shipment_id', $shipmentId)->pluck('id');
         foreach ($ids as $id) {
-            $this->refreshDeadline((string) $id);
+            $this->refreshDeadlines((string) $id);
         }
 
         return $ids->count();

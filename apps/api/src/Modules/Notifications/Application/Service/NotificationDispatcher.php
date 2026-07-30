@@ -26,7 +26,8 @@ final class NotificationDispatcher
         'customs' => ['Dédouanement en cours — dossier {{reference}}', "Le dédouanement de votre expédition {{reference}} a démarré.\nDes documents complémentaires pourront vous être demandés."],
         'delay' => ['Retard détecté — dossier {{reference}}', "Un retard d'environ {{delay_hours}} h a été détecté sur votre expédition {{reference}}.\nNouvelle ETA estimée : {{eta}}."],
         'delivery' => ['Livraison — dossier {{reference}}', 'Votre expédition {{reference}} est en cours de livraison.'],
-        'demurrage_warning' => ['Franchise conteneur — dossier {{reference}}', "La franchise du conteneur {{container_number}} (dossier {{reference}}) expire le {{free_time_ends_at}}.\nPassé cette date, la compagnie facture l'immobilisation par jour entamé."],
+        'demurrage_warning' => ['Surestaries — dossier {{reference}}', "La franchise de surestaries du conteneur {{container_number}} (dossier {{reference}}) expire le {{free_time_ends_at}}.\nPassé cette date, la compagnie facture l'immobilisation au terminal, par jour entamé — sortez le conteneur du port avant."],
+        'detention_warning' => ['Détention — dossier {{reference}}', "La franchise de détention du conteneur {{container_number}} (dossier {{reference}}) expire le {{free_time_ends_at}}.\nPassé cette date, la compagnie facture la rétention du conteneur, par jour entamé — restituez-le à vide avant."],
         'invoice_available' => ['Facture disponible — {{invoice_number}}', "Votre facture {{invoice_number}} ({{total}} {{currency}}) est disponible dans votre espace client.\nDossier concerné : {{reference}}."],
     ];
 

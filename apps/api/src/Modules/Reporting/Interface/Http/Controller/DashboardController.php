@@ -69,13 +69,14 @@ class DashboardController
         // ——— Alertes ———
         $alerts = [];
 
-        foreach (DB::table('v_demurrage_alerts')->where('tenant_id', $tenantId)->where('days_remaining', '<=', 3)->limit(5)->get() as $row) {
+        foreach (DB::table('v_demurrage_alerts')->where('tenant_id', $tenantId)->where('days_remaining', '<=', 3)->orderBy('days_remaining')->limit(5)->get() as $row) {
             $reference = DB::table('shipments')->where('id', $row->shipment_id)->value('reference');
+            $label = ($row->kind ?? 'demurrage') === 'detention' ? 'Détention' : 'Surestaries';
             $alerts[] = [
                 'severity' => $row->days_remaining < 0 ? 'critical' : 'warning',
                 'title' => $row->days_remaining < 0
-                    ? "Franchise surestaries dépassée ({$row->container_number})"
-                    : "Franchise surestaries expire dans {$row->days_remaining} j ({$row->container_number})",
+                    ? "{$label} dépassée ({$row->container_number})"
+                    : "{$label} — franchise expire dans {$row->days_remaining} j ({$row->container_number})",
                 'context' => $reference,
                 'shipment_id' => $row->shipment_id,
             ];

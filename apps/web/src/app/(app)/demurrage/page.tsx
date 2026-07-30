@@ -7,6 +7,7 @@ import { rawApi } from "@/lib/api";
 
 interface DemurrageRow {
   assignment_id: string;
+  kind: "demurrage" | "detention";
   container_number: string;
   size_type: string | null;
   shipment_id: string;
@@ -18,6 +19,13 @@ interface DemurrageRow {
   days_remaining: number;
   severity: "overdue" | "critical" | "warning";
 }
+
+// Surestarie = conteneur au terminal ; détention = conteneur chez le client.
+// Deux immobilisations distinctes, deux factures.
+const KIND: Record<string, { label: string; badge: string }> = {
+  demurrage: { label: "Surestaries", badge: "bg-sea-soft text-sea" },
+  detention: { label: "Détention", badge: "bg-warn-soft text-warn" },
+};
 
 const SEVERITY: Record<string, { badge: string; label: (days: number) => string }> = {
   overdue: {
@@ -58,9 +66,9 @@ export default function DemurragePage() {
     <div className="flex flex-col gap-4">
       <div className="flex items-start">
         <div>
-          <h1 className="text-xl font-bold">Surestaries</h1>
+          <h1 className="text-xl font-bold">Surestaries &amp; détention</h1>
           <p className="text-[13px] text-ink-3">
-            Conteneurs dont la franchise expire — au-delà, la compagnie facture chaque jour entamé.
+            Franchises qui expirent — surestaries au terminal, détention chez le client. Au-delà, la compagnie facture chaque jour entamé.
           </p>
         </div>
         <select
@@ -93,6 +101,7 @@ export default function DemurragePage() {
           <thead>
             <tr className="border-b border-line text-left text-[10px] uppercase tracking-wider text-ink-3">
               <th className="px-3 py-2.5">Conteneur</th>
+              <th className="px-3 py-2.5">Type</th>
               <th className="px-3 py-2.5">Dossier</th>
               <th className="px-3 py-2.5">Client</th>
               <th className="px-3 py-2.5">Sens</th>
@@ -103,20 +112,25 @@ export default function DemurragePage() {
           </thead>
           <tbody>
             {isLoading && (
-              <tr><td colSpan={7} className="px-3 py-8 text-center text-ink-3">Chargement…</td></tr>
+              <tr><td colSpan={8} className="px-3 py-8 text-center text-ink-3">Chargement…</td></tr>
             )}
             {!isLoading && rows.length === 0 && (
               <tr>
-                <td colSpan={7} className="px-3 py-8 text-center text-ink-3">
+                <td colSpan={8} className="px-3 py-8 text-center text-ink-3">
                   Aucune franchise à échéance sur cette période.
                 </td>
               </tr>
             )}
             {rows.map((row) => (
-              <tr key={row.assignment_id} className="border-b border-line last:border-0 hover:bg-sea/5">
+              <tr key={`${row.kind}-${row.assignment_id}`} className="border-b border-line last:border-0 hover:bg-sea/5">
                 <td className="mono px-3 py-2.5 font-semibold">
                   {row.container_number}
                   {row.size_type && <span className="ml-1.5 text-[11px] font-normal text-ink-3">{row.size_type}</span>}
+                </td>
+                <td className="px-3 py-2.5">
+                  <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${KIND[row.kind]?.badge ?? ""}`}>
+                    {KIND[row.kind]?.label ?? row.kind}
+                  </span>
                 </td>
                 <td className="px-3 py-2.5">
                   <Link href={`/shipments/${row.shipment_id}`} className="mono font-semibold text-sea hover:underline">

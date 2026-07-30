@@ -339,7 +339,8 @@ class DemoTenantSeeder extends Seeder
                 'id' => $this->uuid(), 'tenant_id' => $this->tenantId, 'container_id' => $containerId,
                 'shipment_id' => $s1, 'booking_id' => $booking, 'seal_number' => $seal,
                 'vgm_kg' => $vgm, 'vgm_verified_at' => '2026-06-30 15:00:00+00',
-                'free_time_days' => 14, 'gate_in_at' => '2026-07-01 08:14:00+00', 'loaded_at' => '2026-07-04 19:20:00+00',
+                // Franchises portées par le connaissement, échéances déduites.
+                'gate_in_at' => '2026-07-01 08:14:00+00', 'loaded_at' => '2026-07-04 19:20:00+00',
                 'created_at' => $now, 'updated_at' => $now,
             ]);
         }
@@ -349,6 +350,7 @@ class DemoTenantSeeder extends Seeder
         DB::table('bills_of_lading')->insert([
             'id' => $mbl, 'tenant_id' => $this->tenantId, 'shipment_id' => $s1, 'type' => 'master',
             'number' => 'MEDUJ2260417', 'release_type' => 'seaway', 'status' => 'issued',
+            'demurrage_free_days' => 7, 'detention_free_days' => 14,
             'shipper' => json_encode(['name' => 'Foshan Ceramics Export Co.', 'city' => 'Foshan', 'country' => 'CN']),
             'consignee' => json_encode(['name' => 'TransAfrica Logistics SA', 'city' => 'Abidjan', 'country' => 'CI']),
             'notify_party' => json_encode(['name' => 'TransAfrica Logistics SA']),

@@ -38,53 +38,57 @@ class AlertFreeTime extends Command
         foreach (DB::table('tenants')->pluck('id') as $tenantId) {
             $tenant->set((string) $tenantId);
 
-            $rows = DB::table('container_assignments AS ca')
-                ->join('containers AS c', 'c.id', '=', 'ca.container_id')
-                ->join('shipments AS s', 's.id', '=', 'ca.shipment_id')
-                ->whereNotNull('ca.free_time_ends_at')
-                ->where(fn ($query) => $query
-                    ->where(fn ($import) => $import->where('s.direction', '<>', 'export')
-                        ->whereNull('ca.'.FreeTimeTracker::stopColumn('import')))
-                    ->orWhere(fn ($export) => $export->where('s.direction', 'export')
-                        ->whereNull('ca.'.FreeTimeTracker::stopColumn('export'))))
-                ->where('ca.free_time_ends_at', '<=', $today->copy()->addDays($notice)->endOfDay())
-                ->get([
-                    'ca.id', 'ca.free_time_ends_at', 'c.number AS container_number',
-                    's.id AS shipment_id', 's.reference', 's.client_id',
-                ]);
+            foreach (FreeTimeTracker::KINDS as $kind) {
+                $endsAt = "ca.{$kind}_ends_at";
 
-            foreach ($rows as $row) {
-                $deadline = Carbon::parse($row->free_time_ends_at)->startOfDay();
-                $remaining = (int) $today->diffInDays($deadline, false);
+                $rows = DB::table('container_assignments AS ca')
+                    ->join('containers AS c', 'c.id', '=', 'ca.container_id')
+                    ->join('shipments AS s', 's.id', '=', 'ca.shipment_id')
+                    ->whereNotNull($endsAt)
+                    ->where(fn ($query) => $query
+                        ->where(fn ($import) => $import->where('s.direction', '<>', 'export')
+                            ->whereNull('ca.'.FreeTimeTracker::stopColumn($kind, 'import')))
+                        ->orWhere(fn ($export) => $export->where('s.direction', 'export')
+                            ->whereNull('ca.'.FreeTimeTracker::stopColumn($kind, 'export'))))
+                    ->where($endsAt, '<=', $today->copy()->addDays($notice)->endOfDay())
+                    ->get([
+                        'ca.id', "{$endsAt} AS ends_at", 'c.number AS container_number',
+                        's.id AS shipment_id', 's.reference', 's.client_id',
+                    ]);
 
-                // Une seule alerte par palier : sans cela, un conteneur en
-                // dépassement en enverrait une chaque jour jusqu'à sa
-                // restitution, et plus personne ne les lirait.
-                $stage = $remaining < 0 ? 'overdue' : ($remaining === 0 ? 'today' : 'notice');
-                $marker = "demurrage:{$row->id}:{$stage}";
-                $alreadyAlerted = DB::table('shipment_events')
-                    ->where('tenant_id', $tenantId)
-                    ->where('type', 'system')
-                    ->whereRaw("payload->>'marker' = ?", [$marker])
-                    ->exists();
+                foreach ($rows as $row) {
+                    $deadline = Carbon::parse($row->ends_at)->startOfDay();
+                    $remaining = (int) $today->diffInDays($deadline, false);
 
-                if ($alreadyAlerted) {
-                    continue;
+                    // Une seule alerte par compteur et par palier : sans cela, un
+                    // conteneur en dépassement en enverrait une chaque jour, et
+                    // plus personne ne les lirait.
+                    $stage = $remaining < 0 ? 'overdue' : ($remaining === 0 ? 'today' : 'notice');
+                    $marker = "{$kind}:{$row->id}:{$stage}";
+                    $alreadyAlerted = DB::table('shipment_events')
+                        ->where('tenant_id', $tenantId)
+                        ->where('type', 'system')
+                        ->whereRaw("payload->>'marker' = ?", [$marker])
+                        ->exists();
+
+                    if ($alreadyAlerted) {
+                        continue;
+                    }
+
+                    $variables = [
+                        'reference' => $row->reference,
+                        'container_number' => $row->container_number,
+                        'free_time_ends_at' => $deadline->format('d/m/Y'),
+                        'days_remaining' => $remaining,
+                    ];
+
+                    $dispatcher->dispatchToClient(
+                        (string) $tenantId, "{$kind}_warning", $row->shipment_id, $row->client_id, $variables,
+                    );
+                    $this->recordInternal((string) $tenantId, $kind, $row, $variables, $marker);
+
+                    $sent++;
                 }
-
-                $variables = [
-                    'reference' => $row->reference,
-                    'container_number' => $row->container_number,
-                    'free_time_ends_at' => $deadline->format('d/m/Y'),
-                    'days_remaining' => $remaining,
-                ];
-
-                $dispatcher->dispatchToClient(
-                    (string) $tenantId, 'demurrage_warning', $row->shipment_id, $row->client_id, $variables,
-                );
-                $this->recordInternal((string) $tenantId, $row, $variables, $marker);
-
-                $sent++;
             }
         }
 
@@ -99,12 +103,13 @@ class AlertFreeTime extends Command
      *
      * @param  array<string, string|int>  $variables
      */
-    private function recordInternal(string $tenantId, object $row, array $variables, string $marker): void
+    private function recordInternal(string $tenantId, string $kind, object $row, array $variables, string $marker): void
     {
+        $label = $kind === 'demurrage' ? 'Surestaries' : 'Détention';
         $late = $variables['days_remaining'] < 0;
         $title = $late
-            ? "Surestaries en cours — {$row->container_number} ({$variables['days_remaining']} j)"
-            : "Franchise expire le {$variables['free_time_ends_at']} — {$row->container_number}";
+            ? "{$label} en cours — {$row->container_number} ({$variables['days_remaining']} j)"
+            : "{$label} — franchise expire le {$variables['free_time_ends_at']} — {$row->container_number}";
 
         DB::table('shipment_events')->insert([
             'id' => (string) Str::uuid7(),
