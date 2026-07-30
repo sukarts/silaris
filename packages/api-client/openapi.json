@@ -9920,6 +9920,44 @@
                 }
             }
         },
+        "/v1/service-catalog": {
+            "get": {
+                "operationId": "serviceCatalog.index",
+                "summary": "GET /v1/service-catalog \u2014 postes actifs, ordonn\u00e9s, par famille et p\u00e9rim\u00e8tre",
+                "tags": [
+                    "ServiceCatalog"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "type": "object"
+                                            }
+                                        }
+                                    },
+                                    "required": [
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/AuthorizationException"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            }
+        },
         "/v1/shipments": {
             "get": {
                 "operationId": "shipment.index",
