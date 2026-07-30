@@ -810,6 +810,28 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/invoices/{invoiceId}/fne-certify": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * POST /v1/invoices/{id}/fne-certify — fait certifier la facture par la DGI
+         * @description Le taux de change n'est exigé que pour une facture en devise étrangère
+         *     (B2F) ; ailleurs il est ignoré. La facture doit être validée : on ne
+         *     certifie pas un brouillon.
+         */
+        post: operations["invoice.certifyFne"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/tax-rates": {
         parameters: {
             query?: never;
@@ -2560,6 +2582,8 @@ export interface components {
             /** Format: date-time */
             updated_at: string | null;
             shipment_settings: unknown[];
+            fne_settings: unknown[];
+            fne_api_key_set: string;
         };
         /** ComplaintModel */
         ComplaintModel: {
@@ -2726,6 +2750,13 @@ export interface components {
             created_at: string | null;
             /** Format: date-time */
             updated_at: string | null;
+            fne_reference: string | null;
+            fne_token: string | null;
+            fne_balance_sticker: number | null;
+            fne_template: string | null;
+            fne_seller_name: string | null;
+            /** Format: date-time */
+            fne_certified_at: string | null;
         };
         /** LengthAwarePaginator */
         LengthAwarePaginator: {
@@ -2867,6 +2898,8 @@ export interface components {
             updated_at: string | null;
             kind: string;
             industry: string | null;
+            ncc: string | null;
+            tax_regime: string | null;
         };
         /** PaymentModel */
         PaymentModel: {
@@ -4965,6 +4998,36 @@ export interface operations {
             422: components["responses"]["ValidationException"];
         };
     };
+    "invoice.certifyFne": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                invoiceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": {
+                    foreign_currency_rate?: number | null;
+                };
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InvoiceModel"];
+                };
+            };
+            401: components["responses"]["AuthenticationException"];
+            403: components["responses"]["AuthorizationException"];
+            422: components["responses"]["ValidationException"];
+        };
+    };
     "invoice.taxRates": {
         parameters: {
             query?: never;
@@ -5470,6 +5533,20 @@ export interface operations {
                         reference_prefix?: string | null;
                     };
                     is_active?: boolean;
+                    /**
+                     * @description Identifiants FNE de la société. La clé d'API n'est acceptée que si
+                     *     elle est fournie — omise, elle reste inchangée ; elle ne ressort
+                     *     jamais (chiffrée et masquée à la sérialisation).
+                     */
+                    fne_settings?: {
+                        ncc?: string | null;
+                        point_of_sale?: string | null;
+                        establishment?: string | null;
+                        regime?: string | null;
+                        tax_center?: string | null;
+                        enabled?: boolean;
+                    };
+                    fne_api_key?: string | null;
                 };
             };
         };

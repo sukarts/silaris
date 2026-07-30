@@ -18,6 +18,7 @@ interface Invoice {
   total_incl_tax: string;
   issue_date: string | null;
   due_date: string | null;
+  fne_reference: string | null;
   party: { name: string };
   shipment: { reference: string } | null;
 }
@@ -40,6 +41,7 @@ export default function BillingPage() {
   const queryClient = useQueryClient();
   const canValidate = useCan("invoices.validate");
   const canCreate = useCan("invoices.create");
+  const canCertify = useCan("invoices.certify_fne");
   const [error, setError] = useState<string | null>(null);
 
   const { data, isLoading } = useQuery({
@@ -53,6 +55,26 @@ export default function BillingPage() {
   const validate = useMutation({
     mutationFn: async (invoiceId: string) => {
       const { error: problem } = await rawApi.POST(`/v1/invoices/${invoiceId}/validate`);
+      if (problem) throw problem;
+    },
+    onSuccess: () => {
+      setError(null);
+      queryClient.invalidateQueries({ queryKey: ["invoices"] });
+    },
+    onError: (problem) => setError(problemMessage(problem)),
+  });
+
+  // Certification FNE : une facture en devise étrangère (B2F) exige le taux de
+  // change ; on le demande à ce moment plutôt que de le stocker à l'avance.
+  const certify = useMutation({
+    mutationFn: async (invoice: Invoice) => {
+      let body: Record<string, unknown> | undefined;
+      if (invoice.currency_code !== "XOF") {
+        const rate = window.prompt(`Taux de change ${invoice.currency_code} → XOF pour la DGI :`);
+        if (rate === null) return;
+        body = { foreign_currency_rate: Number(rate) };
+      }
+      const { error: problem } = await rawApi.POST(`/v1/invoices/${invoice.id}/fne-certify`, body ? { body } : undefined);
       if (problem) throw problem;
     },
     onSuccess: () => {
@@ -125,6 +147,22 @@ export default function BillingPage() {
                         >
                           Valider →
                         </button>
+                      )}
+                      {/* La certification n'a de sens qu'une fois la facture
+                          validée, et une seule fois : le sceau la fige. */}
+                      {invoice.status !== "draft" && invoice.type !== "proforma" && !invoice.fne_reference && canCertify && (
+                        <button
+                          onClick={() => certify.mutate(invoice)}
+                          disabled={certify.isPending}
+                          className="text-xs font-semibold text-sea hover:underline"
+                        >
+                          Certifier FNE
+                        </button>
+                      )}
+                      {invoice.fne_reference && (
+                        <span className="text-xs font-semibold text-ok" title={`Numéro fiscal ${invoice.fne_reference}`}>
+                          ✓ FNE
+                        </span>
                       )}
                       <button
                         onClick={() => downloadFile(`/v1/invoices/${invoice.id}/pdf`, "facture.pdf").catch(() => undefined)}

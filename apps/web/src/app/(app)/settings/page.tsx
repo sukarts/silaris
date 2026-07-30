@@ -31,6 +31,10 @@ interface Company {
   address: { line1?: string; city?: string; country?: string } | null;
   invoice_settings: { number_format?: string; footer?: string } | null;
   shipment_settings: { reference_format?: string; reference_prefix?: string } | null;
+  // La clé d'API n'est jamais renvoyée (chiffrée, masquée) ; on sait seulement
+  // si elle est posée, pour l'afficher comme configurée sans la révéler.
+  fne_settings: { ncc?: string; point_of_sale?: string; establishment?: string; regime?: string; tax_center?: string; enabled?: boolean } | null;
+  fne_api_key_set?: boolean;
   logo_document_id: string | null;
   branches: Branch[];
 }
@@ -75,6 +79,13 @@ function CompanyTab({ company, canUpdate }: { company: Company; canUpdate: boole
     reference_prefix: company.shipment_settings?.reference_prefix ?? company.code,
     invoice_format: company.invoice_settings?.number_format ?? "F-{YEAR}-{SEQ:4}",
     footer: company.invoice_settings?.footer ?? "",
+    fne_ncc: company.fne_settings?.ncc ?? "",
+    fne_point_of_sale: company.fne_settings?.point_of_sale ?? "",
+    fne_establishment: company.fne_settings?.establishment ?? "",
+    fne_regime: company.fne_settings?.regime ?? "",
+    fne_tax_center: company.fne_settings?.tax_center ?? "",
+    fne_enabled: company.fne_settings?.enabled ?? false,
+    fne_api_key: "", // Saisie seulement pour (re)poser la clé ; jamais préremplie.
   });
   const [preview, setPreview] = useState<{ import: string; export: string } | null>(null);
   const [message, setMessage] = useState<string | null>(null);
@@ -107,6 +118,16 @@ function CompanyTab({ company, canUpdate }: { company: Company; canUpdate: boole
           address: { line1: form.line1, city: form.city, country: form.country },
           invoice_settings: { ...company.invoice_settings, number_format: form.invoice_format, footer: form.footer },
           shipment_settings: { reference_format: form.reference_format, reference_prefix: form.reference_prefix },
+          fne_settings: {
+            ncc: form.fne_ncc || null,
+            point_of_sale: form.fne_point_of_sale || null,
+            establishment: form.fne_establishment || null,
+            regime: form.fne_regime || null,
+            tax_center: form.fne_tax_center || null,
+            enabled: form.fne_enabled,
+          },
+          // Clé transmise seulement si saisie : vide, on ne l'écrase pas.
+          ...(form.fne_api_key ? { fne_api_key: form.fne_api_key } : {}),
         },
       });
       if (problem) throw problem;
@@ -236,6 +257,44 @@ function CompanyTab({ company, canUpdate }: { company: Company; canUpdate: boole
               )}
             </div>
           </div>
+        </div>
+      </section>
+
+      <section className="rounded-xl border border-line bg-surface p-5 shadow-sm">
+        <div className="flex items-center gap-3 pb-1">
+          <h2 className="text-sm font-bold">Facture Normalisée Électronique (DGI)</h2>
+          <label className="ml-auto flex items-center gap-2 text-[12px] text-ink-2">
+            <input type="checkbox" checked={form.fne_enabled} disabled={!canUpdate}
+              onChange={(e) => setForm({ ...form, fne_enabled: e.target.checked })} />
+            Certification active
+          </label>
+        </div>
+        <p className="pb-4 text-xs text-ink-3">
+          Identifiants d&apos;enrôlement de la société auprès de la DGI. Tant qu&apos;ils ne sont pas renseignés et la
+          certification active, les factures ne peuvent pas être certifiées.
+        </p>
+        <div className="grid gap-4 md:grid-cols-3">
+          <Field label="NCC de la société">
+            <input maxLength={32} value={form.fne_ncc} onChange={(e) => setForm({ ...form, fne_ncc: e.target.value })} disabled={!canUpdate} className={`${inputClass} mono`} />
+          </Field>
+          <Field label="Point de vente">
+            <input maxLength={64} value={form.fne_point_of_sale} onChange={(e) => setForm({ ...form, fne_point_of_sale: e.target.value })} disabled={!canUpdate} className={`${inputClass} mono`} />
+          </Field>
+          <Field label="Établissement">
+            <input maxLength={120} value={form.fne_establishment} onChange={(e) => setForm({ ...form, fne_establishment: e.target.value })} disabled={!canUpdate} className={inputClass} />
+          </Field>
+          <Field label="Régime d'imposition">
+            <input maxLength={64} value={form.fne_regime} onChange={(e) => setForm({ ...form, fne_regime: e.target.value })} disabled={!canUpdate} placeholder="Réel, Microentreprise…" className={inputClass} />
+          </Field>
+          <Field label="Centre des impôts" className="md:col-span-2">
+            <input maxLength={120} value={form.fne_tax_center} onChange={(e) => setForm({ ...form, fne_tax_center: e.target.value })} disabled={!canUpdate} placeholder="947 Impôts des II Plateaux Djibi" className={inputClass} />
+          </Field>
+          <Field label="Clé d'API DGI" className="md:col-span-3">
+            <input type="password" autoComplete="off" value={form.fne_api_key}
+              onChange={(e) => setForm({ ...form, fne_api_key: e.target.value })} disabled={!canUpdate}
+              placeholder={company.fne_api_key_set ? "•••••••• (configurée — saisir pour remplacer)" : "Clé délivrée par la DGI"}
+              className={`${inputClass} mono`} />
+          </Field>
         </div>
       </section>
 

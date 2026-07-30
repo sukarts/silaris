@@ -9,10 +9,12 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
+use Silaris\Modules\Billing\Application\Fne\CertifyInvoice;
 use Silaris\Modules\Billing\Domain\Event\InvoiceValidated;
 use Silaris\Modules\Billing\Infrastructure\Persistence\Model\InvoiceModel;
 use Silaris\Modules\Billing\Infrastructure\Persistence\Model\TaxRateModel;
 use Silaris\Modules\OdooSync\Application\Job\PushInvoiceToOdoo;
+use Silaris\Modules\Shared\Domain\Service\QrSvg;
 use Silaris\Modules\Shared\Infrastructure\Events\DomainEventPublisher;
 use Silaris\Modules\Shared\Infrastructure\Tenancy\TenantContext;
 use Silaris\Modules\Tenancy\Application\Service\BrandingResolver;
@@ -127,6 +129,27 @@ class InvoiceController
         });
 
         return response()->json($invoice->fresh('lines'), 201);
+    }
+
+    /**
+     * POST /v1/invoices/{id}/fne-certify — fait certifier la facture par la DGI.
+     *
+     * Le taux de change n'est exigé que pour une facture en devise étrangère
+     * (B2F) ; ailleurs il est ignoré. La facture doit être validée : on ne
+     * certifie pas un brouillon.
+     */
+    public function certifyFne(Request $request, string $invoiceId, CertifyInvoice $certifier): JsonResponse
+    {
+        $invoice = InvoiceModel::findOrFail($invoiceId);
+        $rate = $request->validate([
+            'foreign_currency_rate' => ['nullable', 'numeric', 'gt:0'],
+        ])['foreign_currency_rate'] ?? null;
+
+        // Le vendeur porté sur la facture normalisée est celui qui la certifie.
+        $user = $request->user();
+        $sellerName = $user !== null ? trim("{$user->first_name} {$user->last_name}") : null;
+
+        return response()->json($certifier->certify($invoice, $rate !== null ? (float) $rate : null, $sellerName ?: null));
     }
 
     /** GET /v1/tax-rates — barème actif, pour le choix de la TVA à la ligne. */
@@ -280,8 +303,14 @@ class InvoiceController
     /** GET /v1/invoices/{id}/pdf — document imprimable (facture, proforma ou avoir). */
     public function pdf(string $invoiceId): Response
     {
-        $invoice = InvoiceModel::with(['lines', 'party', 'shipment'])->findOrFail($invoiceId);
+        $invoice = InvoiceModel::with(['lines', 'party.contacts', 'shipment'])->findOrFail($invoiceId);
         $company = CompanyModel::findOrFail($invoice->company_id);
+
+        // Facture d'origine d'un avoir : la facture normalisée d'avoir rappelle
+        // le numéro fiscal de la facture qu'elle corrige.
+        $originalFne = $invoice->original_invoice_id !== null
+            ? InvoiceModel::where('id', $invoice->original_invoice_id)->value('fne_reference')
+            : null;
 
         $prefix = match ($invoice->type) {
             'credit_note' => 'avoir',
@@ -290,6 +319,22 @@ class InvoiceController
         };
         $name = $prefix.'-'.($invoice->number ?? 'brouillon-'.substr($invoice->id, 0, 8)).'.pdf';
 
-        return Pdf::loadView('pdf.invoice', ['invoice' => $invoice, 'company' => $company, 'logo' => app(BrandingResolver::class)->logoDataUri($company)])->download($name);
+        // QR de certification : la douane le scanne pour vérifier la facture
+        // auprès de la DGI. Il n'existe qu'une fois la facture certifiée.
+        $fneQr = ($invoice->fne_token ?? '') !== '' ? QrSvg::dataUri((string) $invoice->fne_token) : null;
+
+        // Taux par ligne, pour la colonne Taxes de la facture normalisée —
+        // résolus en une requête plutôt qu'une par ligne.
+        $taxRates = TaxRateModel::whereIn('id', $invoice->lines->pluck('tax_rate_id')->filter()->all())
+            ->pluck('rate_percent', 'id');
+
+        return Pdf::loadView('pdf.invoice', [
+            'invoice' => $invoice,
+            'company' => $company,
+            'logo' => app(BrandingResolver::class)->logoDataUri($company),
+            'fneQr' => $fneQr,
+            'originalFne' => $originalFne,
+            'taxRates' => $taxRates,
+        ])->download($name);
     }
 }

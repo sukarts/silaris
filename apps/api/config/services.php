@@ -44,4 +44,18 @@ return [
         'webhook_secret' => env('SHIPSGO_WEBHOOK_SECRET'),
     ],
 
+    // Facture Normalisée Électronique — DGI Côte d'Ivoire. La clé d'API et les
+    // identifiants (NCC, point de vente, établissement) sont propres à chaque
+    // société transitaire, stockés sur la société ; seule l'URL de la plateforme
+    // dépend de l'environnement. 'test' vise le bac à sable public de la DGI ;
+    // 'production' attend l'URL délivrée à l'enrôlement.
+    'fne' => [
+        'env' => env('FNE_ENV', 'test'),
+        'base_url' => [
+            'test' => env('FNE_TEST_URL', 'http://54.247.95.108/ws'),
+            'production' => env('FNE_PRODUCTION_URL', ''),
+        ],
+        'timeout' => (int) env('FNE_TIMEOUT', 20),
+    ],
+
 ];

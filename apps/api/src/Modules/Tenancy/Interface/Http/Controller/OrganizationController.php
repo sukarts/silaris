@@ -54,6 +54,17 @@ class OrganizationController
             'shipment_settings.reference_format' => ['sometimes', 'nullable', 'string', 'max:64', 'regex:/\\{SEQ:[1-9]\\}/'],
             'shipment_settings.reference_prefix' => ['sometimes', 'nullable', 'string', 'max:16'],
             'is_active' => ['sometimes', 'boolean'],
+            // Identifiants FNE de la société. La clé d'API n'est acceptée que si
+            // elle est fournie — omise, elle reste inchangée ; elle ne ressort
+            // jamais (chiffrée et masquée à la sérialisation).
+            'fne_settings' => ['sometimes', 'array'],
+            'fne_settings.ncc' => ['sometimes', 'nullable', 'string', 'max:32'],
+            'fne_settings.point_of_sale' => ['sometimes', 'nullable', 'string', 'max:64'],
+            'fne_settings.establishment' => ['sometimes', 'nullable', 'string', 'max:120'],
+            'fne_settings.regime' => ['sometimes', 'nullable', 'string', 'max:64'],
+            'fne_settings.tax_center' => ['sometimes', 'nullable', 'string', 'max:120'],
+            'fne_settings.enabled' => ['sometimes', 'boolean'],
+            'fne_api_key' => ['sometimes', 'nullable', 'string', 'max:255'],
         ]));
 
         return response()->json($company->fresh('branches'));

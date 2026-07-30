@@ -33,7 +33,7 @@ class PermissionSeeder extends Seeder
         'complaints' => ['read', 'create', 'update', 'resolve'],
         'quotes' => ['read', 'create', 'update', 'delete', 'approve', 'send', 'accept'],
         'tariffs' => ['read', 'create', 'update', 'delete', 'import'],
-        'invoices' => ['read', 'create', 'update', 'validate', 'credit', 'export', 'sync_odoo'],
+        'invoices' => ['read', 'create', 'update', 'validate', 'credit', 'export', 'sync_odoo', 'certify_fne'],
         'payments' => ['read', 'create', 'cancel'],
         'documents' => ['read', 'create', 'update', 'delete', 'download', 'archive'],
         'notifications' => ['read', 'manage_templates'],
@@ -112,7 +112,8 @@ class PermissionSeeder extends Seeder
             'reports.read',
         ]],
         'accountant' => ['label' => 'Comptable', 'perms' => [
-            'invoices.read', 'invoices.export', 'invoices.sync_odoo',
+            // Il tient les factures et les fait certifier par la DGI (FNE).
+            'invoices.read', 'invoices.export', 'invoices.sync_odoo', 'invoices.certify_fne',
             // Il encaisse et impute ; l'annulation d'un règlement déjà porté en
             // caisse relève du responsable financier.
             'payments.read', 'payments.create',
