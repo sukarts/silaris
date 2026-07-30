@@ -2,10 +2,17 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
-import { problemMessage, rawApi } from "@/lib/api";
+import { downloadFile, problemMessage, rawApi } from "@/lib/api";
 import { Field, buttonPrimary, buttonSecondary, inputClass } from "@/components/Field";
 import { PlaceCombobox } from "@/components/PlaceCombobox";
 import { useCan } from "@/stores/auth";
+
+interface Airline {
+  id: string;
+  awb_prefix: string;
+  iata: string | null;
+  name: string;
+}
 
 interface AwbLeg {
   id: string;
@@ -24,11 +31,13 @@ interface Awb {
   status: string;
   gross_weight_kg: string | null;
   volume_m3: string | null;
+  chargeable_weight_kg: string | null;
   packages_count: number | null;
   goods_description: string | null;
   issued_at: string | null;
   legs: AwbLeg[];
   shipment: { id: string; reference: string } | null;
+  airline: Airline | null;
 }
 
 const STATUS_LABEL: Record<string, string> = { draft: "Brouillon", issued: "Émise" };
@@ -41,6 +50,7 @@ const emptyForm = {
   shipment_id: "",
   type: "master",
   number: "",
+  airline_id: "",
   gross_weight_kg: "",
   volume_m3: "",
   packages_count: "",
@@ -69,6 +79,18 @@ export default function AirPage() {
     },
   });
 
+  const { data: airlines } = useQuery({
+    queryKey: ["referentials", "airlines"],
+    queryFn: async () => {
+      const referential = "airlines";
+      const { data: response } = await rawApi.GET(`/v1/referentials/${referential}`, {
+        params: { query: { per_page: 100 } },
+      });
+      return (response as { data: Airline[] } | undefined)?.data ?? [];
+    },
+    staleTime: 60 * 60 * 1000,
+  });
+
   const create = useMutation({
     mutationFn: async () => {
       const hasLeg = form.flight_number && form.origin_iata && form.destination_iata;
@@ -77,6 +99,7 @@ export default function AirPage() {
           shipment_id: form.shipment_id,
           type: form.type,
           number: form.number,
+          airline_id: form.airline_id || null,
           gross_weight_kg: form.gross_weight_kg ? Number(form.gross_weight_kg) : null,
           volume_m3: form.volume_m3 ? Number(form.volume_m3) : null,
           packages_count: form.packages_count ? Number(form.packages_count) : null,
@@ -148,6 +171,14 @@ export default function AirPage() {
           <Field label="N° AWB">
             <input required maxLength={16} value={form.number} onChange={(e) => setForm({ ...form, number: e.target.value })} className={`${inputClass} mono`} placeholder="057-12345675" />
           </Field>
+          <Field label="Compagnie">
+            <select value={form.airline_id} onChange={(e) => setForm({ ...form, airline_id: e.target.value })} className={inputClass}>
+              <option value="">—</option>
+              {(airlines ?? []).map((a) => (
+                <option key={a.id} value={a.id}>{a.awb_prefix} · {a.name}</option>
+              ))}
+            </select>
+          </Field>
           <Field label="Poids brut (kg)">
             <input type="number" min={0} step="0.01" value={form.gross_weight_kg} onChange={(e) => setForm({ ...form, gross_weight_kg: e.target.value })} className={inputClass} />
           </Field>
@@ -202,6 +233,7 @@ export default function AirPage() {
               <th className="px-3 py-2.5">Vol</th>
               <th className="px-3 py-2.5">Trajet</th>
               <th className="px-3 py-2.5 text-right">Poids (kg)</th>
+              <th className="px-3 py-2.5 text-right">Taxable (kg)</th>
               <th className="px-3 py-2.5 text-right">Colis</th>
               <th className="px-3 py-2.5">Dossier</th>
               <th className="px-3 py-2.5">Statut</th>
@@ -210,7 +242,7 @@ export default function AirPage() {
           </thead>
           <tbody>
             {isLoading && (
-              <tr><td colSpan={9} className="px-3 py-8 text-center text-ink-3">Chargement…</td></tr>
+              <tr><td colSpan={10} className="px-3 py-8 text-center text-ink-3">Chargement…</td></tr>
             )}
             {data?.data.map((awb) => {
               const legs = awb.legs ?? [];
@@ -218,7 +250,10 @@ export default function AirPage() {
               const lastLeg = legs[legs.length - 1];
               return (
                 <tr key={awb.id} className="border-b border-line last:border-0 hover:bg-sea/5">
-                  <td className="mono px-3 py-2.5 font-semibold text-sea">{awb.number}</td>
+                  <td className="mono px-3 py-2.5 font-semibold text-sea">
+                    {awb.number}
+                    {awb.airline && <span className="mono block text-[11px] font-normal text-ink-3">{awb.airline.name}</span>}
+                  </td>
                   <td className="px-3 py-2.5 text-ink-2">{awb.type === "master" ? "Master" : "House"}</td>
                   <td className="mono px-3 py-2.5">{firstLeg?.flight_number ?? "—"}</td>
                   <td className="mono px-3 py-2.5">
@@ -226,6 +261,9 @@ export default function AirPage() {
                   </td>
                   <td className="mono px-3 py-2.5 text-right">
                     {awb.gross_weight_kg != null ? Number(awb.gross_weight_kg).toLocaleString("fr-FR") : "—"}
+                  </td>
+                  <td className="mono px-3 py-2.5 text-right font-semibold">
+                    {awb.chargeable_weight_kg != null ? Number(awb.chargeable_weight_kg).toLocaleString("fr-FR", { maximumFractionDigits: 1 }) : "—"}
                   </td>
                   <td className="mono px-3 py-2.5 text-right">{awb.packages_count ?? "—"}</td>
                   <td className="mono px-3 py-2.5 text-ink-2">{awb.shipment?.reference ?? "—"}</td>
@@ -235,15 +273,23 @@ export default function AirPage() {
                     </span>
                   </td>
                   <td className="px-3 py-2.5">
-                    {awb.status === "draft" && canIssue && (
+                    <div className="flex items-center justify-end gap-3">
                       <button
-                        onClick={() => issue.mutate(awb.id)}
-                        disabled={issue.isPending}
+                        onClick={() => downloadFile(`/v1/air-waybills/${awb.id}/lta`, `lta-${awb.number}.pdf`).catch(() => setError("LTA indisponible."))}
                         className="text-xs font-semibold text-sea hover:underline"
                       >
-                        Émettre →
+                        LTA
                       </button>
-                    )}
+                      {awb.status === "draft" && canIssue && (
+                        <button
+                          onClick={() => issue.mutate(awb.id)}
+                          disabled={issue.isPending}
+                          className="text-xs font-semibold text-sea hover:underline"
+                        >
+                          Émettre →
+                        </button>
+                      )}
+                    </div>
                   </td>
                 </tr>
               );

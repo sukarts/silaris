@@ -93,6 +93,43 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/air-waybills/{awbId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["airWaybill.show"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/air-waybills/{awbId}/lta": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * GET /v1/air-waybills/{id}/lta — la lettre de transport aérien en PDF, à
+         *     remettre à la compagnie et à joindre au dossier. Disponible dès le
+         *     brouillon (marquée « proforma »), définitive une fois émise
+         */
+        get: operations["airWaybill.lta"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/air-waybills/{awbId}/issue": {
         parameters: {
             query?: never;
@@ -3399,6 +3436,53 @@ export interface operations {
             401: components["responses"]["AuthenticationException"];
             403: components["responses"]["AuthorizationException"];
             422: components["responses"]["ValidationException"];
+        };
+    };
+    "airWaybill.show": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                awbId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": string;
+                };
+            };
+            401: components["responses"]["AuthenticationException"];
+            403: components["responses"]["AuthorizationException"];
+            404: components["responses"]["ModelNotFoundException"];
+        };
+    };
+    "airWaybill.lta": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                awbId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": Record<string, never>;
+                };
+            };
+            401: components["responses"]["AuthenticationException"];
+            403: components["responses"]["AuthorizationException"];
         };
     };
     "airWaybill.issue": {
