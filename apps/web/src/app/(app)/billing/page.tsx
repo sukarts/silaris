@@ -19,16 +19,22 @@ interface Invoice {
   issue_date: string | null;
   due_date: string | null;
   fne_reference: string | null;
+  accounting_export_status: string;
   party: { name: string };
   shipment: { reference: string } | null;
 }
 
 const TYPE_LABEL: Record<string, string> = { proforma: "Proforma", invoice: "Facture", credit_note: "Avoir" };
+// Le statut ne décrit plus que la facture elle-même — l'export comptable est
+// un état à part, montré seulement quand une comptabilité tierce est branchée.
 const STATUS_TONE: Record<string, string> = {
   draft: "bg-paper text-ink-3",
   validated: "bg-sea-soft text-sea",
-  synced: "bg-ok-soft text-ok",
-  sync_failed: "bg-crit-soft text-crit",
+};
+const EXPORT_BADGE: Record<string, [string, string]> = {
+  pending: ["Compta ⋯", "bg-warn-soft text-warn"],
+  exported: ["Compta ✓", "bg-ok-soft text-ok"],
+  failed: ["Compta ⚠", "bg-crit-soft text-crit"],
 };
 const PAYMENT_LABEL: Record<string, [string, string]> = {
   none: ["—", "text-ink-3"],
@@ -125,9 +131,17 @@ export default function BillingPage() {
                   <td className="px-3 py-2.5">{invoice.party.name}</td>
                   <td className="mono px-3 py-2.5 text-ink-2">{invoice.shipment?.reference ?? "—"}</td>
                   <td className="px-3 py-2.5">
-                    <span className={`rounded-full px-2.5 py-0.5 text-[11px] font-semibold ${STATUS_TONE[invoice.status]}`}>
-                      {invoice.status === "draft" ? "Brouillon" : invoice.status === "validated" ? "Validée" : invoice.status === "synced" ? "Exportée compta" : "Export à reprendre"}
+                    <span className={`rounded-full px-2.5 py-0.5 text-[11px] font-semibold ${STATUS_TONE[invoice.status] ?? "bg-paper text-ink-3"}`}>
+                      {invoice.status === "draft" ? "Brouillon" : "Validée"}
                     </span>
+                    {invoice.fne_reference && (
+                      <span className="ml-1.5 rounded-full bg-ok-soft px-2 py-0.5 text-[10px] font-semibold text-ok">FNE ✓</span>
+                    )}
+                    {EXPORT_BADGE[invoice.accounting_export_status] && (
+                      <span className={`ml-1.5 rounded-full px-2 py-0.5 text-[10px] font-semibold ${EXPORT_BADGE[invoice.accounting_export_status]![1]}`}>
+                        {EXPORT_BADGE[invoice.accounting_export_status]![0]}
+                      </span>
+                    )}
                   </td>
                   <td className={`px-3 py-2.5 text-xs font-semibold ${paymentTone}`}>{paymentLabel}</td>
                   <td className="mono px-3 py-2.5 text-right">{Number(invoice.total_excl_tax).toLocaleString("fr-FR")}</td>

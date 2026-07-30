@@ -2757,6 +2757,10 @@ export interface components {
             fne_seller_name: string | null;
             /** Format: date-time */
             fne_certified_at: string | null;
+            accounting_export_status: string;
+            accounting_ref: string | null;
+            accounting_error: string | null;
+            accounting_exported_at: string | null;
         };
         /** LengthAwarePaginator */
         LengthAwarePaginator: {
@@ -4791,7 +4795,8 @@ export interface operations {
         parameters: {
             query?: {
                 type?: "proforma" | "invoice" | "credit_note";
-                status?: "draft" | "validated" | "synced" | "sync_failed";
+                status?: "draft" | "validated";
+                accounting_export_status?: "none" | "pending" | "exported" | "failed";
                 payment_status?: "none" | "unpaid" | "partial" | "paid";
                 party_id?: string;
                 shipment_id?: string;
