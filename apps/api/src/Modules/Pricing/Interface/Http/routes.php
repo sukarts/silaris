@@ -5,6 +5,7 @@ declare(strict_types=1);
 use Illuminate\Support\Facades\Route;
 use Silaris\Modules\Pricing\Interface\Http\Controller\CustomsTariffController;
 use Silaris\Modules\Pricing\Interface\Http\Controller\QuoteController;
+use Silaris\Modules\Pricing\Interface\Http\Controller\ServiceCatalogController;
 use Silaris\Modules\Pricing\Interface\Http\Controller\TariffController;
 
 Route::prefix('quotes')->group(function (): void {
@@ -34,3 +35,6 @@ Route::prefix('customs-tariffs')->group(function (): void {
 });
 
 Route::get('customs-regimes', [CustomsTariffController::class, 'regimes'])->can('quotes.read');
+
+// Catalogue des prestations — proposé à la saisie en cotation et en facturation.
+Route::get('service-catalog', [ServiceCatalogController::class, 'index'])->can('quotes.read');

@@ -6,6 +6,7 @@ import { useEffect, useState } from "react";
 import { problemMessage, rawApi } from "@/lib/api";
 import { Field, buttonPrimary, buttonSecondary, inputClass } from "@/components/Field";
 import { PlaceCombobox } from "@/components/PlaceCombobox";
+import { ServiceCatalogDatalist, useServiceCatalog } from "@/components/ServiceCatalog";
 import { useAuth } from "@/stores/auth";
 
 interface CalculatedLine {
@@ -60,48 +61,10 @@ function blankLine(currency: string, category: LineCategory = "other"): QuoteLin
   };
 }
 
-/**
- * Trame de l'offre de transit maritime import, reprise de l'offre type du
- * transitaire. Proposée d'emblée pour qu'aucun poste ne soit oublié : un débours
- * omis à la cotation se facture ensuite sans avoir été annoncé.
- */
-const IMPORT_TEMPLATE: { category: LineCategory; code: string; label: string }[] = [
-  { category: "customs", code: "DD", label: "Droit de douane" },
-  { category: "customs", code: "RSTA", label: "RSTA" },
-  { category: "customs", code: "PCS", label: "PCS" },
-  { category: "customs", code: "PUA", label: "PUA" },
-  { category: "customs", code: "PCC", label: "PCC" },
-  { category: "customs", code: "RPI", label: "RPI" },
-  { category: "customs", code: "TVA", label: "TVA" },
-  { category: "customs", code: "TS_SYDAM", label: "TS + Sydam" },
-  { category: "other", code: "OUVERTURE", label: "Ouverture" },
-  { category: "other", code: "FDI_RFCV", label: "FDI/RFCV" },
-  { category: "other", code: "ASSURANCE", label: "Assurance" },
-  { category: "other", code: "TIRAGE", label: "Tirage" },
-  { category: "other", code: "PASSAGE", label: "Passage" },
-  { category: "other", code: "AGIO", label: "Agio/Gestion crédit" },
-  { category: "other", code: "AMENDE_BSC", label: "Amende BSC" },
-  { category: "other", code: "VISITE", label: "Visite" },
-  { category: "other", code: "ACCONAGE", label: "Acconage" },
-  { category: "other", code: "CAUTION", label: "Caution" },
-  { category: "other", code: "ECHANGE_BL", label: "Echange BL" },
-  { category: "other", code: "LIVRAISON", label: "Livraison" },
-  { category: "other", code: "COMMISSION", label: "Commission de facilitation" },
-  { category: "other", code: "PRESTATIONS", label: "Prestations" },
-];
-
 const CATEGORY_LABEL: Record<LineCategory, string> = {
   customs: "Débours douane",
   other: "Débours divers",
 };
-
-function templateLines(currency: string): QuoteLine[] {
-  return IMPORT_TEMPLATE.map((entry) => ({
-    ...blankLine(currency, entry.category),
-    service_code: entry.code,
-    description: entry.label,
-  }));
-}
 
 function inNinetyDays(): string {
   const date = new Date();
@@ -132,6 +95,7 @@ export default function NewQuotePage() {
     valid_until: inNinetyDays(),
   });
   const [lines, setLines] = useState<QuoteLine[]>([]);
+  const catalog = useServiceCatalog();
   // Position tarifaire, valeur en douane et régime : de quoi chiffrer les
   // débours douane au lieu de les saisir.
   const [customs, setCustoms] = useState({ hs_code: "", customs_value: "", customs_regime: "IM4" });
@@ -192,17 +156,16 @@ export default function NewQuotePage() {
     setForm((state) => ({ ...state, [key]: value }));
   }
 
-  // Le maritime FCL à l'import suit une trame connue : la proposer d'emblée
-  // évite d'oublier un poste, sans empêcher d'en ajouter ou d'en retirer.
-  useEffect(() => {
-    const applies = form.mode === "sea_fcl" && form.direction === "import";
-    if (applies && lines.length === 0 && !calculated) {
-      setLines(templateLines(deal.currency_code));
-    }
-  }, [form.mode, form.direction, lines.length, calculated, deal.currency_code]);
-
   function setLine(index: number, key: keyof QuoteLine, value: string) {
     setLines((state) => state.map((line, i) => (i === index ? { ...line, [key]: value } : line)));
+  }
+
+  /** Saisie de la désignation : un poste connu renseigne code et famille, la ligne libre reste libre. */
+  function setDescription(index: number, value: string) {
+    const item = catalog.resolve(value);
+    setLines((state) => state.map((line, i) => (i === index
+      ? (item ? { ...line, description: item.label, service_code: item.code, category: item.family } : { ...line, description: value })
+      : line)));
   }
 
   async function calculate(event: React.FormEvent) {
@@ -460,6 +423,7 @@ export default function NewQuotePage() {
             </p>
           )}
 
+          <ServiceCatalogDatalist items={catalog.items} />
           {lines.length > 0 && (
             <div className="overflow-x-auto">
               <table className="w-full text-[13px]">
@@ -491,7 +455,7 @@ export default function NewQuotePage() {
                   {indexes.map(({ line, index }) => (
                     <tr key={index} className="border-b border-line last:border-0">
                       <td className="py-1.5 pr-2">
-                        <input required value={line.description} onChange={(e) => setLine(index, "description", e.target.value)} placeholder="Fret maritime" className={`${inputClass} w-full`} />
+                        <input required list="service-catalog" value={line.description} onChange={(e) => setDescription(index, e.target.value)} placeholder="Fret maritime" className={`${inputClass} w-full`} />
                         {line.minimumApplied && <span className="mt-1 inline-block rounded bg-warn-soft px-1.5 text-[10px] text-warn">minimum appliqué</span>}
                       </td>
                       <td className="px-2 py-1.5">

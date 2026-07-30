@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { problemMessage, rawApi } from "@/lib/api";
 import { Field, buttonPrimary, buttonSecondary, inputClass } from "@/components/Field";
+import { ServiceCatalogDatalist, useServiceCatalog } from "@/components/ServiceCatalog";
 
 interface Branch { company_id: string; company_name: string }
 interface TaxRate { id: string; name: string; rate_percent: string }
@@ -29,6 +30,7 @@ export default function NewInvoicePage() {
   const [currency, setCurrency] = useState("XOF");
   const [lines, setLines] = useState<Line[]>([blankLine()]);
   const [error, setError] = useState<string | null>(null);
+  const catalog = useServiceCatalog();
 
   const { data: branches } = useQuery({
     queryKey: ["auth", "me", "branches"],
@@ -136,6 +138,7 @@ export default function NewInvoicePage() {
       </div>
 
       <div className="flex flex-col gap-3 rounded-xl border border-line bg-surface p-4 shadow-sm">
+        <ServiceCatalogDatalist items={catalog.items} />
         <div className="overflow-x-auto">
           <table className="w-full text-[13px]">
             <thead>
@@ -152,7 +155,18 @@ export default function NewInvoicePage() {
             <tbody>
               {lines.map((line, i) => (
                 <tr key={i} className="border-b border-line last:border-0">
-                  <td className="px-2 py-1.5"><input value={line.description} onChange={(e) => update(i, { description: e.target.value })} className={`${inputClass} !py-1`} /></td>
+                  <td className="px-2 py-1.5">
+                    <input
+                      list="service-catalog" value={line.description}
+                      onChange={(e) => {
+                        const item = catalog.resolve(e.target.value);
+                        // Choisir un poste connu renseigne son code ; la saisie
+                        // libre reste possible et garde le code déjà là.
+                        update(i, item ? { description: item.label, service_code: item.code } : { description: e.target.value });
+                      }}
+                      className={`${inputClass} !py-1`}
+                    />
+                  </td>
                   <td className="px-2 py-1.5"><input type="number" min="0" step="0.001" value={line.quantity} onChange={(e) => update(i, { quantity: e.target.value })} className={`${inputClass} mono !py-1 text-right`} /></td>
                   <td className="px-2 py-1.5">
                     <select value={line.unit} onChange={(e) => update(i, { unit: e.target.value })} className={`${inputClass} !py-1`}>

@@ -5,7 +5,6 @@ declare(strict_types=1);
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Silaris\Modules\Pricing\Domain\Service\CustomsDutyCalculator;
-use Silaris\Modules\Pricing\Domain\Service\ImportQuoteTemplate;
 
 uses(RefreshDatabase::class);
 
@@ -81,16 +80,6 @@ it('cherche une position par son libellé comme par ses chiffres', function (): 
 
     expect($this->withToken($token)->getJson('/api/v1/customs-tariffs?search=8703')->json('data'))->toHaveCount(1);
     expect($this->withToken($token)->getJson('/api/v1/customs-tariffs?search=tourisme')->json('data'))->toHaveCount(1);
-});
-
-it('propose la trame complète de l\'offre import', function (): void {
-    $lines = ImportQuoteTemplate::lines();
-
-    expect($lines)->toHaveCount(22);
-    expect(array_column(array_filter($lines, fn ($l) => $l['category'] === 'customs'), 'description'))
-        ->toBe(['Droit de douane', 'RSTA', 'PCS', 'PUA', 'PCC', 'RPI', 'TVA', 'TS + Sydam']);
-    expect(array_column(array_filter($lines, fn ($l) => $l['category'] === 'other'), 'description'))
-        ->toContain('Commission de facilitation', 'Echange BL', 'Acconage');
 });
 
 it('n\'exige aucun droit ivoirien sur une marchandise en transit', function (): void {

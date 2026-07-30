@@ -6,6 +6,7 @@ import { useParams, useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 import { downloadFile, problemMessage, rawApi } from "@/lib/api";
 import { buttonPrimary, buttonSecondary, inputClass } from "@/components/Field";
+import { ServiceCatalogDatalist, useServiceCatalog } from "@/components/ServiceCatalog";
 import { useCan } from "@/stores/auth";
 
 type LineCategory = "customs" | "other";
@@ -346,14 +347,21 @@ function LineEditor({
   onSave: () => void;
   onCancel: () => void;
 }) {
+  const catalog = useServiceCatalog();
   const update = (index: number, patch: Partial<QuoteLine>) =>
     onChange(lines.map((line, i) => (i === index ? { ...line, ...patch } : line)));
+  // Poste connu → code + famille renseignés ; ligne libre préservée.
+  const setDescription = (index: number, value: string) => {
+    const item = catalog.resolve(value);
+    update(index, item ? { description: item.label, service_code: item.code, category: item.family } : { description: value });
+  };
   const remove = (index: number) => onChange(lines.filter((_, i) => i !== index));
   const add = (category: LineCategory) =>
     onChange([...lines, { category, service_code: "", description: "", quantity: "1", unit: "flat", unit_price: "0", currency_code: currency }]);
 
   return (
     <div className="flex flex-col gap-3 rounded-xl border border-line bg-surface p-4 shadow-sm">
+      <ServiceCatalogDatalist items={catalog.items} />
       <div className="overflow-x-auto">
         <table className="w-full text-[13px]">
           <thead>
@@ -376,7 +384,7 @@ function LineEditor({
                   </select>
                 </td>
                 <td className="px-2 py-1.5">
-                  <input value={line.description} onChange={(e) => update(i, { description: e.target.value })} className={`${inputClass} !py-1`} />
+                  <input list="service-catalog" value={line.description} onChange={(e) => setDescription(i, e.target.value)} className={`${inputClass} !py-1`} />
                 </td>
                 <td className="px-2 py-1.5">
                   <input type="number" min="0" step="0.001" value={line.quantity} onChange={(e) => update(i, { quantity: e.target.value })} className={`${inputClass} mono !py-1 text-right`} />
