@@ -45,10 +45,19 @@ export function ServiceCatalogDatalist({ items }: { items: CatalogItem[] }) {
   return (
     <datalist id="service-catalog">
       {items.map((item) => (
+        // Le texte de l'option est ce que le navigateur affiche et filtre ; il
+        // porte donc le libellé de la prestation. La `value` reste le libellé
+        // seul : c'est elle qui remplit le champ à la sélection, et que
+        // `resolve()` retrouve pour poser code et famille.
         <option key={item.code} value={item.label}>
-          {item.scope === "vehicle" ? "Véhicule" : item.family === "customs" ? "Débours douane" : "Débours divers"}
+          {item.label} · {familyLabel(item)}
         </option>
       ))}
     </datalist>
   );
+}
+
+function familyLabel(item: CatalogItem): string {
+  if (item.scope === "vehicle") return "Véhicule";
+  return item.family === "customs" ? "Débours douane" : "Débours divers";
 }
