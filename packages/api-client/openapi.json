@@ -2279,21 +2279,6 @@
                                         ],
                                         "format": "date-time"
                                     },
-                                    "free_time_days": {
-                                        "type": [
-                                            "integer",
-                                            "null"
-                                        ],
-                                        "minimum": 0,
-                                        "maximum": 90
-                                    },
-                                    "free_time_ends_at": {
-                                        "type": [
-                                            "string",
-                                            "null"
-                                        ],
-                                        "format": "date-time"
-                                    },
                                     "gate_in_at": {
                                         "type": [
                                             "string",
@@ -2444,14 +2429,6 @@
                                             "null"
                                         ],
                                         "minimum": 0
-                                    },
-                                    "free_time_days": {
-                                        "type": [
-                                            "integer",
-                                            "null"
-                                        ],
-                                        "minimum": 0,
-                                        "maximum": 90
                                     }
                                 },
                                 "required": [
@@ -2844,7 +2821,7 @@
         "/v1/demurrage": {
             "get": {
                 "operationId": "demurrage.index",
-                "summary": "GET /v1/demurrage \u2014 conteneurs en cours, tri\u00e9s par urgence",
+                "summary": "GET /v1/demurrage \u2014 compteurs en cours, tri\u00e9s par urgence",
                 "tags": [
                     "Demurrage"
                 ],
@@ -2865,6 +2842,17 @@
                             "type": "string",
                             "format": "uuid"
                         }
+                    },
+                    {
+                        "name": "kind",
+                        "in": "query",
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "demurrage",
+                                "detention"
+                            ]
+                        }
                     }
                 ],
                 "responses": {
@@ -2881,6 +2869,9 @@
                                                 "type": "object",
                                                 "properties": {
                                                     "assignment_id": {
+                                                        "type": "string"
+                                                    },
+                                                    "kind": {
                                                         "type": "string"
                                                     },
                                                     "container_number": {
@@ -2921,6 +2912,7 @@
                                                 },
                                                 "required": [
                                                     "assignment_id",
+                                                    "kind",
                                                     "container_number",
                                                     "size_type",
                                                     "shipment_id",
@@ -2948,12 +2940,22 @@
                                                 "warning": {
                                                     "type": "integer",
                                                     "minimum": 0
+                                                },
+                                                "demurrage": {
+                                                    "type": "integer",
+                                                    "minimum": 0
+                                                },
+                                                "detention": {
+                                                    "type": "integer",
+                                                    "minimum": 0
                                                 }
                                             },
                                             "required": [
                                                 "overdue",
                                                 "critical",
-                                                "warning"
+                                                "warning",
+                                                "demurrage",
+                                                "detention"
                                             ]
                                         }
                                     },
@@ -2980,7 +2982,7 @@
         "/v1/demurrage/free-time": {
             "patch": {
                 "operationId": "demurrage.updateFreeTime",
-                "summary": "PATCH /v1/demurrage/free-time \u2014 franchise n\u00e9goci\u00e9e du dossier.\nElle se porte sur le connaissement \u00e0 l'import, sur le booking \u00e0 l'export",
+                "summary": "PATCH /v1/demurrage/free-time \u2014 franchises n\u00e9goci\u00e9es du dossier.\nElles se portent sur le connaissement \u00e0 l'import, sur le booking \u00e0 l'export",
                 "tags": [
                     "Demurrage"
                 ],
@@ -2995,15 +2997,25 @@
                                         "type": "string",
                                         "format": "uuid"
                                     },
-                                    "free_time_days": {
-                                        "type": "integer",
+                                    "demurrage_free_days": {
+                                        "type": [
+                                            "integer",
+                                            "null"
+                                        ],
+                                        "minimum": 0,
+                                        "maximum": 180
+                                    },
+                                    "detention_free_days": {
+                                        "type": [
+                                            "integer",
+                                            "null"
+                                        ],
                                         "minimum": 0,
                                         "maximum": 180
                                     }
                                 },
                                 "required": [
-                                    "shipment_id",
-                                    "free_time_days"
+                                    "shipment_id"
                                 ]
                             }
                         }
@@ -12518,7 +12530,13 @@
                         ],
                         "format": "date-time"
                     },
-                    "free_time_days": {
+                    "demurrage_free_days": {
+                        "type": [
+                            "integer",
+                            "null"
+                        ]
+                    },
+                    "detention_free_days": {
                         "type": [
                             "integer",
                             "null"
@@ -12545,7 +12563,8 @@
                     "issued_by",
                     "created_at",
                     "updated_at",
-                    "free_time_days"
+                    "demurrage_free_days",
+                    "detention_free_days"
                 ],
                 "title": "BillOfLadingModel"
             },
@@ -12627,7 +12646,13 @@
                         ],
                         "format": "date-time"
                     },
-                    "free_time_days": {
+                    "demurrage_free_days": {
+                        "type": [
+                            "integer",
+                            "null"
+                        ]
+                    },
+                    "detention_free_days": {
                         "type": [
                             "integer",
                             "null"
@@ -12649,7 +12674,8 @@
                     "notes",
                     "created_at",
                     "updated_at",
-                    "free_time_days"
+                    "demurrage_free_days",
+                    "detention_free_days"
                 ],
                 "title": "BookingModel"
             },
@@ -13035,19 +13061,6 @@
                         ],
                         "format": "date-time"
                     },
-                    "free_time_days": {
-                        "type": [
-                            "integer",
-                            "null"
-                        ]
-                    },
-                    "free_time_ends_at": {
-                        "type": [
-                            "string",
-                            "null"
-                        ],
-                        "format": "date-time"
-                    },
                     "gate_in_at": {
                         "type": [
                             "string",
@@ -13096,6 +13109,32 @@
                             "null"
                         ],
                         "format": "date-time"
+                    },
+                    "demurrage_days": {
+                        "type": [
+                            "integer",
+                            "null"
+                        ]
+                    },
+                    "demurrage_ends_at": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "format": "date-time"
+                    },
+                    "detention_days": {
+                        "type": [
+                            "integer",
+                            "null"
+                        ]
+                    },
+                    "detention_ends_at": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "format": "date-time"
                     }
                 },
                 "required": [
@@ -13107,15 +13146,17 @@
                     "seal_number",
                     "vgm_kg",
                     "vgm_verified_at",
-                    "free_time_days",
-                    "free_time_ends_at",
                     "gate_in_at",
                     "loaded_at",
                     "discharged_at",
                     "gate_out_at",
                     "returned_at",
                     "created_at",
-                    "updated_at"
+                    "updated_at",
+                    "demurrage_days",
+                    "demurrage_ends_at",
+                    "detention_days",
+                    "detention_ends_at"
                 ],
                 "title": "ContainerAssignmentModel"
             },

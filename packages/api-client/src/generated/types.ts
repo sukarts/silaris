@@ -536,7 +536,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** GET /v1/demurrage — conteneurs en cours, triés par urgence */
+        /** GET /v1/demurrage — compteurs en cours, triés par urgence */
         get: operations["demurrage.index"];
         put?: never;
         post?: never;
@@ -560,8 +560,8 @@ export interface paths {
         options?: never;
         head?: never;
         /**
-         * PATCH /v1/demurrage/free-time — franchise négociée du dossier.
-         *     Elle se porte sur le connaissement à l'import, sur le booking à l'export
+         * PATCH /v1/demurrage/free-time — franchises négociées du dossier.
+         *     Elles se portent sur le connaissement à l'import, sur le booking à l'export
          */
         patch: operations["demurrage.updateFreeTime"];
         trace?: never;
@@ -2505,7 +2505,8 @@ export interface components {
             created_at: string | null;
             /** Format: date-time */
             updated_at: string | null;
-            free_time_days: number | null;
+            demurrage_free_days: number | null;
+            detention_free_days: number | null;
         };
         /** BookingModel */
         BookingModel: {
@@ -2529,7 +2530,8 @@ export interface components {
             created_at: string | null;
             /** Format: date-time */
             updated_at: string | null;
-            free_time_days: number | null;
+            demurrage_free_days: number | null;
+            detention_free_days: number | null;
         };
         /** BranchModel */
         BranchModel: {
@@ -2619,9 +2621,6 @@ export interface components {
             vgm_kg: string | null;
             /** Format: date-time */
             vgm_verified_at: string | null;
-            free_time_days: number | null;
-            /** Format: date-time */
-            free_time_ends_at: string | null;
             /** Format: date-time */
             gate_in_at: string | null;
             /** Format: date-time */
@@ -2636,6 +2635,12 @@ export interface components {
             created_at: string | null;
             /** Format: date-time */
             updated_at: string | null;
+            demurrage_days: number | null;
+            /** Format: date-time */
+            demurrage_ends_at: string | null;
+            detention_days: number | null;
+            /** Format: date-time */
+            detention_ends_at: string | null;
         };
         /** ContainerModel */
         ContainerModel: {
@@ -4196,9 +4201,6 @@ export interface operations {
                     vgm_kg?: number | null;
                     /** Format: date-time */
                     vgm_verified_at?: string | null;
-                    free_time_days?: number | null;
-                    /** Format: date-time */
-                    free_time_ends_at?: string | null;
                     /** Format: date-time */
                     gate_in_at?: string | null;
                     /** Format: date-time */
@@ -4268,7 +4270,6 @@ export interface operations {
                     booking_id?: string | null;
                     seal_number?: string | null;
                     vgm_kg?: number | null;
-                    free_time_days?: number | null;
                 };
             };
         };
@@ -4436,6 +4437,7 @@ export interface operations {
             query?: {
                 within_days?: number;
                 client_id?: string;
+                kind?: "demurrage" | "detention";
             };
             header?: never;
             path?: never;
@@ -4451,6 +4453,7 @@ export interface operations {
                     "application/json": {
                         data: {
                             assignment_id: string;
+                            kind: string;
                             container_number: string;
                             size_type: string;
                             shipment_id: string;
@@ -4467,6 +4470,8 @@ export interface operations {
                             overdue: number;
                             critical: number;
                             warning: number;
+                            demurrage: number;
+                            detention: number;
                         };
                     };
                 };
@@ -4488,7 +4493,8 @@ export interface operations {
                 "application/json": {
                     /** Format: uuid */
                     shipment_id: string;
-                    free_time_days: number;
+                    demurrage_free_days?: number | null;
+                    detention_free_days?: number | null;
                 };
             };
         };

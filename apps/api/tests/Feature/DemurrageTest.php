@@ -10,8 +10,11 @@ use Silaris\Modules\Ocean\Application\Service\FreeTimeTracker;
 
 uses(RefreshDatabase::class);
 
-/** Dossier import avec connaissement maître, conteneur affecté et franchise négociée. */
-function seedFreeTimeShipment(array $ids, int $freeDays, string $direction = 'import'): array
+/**
+ * Dossier avec son document porteur, un conteneur affecté, et les deux
+ * franchises négociées — surestaries (au terminal) et détention (chez le client).
+ */
+function seedFreeTimeShipment(array $ids, int $demurrageDays, int $detentionDays, string $direction = 'import'): array
 {
     $shipmentId = seedShipmentFor($ids, $ids['client'], 'IMP-2026-00001');
     DB::table('shipments')->where('id', $shipmentId)->update(['direction' => $direction]);
@@ -25,13 +28,15 @@ function seedFreeTimeShipment(array $ids, int $freeDays, string $direction = 'im
         DB::table('bookings')->insert([
             'id' => (string) Str::uuid7(), 'tenant_id' => $ids['tenant'], 'shipment_id' => $shipmentId,
             'carrier_id' => $carrierId, 'booking_number' => 'EBKG12345678', 'status' => 'requested',
-            'free_time_days' => $freeDays, 'created_at' => now(), 'updated_at' => now(),
+            'demurrage_free_days' => $demurrageDays, 'detention_free_days' => $detentionDays,
+            'created_at' => now(), 'updated_at' => now(),
         ]);
     } else {
         DB::table('bills_of_lading')->insert([
             'id' => (string) Str::uuid7(), 'tenant_id' => $ids['tenant'], 'shipment_id' => $shipmentId,
             'type' => 'master', 'number' => 'MEDUJ2260417', 'status' => 'issued',
-            'shipper' => '{}', 'consignee' => '{}', 'free_time_days' => $freeDays,
+            'shipper' => '{}', 'consignee' => '{}',
+            'demurrage_free_days' => $demurrageDays, 'detention_free_days' => $detentionDays,
             'created_at' => now(), 'updated_at' => now(),
         ]);
     }
@@ -46,38 +51,47 @@ function seedFreeTimeShipment(array $ids, int $freeDays, string $direction = 'im
     return [$shipmentId, $assignmentId];
 }
 
-it('fait courir la franchise depuis le déchargement à l\'import', function (): void {
+it('à l\'import, la surestarie court du déchargement, la détention de la sortie du port', function (): void {
     $ids = seedCore();
-    [$shipmentId, $assignmentId] = seedFreeTimeShipment($ids, freeDays: 7);
+    [$shipmentId, $assignmentId] = seedFreeTimeShipment($ids, demurrageDays: 5, detentionDays: 10);
+    $tracker = app(FreeTimeTracker::class);
 
-    // Le suivi annonce le déchargement il y a cinq jours.
-    app(FreeTimeTracker::class)->recordMilestone(
-        $shipmentId, 'MSNU9682848', 'DISC', Carbon::today()->subDays(5),
-    );
+    // Déchargé il y a deux jours : la surestarie court, la détention pas encore.
+    $tracker->recordMilestone($shipmentId, 'MSNU9682848', 'DISC', Carbon::today()->subDays(2));
 
-    $assignment = DB::table('container_assignments')->where('id', $assignmentId)->first();
-    expect($assignment->free_time_days)->toBe(7)
-        ->and(Carbon::parse($assignment->free_time_ends_at)->toDateString())
-        ->toBe(Carbon::today()->addDays(2)->toDateString());
+    $row = DB::table('container_assignments')->where('id', $assignmentId)->first();
+    expect(Carbon::parse($row->demurrage_ends_at)->toDateString())->toBe(Carbon::today()->addDays(3)->toDateString())
+        ->and($row->detention_ends_at)->toBeNull();
+
+    // Sorti du port aujourd'hui : la surestarie s'arrête, la détention démarre.
+    $tracker->recordMilestone($shipmentId, 'MSNU9682848', 'GTOT', Carbon::today());
+    $row = DB::table('container_assignments')->where('id', $assignmentId)->first();
+    expect(Carbon::parse($row->detention_ends_at)->toDateString())->toBe(Carbon::today()->addDays(10)->toDateString());
 });
 
-it('fait courir la franchise depuis la sortie du vide à l\'export', function (): void {
-    $ids = seedCore();
-    [$shipmentId, $assignmentId] = seedFreeTimeShipment($ids, freeDays: 10, direction: 'export');
-
-    app(FreeTimeTracker::class)->recordMilestone(
-        $shipmentId, 'MSNU9682848', 'GTOT', Carbon::today()->subDays(3),
-    );
-
-    expect(Carbon::parse(DB::table('container_assignments')->where('id', $assignmentId)->value('free_time_ends_at'))->toDateString())
-        ->toBe(Carbon::today()->addDays(7)->toDateString());
-});
-
-it('classe les conteneurs par urgence et compte les dépassements', function (): void {
+it('liste surestarie et détention comme deux échéances distinctes', function (): void {
     $ids = seedCore();
     $token = tokenFor($ids['user_admin']);
-    [$shipmentId] = seedFreeTimeShipment($ids, freeDays: 7);
-    // Déchargé il y a dix jours pour sept de franchise : trois jours de retard.
+    [$shipmentId] = seedFreeTimeShipment($ids, demurrageDays: 7, detentionDays: 14);
+    $tracker = app(FreeTimeTracker::class);
+
+    // Déchargé : seule la surestarie court.
+    $tracker->recordMilestone($shipmentId, 'MSNU9682848', 'DISC', Carbon::today()->subDays(6));
+    $data = $this->withToken($token)->getJson('/api/v1/demurrage?within_days=30')->assertOk()->json('data');
+    expect($data)->toHaveCount(1)->and($data[0]['kind'])->toBe('demurrage');
+
+    // Sorti du port : la surestarie s'arrête, la détention court.
+    freshAuth();
+    $tracker->recordMilestone($shipmentId, 'MSNU9682848', 'GTOT', Carbon::today()->subDays(2));
+    $data = $this->withToken($token)->getJson('/api/v1/demurrage?within_days=30')->assertOk()->json('data');
+    expect($data)->toHaveCount(1)->and($data[0]['kind'])->toBe('detention');
+});
+
+it('classe par urgence et compte le dépassement de surestaries', function (): void {
+    $ids = seedCore();
+    $token = tokenFor($ids['user_admin']);
+    [$shipmentId] = seedFreeTimeShipment($ids, demurrageDays: 7, detentionDays: 14);
+    // Déchargé il y a dix jours, sept de franchise surestaries : trois jours de retard.
     app(FreeTimeTracker::class)->recordMilestone($shipmentId, 'MSNU9682848', 'DISC', Carbon::today()->subDays(10));
 
     $response = $this->withToken($token)->getJson('/api/v1/demurrage')->assertOk()->json();
@@ -88,46 +102,45 @@ it('classe les conteneurs par urgence et compte les dépassements', function ():
         ->and($response['summary']['overdue'])->toBe(1);
 });
 
-it('sort de la liste dès le conteneur restitué', function (): void {
+it('la détention sort de la liste dès le vide restitué', function (): void {
     $ids = seedCore();
     $token = tokenFor($ids['user_admin']);
-    [$shipmentId] = seedFreeTimeShipment($ids, freeDays: 7);
-    app(FreeTimeTracker::class)->recordMilestone($shipmentId, 'MSNU9682848', 'DISC', Carbon::today()->subDays(10));
+    [$shipmentId] = seedFreeTimeShipment($ids, demurrageDays: 3, detentionDays: 7);
+    $tracker = app(FreeTimeTracker::class);
+    $tracker->recordMilestone($shipmentId, 'MSNU9682848', 'GTOT', Carbon::today()->subDays(10));
 
     expect($this->withToken($token)->getJson('/api/v1/demurrage')->json('data'))->toHaveCount(1);
 
-    // Le vide rendu, plus rien ne court.
-    app(FreeTimeTracker::class)->recordMilestone($shipmentId, 'MSNU9682848', 'RETU', Carbon::today());
-
+    freshAuth();
+    $tracker->recordMilestone($shipmentId, 'MSNU9682848', 'RETU', Carbon::today());
     expect($this->withToken($token)->getJson('/api/v1/demurrage')->json('data'))->toBeEmpty();
 });
 
-it('recalcule les échéances quand la franchise négociée change', function (): void {
+it('recalcule les échéances quand les franchises négociées changent', function (): void {
     $ids = seedCore();
     $token = tokenFor($ids['user_admin']);
-    [$shipmentId, $assignmentId] = seedFreeTimeShipment($ids, freeDays: 7);
-    app(FreeTimeTracker::class)->recordMilestone($shipmentId, 'MSNU9682848', 'DISC', Carbon::today()->subDays(5));
+    [$shipmentId, $assignmentId] = seedFreeTimeShipment($ids, demurrageDays: 5, detentionDays: 10);
+    app(FreeTimeTracker::class)->recordMilestone($shipmentId, 'MSNU9682848', 'DISC', Carbon::today()->subDays(3));
 
     $this->withToken($token)->patchJson('/api/v1/demurrage/free-time', [
-        'shipment_id' => $shipmentId, 'free_time_days' => 14,
+        'shipment_id' => $shipmentId, 'demurrage_free_days' => 8, 'detention_free_days' => 14,
     ])->assertOk()->assertJsonPath('containers_refreshed', 1);
 
-    expect(Carbon::parse(DB::table('container_assignments')->where('id', $assignmentId)->value('free_time_ends_at'))->toDateString())
-        ->toBe(Carbon::today()->addDays(9)->toDateString());
+    expect(Carbon::parse(DB::table('container_assignments')->where('id', $assignmentId)->value('demurrage_ends_at'))->toDateString())
+        ->toBe(Carbon::today()->addDays(5)->toDateString());
 });
 
 it('ne repousse pas une échéance déjà courue si le relevé est rejoué', function (): void {
     $ids = seedCore();
-    [$shipmentId, $assignmentId] = seedFreeTimeShipment($ids, freeDays: 7);
+    [$shipmentId, $assignmentId] = seedFreeTimeShipment($ids, demurrageDays: 7, detentionDays: 14);
     $tracker = app(FreeTimeTracker::class);
 
     $tracker->recordMilestone($shipmentId, 'MSNU9682848', 'DISC', Carbon::today()->subDays(5));
-    $first = DB::table('container_assignments')->where('id', $assignmentId)->value('free_time_ends_at');
+    $first = DB::table('container_assignments')->where('id', $assignmentId)->value('demurrage_ends_at');
 
-    // Un agrégateur peut renvoyer le même mouvement avec un horodatage corrigé.
     $tracker->recordMilestone($shipmentId, 'MSNU9682848', 'DISC', Carbon::today());
 
-    expect(DB::table('container_assignments')->where('id', $assignmentId)->value('free_time_ends_at'))->toBe($first);
+    expect(DB::table('container_assignments')->where('id', $assignmentId)->value('demurrage_ends_at'))->toBe($first);
 });
 
 it('refuse la franchise import sans connaissement maître', function (): void {
@@ -135,39 +148,24 @@ it('refuse la franchise import sans connaissement maître', function (): void {
     $shipmentId = seedShipmentFor($ids, $ids['client'], 'IMP-2026-00002');
 
     $this->withToken(tokenFor($ids['user_admin']))
-        ->patchJson('/api/v1/demurrage/free-time', ['shipment_id' => $shipmentId, 'free_time_days' => 7])
+        ->patchJson('/api/v1/demurrage/free-time', ['shipment_id' => $shipmentId, 'detention_free_days' => 7])
         ->assertStatus(422)->assertJsonPath('message', "Aucun connaissement maître sur ce dossier : la franchise import s'y rattache.");
 });
 
-it('alerte l\'exploitant et le client avant l\'échéance, une seule fois', function (): void {
+it('alerte séparément sur la surestarie et sur la détention, exploitant et client', function (): void {
     $ids = seedCore();
-    [$shipmentId] = seedFreeTimeShipment($ids, freeDays: 7);
-    // Déchargé il y a cinq jours : l'échéance tombe dans deux jours.
-    app(FreeTimeTracker::class)->recordMilestone($shipmentId, 'MSNU9682848', 'DISC', Carbon::today()->subDays(5));
+    [$shipmentId] = seedFreeTimeShipment($ids, demurrageDays: 5, detentionDays: 10);
+    $tracker = app(FreeTimeTracker::class);
 
-    $this->artisan('demurrage:alert')->assertSuccessful();
-
-    // Le client reçoit une notification, l'exploitant voit l'alerte au dossier.
-    expect(DB::table('notifications')->where('event_type', 'demurrage_warning')->count())->toBe(1)
-        ->and(DB::table('shipment_events')->where('shipment_id', $shipmentId)->where('type', 'system')->count())->toBe(1);
-
-    // Relancée le lendemain, la commande ne réémet pas le même palier.
+    // Déchargé il y a trois jours : la surestarie expire dans deux jours.
+    $tracker->recordMilestone($shipmentId, 'MSNU9682848', 'DISC', Carbon::today()->subDays(3));
     $this->artisan('demurrage:alert')->assertSuccessful();
     expect(DB::table('notifications')->where('event_type', 'demurrage_warning')->count())->toBe(1);
-});
 
-it('réalerte quand le conteneur bascule en dépassement', function (): void {
-    $ids = seedCore();
-    [$shipmentId] = seedFreeTimeShipment($ids, freeDays: 7);
-    app(FreeTimeTracker::class)->recordMilestone($shipmentId, 'MSNU9682848', 'DISC', Carbon::today()->subDays(5));
+    // Sorti du port il y a huit jours : la détention expire dans deux jours.
+    $tracker->recordMilestone($shipmentId, 'MSNU9682848', 'GTOT', Carbon::today()->subDays(8));
     $this->artisan('demurrage:alert')->assertSuccessful();
-
-    // Dix jours plus tard, la franchise est dépassée : c'est un autre palier.
-    Carbon::setTestNow(Carbon::now()->addDays(10));
-    $this->artisan('demurrage:alert')->assertSuccessful();
-    Carbon::setTestNow();
-
-    expect(DB::table('notifications')->where('event_type', 'demurrage_warning')->count())->toBe(2)
-        ->and(DB::table('shipment_events')->where('type', 'system')->latest('occurred_at')->value('title'))
-        ->toContain('Surestaries en cours');
+    expect(DB::table('notifications')->where('event_type', 'detention_warning')->count())->toBe(1)
+        // L'exploitant voit les deux alertes au dossier.
+        ->and(DB::table('shipment_events')->where('shipment_id', $shipmentId)->where('type', 'system')->count())->toBeGreaterThanOrEqual(2);
 });

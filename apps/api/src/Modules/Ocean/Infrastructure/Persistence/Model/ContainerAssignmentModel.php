@@ -18,7 +18,8 @@ class ContainerAssignmentModel extends BaseModel
     protected $casts = [
         'vgm_kg' => 'decimal:3',
         'vgm_verified_at' => 'immutable_datetime',
-        'free_time_ends_at' => 'immutable_datetime',
+        'demurrage_ends_at' => 'immutable_datetime',
+        'detention_ends_at' => 'immutable_datetime',
         'gate_in_at' => 'immutable_datetime',
         'loaded_at' => 'immutable_datetime',
         'discharged_at' => 'immutable_datetime',

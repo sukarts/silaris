@@ -7,6 +7,7 @@ namespace Silaris\Modules\Ocean\Interface\Http\Controller;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
+use Silaris\Modules\Ocean\Application\Service\FreeTimeTracker;
 use Silaris\Modules\Ocean\Infrastructure\Persistence\Model\ContainerAssignmentModel;
 use Silaris\Modules\Ocean\Infrastructure\Persistence\Model\ContainerModel;
 use Silaris\Modules\Shared\Infrastructure\Tenancy\TenantContext;
@@ -17,6 +18,7 @@ class ContainerController
     public function __construct(
         private readonly TenantContext $tenant,
         private readonly TrackingSubscriber $subscriber,
+        private readonly FreeTimeTracker $freeTime,
     ) {}
 
     private const SIZE_TYPES = ['20GP', '40GP', '40HC', '45HC', '20RF', '40RF', '20OT', '40OT', '20FR', '40FR', '20TK'];
@@ -64,10 +66,12 @@ class ContainerController
             'booking_id' => ['nullable', 'uuid', 'exists:bookings,id'],
             'seal_number' => ['nullable', 'string', 'max:32'],
             'vgm_kg' => ['nullable', 'numeric', 'min:0'],
-            'free_time_days' => ['nullable', 'integer', 'min:0', 'max:90'],
         ]);
 
+        // La franchise ne se saisit plus sur l'affectation : elle se négocie sur
+        // le document (connaissement, booking) et l'échéance en est déduite.
         $assignment = ContainerAssignmentModel::create([...$data, 'container_id' => $containerId]);
+        $this->freeTime->refreshDeadlines((string) $assignment->id);
 
         // Le conteneur porte enfin un numéro rattaché à un dossier : c'est le
         // moment où le suivi transporteur a quelque chose à interroger.
@@ -89,14 +93,16 @@ class ContainerController
             'seal_number' => ['nullable', 'string', 'max:32'],
             'vgm_kg' => ['nullable', 'numeric', 'min:0'],
             'vgm_verified_at' => ['nullable', 'date'],
-            'free_time_days' => ['nullable', 'integer', 'min:0', 'max:90'],
-            'free_time_ends_at' => ['nullable', 'date'],
             'gate_in_at' => ['nullable', 'date'],
             'loaded_at' => ['nullable', 'date'],
             'discharged_at' => ['nullable', 'date'],
             'gate_out_at' => ['nullable', 'date'],
             'returned_at' => ['nullable', 'date'],
         ]));
+
+        // Un jalon saisi à la main déplace les compteurs autant qu'un jalon reçu
+        // du suivi : on recalcule surestaries et détention.
+        $this->freeTime->refreshDeadlines((string) $assignment->id);
 
         return response()->json($assignment->fresh());
     }
