@@ -117,10 +117,15 @@ class ShipmentController
                     'container_assignments.seal_number',
                     'container_assignments.gate_in_at',
                     'container_assignments.discharged_at',
+                    'container_assignments.demurrage_ends_at',
+                    'container_assignments.detention_ends_at',
                     'tracking_subscriptions.status AS tracking_status',
                     'tracking_subscriptions.last_polled_at',
                     'tracking_subscriptions.last_snapshot',
                 ]),
+            // Franchises négociées du dossier — portées par le document, éditables
+            // depuis l'écran pour alimenter la surveillance surestaries/détention.
+            'free_time' => $this->freeTimeOf($model),
         ])->response();
     }
 
@@ -211,5 +216,29 @@ class ShipmentController
     private function loadDetail(string $id): ShipmentModel
     {
         return ShipmentModel::with(['client', 'agent', 'branch', 'cargoItems', 'segments'])->findOrFail($id);
+    }
+
+    /**
+     * Franchises du dossier — sur le connaissement à l'import, le booking à
+     * l'export. Le sens dit sur quel document l'écran doit les enregistrer.
+     *
+     * @return array{direction: string, document: string, demurrage_free_days: ?int, detention_free_days: ?int}
+     */
+    private function freeTimeOf(ShipmentModel $shipment): array
+    {
+        // direction est un enum : comparer sur sa valeur.
+        $isExport = $shipment->direction->value === 'export';
+        $row = $isExport
+            ? DB::table('bookings')->where('shipment_id', $shipment->id)
+                ->orderByDesc('created_at')->first(['demurrage_free_days', 'detention_free_days'])
+            : DB::table('bills_of_lading')->where('shipment_id', $shipment->id)
+                ->where('type', 'master')->orderByDesc('created_at')->first(['demurrage_free_days', 'detention_free_days']);
+
+        return [
+            'direction' => $isExport ? 'export' : 'import',
+            'document' => $isExport ? 'booking' : 'connaissement maître',
+            'demurrage_free_days' => $row?->demurrage_free_days === null ? null : (int) $row->demurrage_free_days,
+            'detention_free_days' => $row?->detention_free_days === null ? null : (int) $row->detention_free_days,
+        ];
     }
 }

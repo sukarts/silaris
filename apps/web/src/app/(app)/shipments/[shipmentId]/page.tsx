@@ -34,6 +34,12 @@ interface ShipmentDetail {
     allowed_transitions: string[];
   };
   containers?: AssignedContainer[];
+  free_time?: {
+    direction: string;
+    document: string;
+    demurrage_free_days: number | null;
+    detention_free_days: number | null;
+  };
 }
 
 /** Conteneur affecté au dossier, avec l'état de son abonnement au suivi. */
@@ -45,6 +51,8 @@ interface AssignedContainer {
   tracking_status: string | null;
   last_polled_at: string | null;
   last_snapshot: string | null;
+  demurrage_ends_at: string | null;
+  detention_ends_at: string | null;
 }
 
 /**
@@ -340,11 +348,15 @@ export default function ShipmentDetailPage({ params }: { params: Promise<{ shipm
             </div>
           )}
 
+          {data.free_time && (
+            <FreeTimeCard shipmentId={shipmentId} freeTime={data.free_time} canUpdate={canUpdate} />
+          )}
+
           <div className="rounded-xl border border-line bg-surface shadow-sm">
             <div className="flex items-center border-b border-line px-4 py-3">
               <span className="text-[13px] font-bold">Conteneurs</span>
               <Link href="/demurrage" className="ml-auto text-xs font-semibold text-sea hover:underline">
-                Surestaries →
+                Surestaries &amp; détention →
               </Link>
             </div>
 
@@ -474,6 +486,84 @@ export default function ShipmentDetailPage({ params }: { params: Promise<{ shipm
           </ul>
         </div>
       </div>
+    </div>
+  );
+}
+
+/**
+ * Éditeur des franchises négociées du dossier — surestaries et détention.
+ *
+ * Elles se portent sur le connaissement à l'import, le booking à l'export ;
+ * l'API les y range selon le sens. Les renseigner arme la surveillance : sans
+ * franchise, aucune échéance ne se calcule.
+ */
+function FreeTimeCard({
+  shipmentId,
+  freeTime,
+  canUpdate,
+}: {
+  shipmentId: string;
+  freeTime: NonNullable<ShipmentDetail["free_time"]>;
+  canUpdate: boolean;
+}) {
+  const queryClient = useQueryClient();
+  const [demurrage, setDemurrage] = useState(freeTime.demurrage_free_days?.toString() ?? "");
+  const [detention, setDetention] = useState(freeTime.detention_free_days?.toString() ?? "");
+  const [info, setInfo] = useState<string | null>(null);
+
+  const save = useMutation({
+    mutationFn: async () => {
+      const { error: problem } = await rawApi.PATCH("/v1/demurrage/free-time", {
+        body: {
+          shipment_id: shipmentId,
+          demurrage_free_days: demurrage === "" ? null : Number(demurrage),
+          detention_free_days: detention === "" ? null : Number(detention),
+        },
+      });
+      if (problem) throw problem;
+    },
+    onSuccess: () => {
+      setInfo("Franchises enregistrées — échéances recalculées.");
+      queryClient.invalidateQueries({ queryKey: ["shipment", shipmentId] });
+    },
+    onError: (problem) => setInfo(problemMessage(problem)),
+  });
+
+  return (
+    <div className="rounded-xl border border-line bg-surface shadow-sm">
+      <div className="border-b border-line px-4 py-3">
+        <span className="text-[13px] font-bold">Franchises conteneur</span>
+        <span className="ml-2 text-[11px] text-ink-3">
+          négociées sur le {freeTime.document} — {freeTime.direction === "export" ? "export" : "import"}
+        </span>
+      </div>
+      <form
+        onSubmit={(event) => { event.preventDefault(); setInfo(null); save.mutate(); }}
+        className="flex flex-wrap items-end gap-3 px-4 py-3"
+      >
+        <div>
+          <label className="text-[10px] uppercase tracking-wider text-ink-3">Surestaries (jours)</label>
+          <input
+            type="number" min={0} max={180} value={demurrage} disabled={!canUpdate}
+            onChange={(e) => setDemurrage(e.target.value)}
+            placeholder="au terminal" className={`${inputClass} mono w-32`}
+          />
+        </div>
+        <div>
+          <label className="text-[10px] uppercase tracking-wider text-ink-3">Détention (jours)</label>
+          <input
+            type="number" min={0} max={180} value={detention} disabled={!canUpdate}
+            onChange={(e) => setDetention(e.target.value)}
+            placeholder="chez le client" className={`${inputClass} mono w-32`}
+          />
+        </div>
+        {canUpdate && (
+          <button type="submit" disabled={save.isPending} className={`${buttonPrimary} !py-2`}>
+            {save.isPending ? "Enregistrement…" : "Enregistrer"}
+          </button>
+        )}
+        {info && <p className="w-full text-xs text-ink-3">{info}</p>}
+      </form>
     </div>
   );
 }
