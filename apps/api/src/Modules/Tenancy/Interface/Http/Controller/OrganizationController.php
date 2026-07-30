@@ -61,6 +61,8 @@ class OrganizationController
             'fne_settings.ncc' => ['sometimes', 'nullable', 'string', 'max:32'],
             'fne_settings.point_of_sale' => ['sometimes', 'nullable', 'string', 'max:64'],
             'fne_settings.establishment' => ['sometimes', 'nullable', 'string', 'max:120'],
+            'fne_settings.regime' => ['sometimes', 'nullable', 'string', 'max:64'],
+            'fne_settings.tax_center' => ['sometimes', 'nullable', 'string', 'max:120'],
             'fne_settings.enabled' => ['sometimes', 'boolean'],
             'fne_api_key' => ['sometimes', 'nullable', 'string', 'max:255'],
         ]));

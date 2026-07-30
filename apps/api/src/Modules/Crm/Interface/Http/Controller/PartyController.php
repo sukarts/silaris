@@ -134,6 +134,7 @@ class PartyController
             'name' => [$existing ? 'sometimes' : 'required', 'string', 'max:255'],
             'tax_id' => ['nullable', 'string', 'max:64'],
             'ncc' => ['nullable', 'string', 'max:32'],
+            'tax_regime' => ['nullable', 'string', 'max:32'],
             'industry' => ['nullable', 'string', 'max:100'],
             'currency_code' => ['nullable', 'size:3', 'exists:currencies,code'],
             'payment_terms_days' => ['nullable', 'integer', 'min:0', 'max:365'],

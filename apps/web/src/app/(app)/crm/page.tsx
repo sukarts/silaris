@@ -61,7 +61,7 @@ export default function CrmPage() {
   const [search, setSearch] = useState("");
   const [showForm, setShowForm] = useState(false);
   const emptyForm = {
-    type: "client", kind: "company", supplier_kind: "trucker", name: "", tax_id: "", ncc: "", industry: "",
+    type: "client", kind: "company", supplier_kind: "trucker", name: "", tax_id: "", ncc: "", tax_regime: "", industry: "",
     currency_code: "XOF", payment_terms_days: "30",
     contact_name: "", contact_email: "", contact_dial: "+225", contact_phone: "",
     address_line1: "", address_city: "", address_country: "",
@@ -89,6 +89,7 @@ export default function CrmPage() {
           name: form.name,
           tax_id: form.tax_id || null,
           ncc: form.ncc || null,
+          tax_regime: form.tax_regime || null,
           industry: form.industry || null,
           currency_code: form.currency_code || null,
           payment_terms_days: Number(form.payment_terms_days) || null,
@@ -198,6 +199,11 @@ export default function CrmPage() {
           {form.type === "client" && (
             <Field label="NCC (Compte Contribuable)">
               <input maxLength={32} value={form.ncc} onChange={(e) => setForm({ ...form, ncc: e.target.value })} placeholder="Requis pour la facture normalisée" className={`${inputClass} mono`} />
+            </Field>
+          )}
+          {form.type === "client" && (
+            <Field label="Régime d'imposition">
+              <input maxLength={32} value={form.tax_regime} onChange={(e) => setForm({ ...form, tax_regime: e.target.value })} placeholder="TEE, réel… — mention FNE" className={inputClass} />
             </Field>
           )}
           <Field label="Secteur d'activité" className="md:col-span-2">

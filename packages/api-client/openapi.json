@@ -5169,6 +5169,20 @@
                                                 ],
                                                 "maxLength": 120
                                             },
+                                            "regime": {
+                                                "type": [
+                                                    "string",
+                                                    "null"
+                                                ],
+                                                "maxLength": 64
+                                            },
+                                            "tax_center": {
+                                                "type": [
+                                                    "string",
+                                                    "null"
+                                                ],
+                                                "maxLength": 120
+                                            },
                                             "enabled": {
                                                 "type": "boolean"
                                             }
@@ -13580,6 +13594,12 @@
                             "null"
                         ]
                     },
+                    "fne_seller_name": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
                     "fne_certified_at": {
                         "type": [
                             "string",
@@ -13616,6 +13636,7 @@
                     "fne_token",
                     "fne_balance_sticker",
                     "fne_template",
+                    "fne_seller_name",
                     "fne_certified_at"
                 ],
                 "title": "InvoiceModel"
@@ -14253,6 +14274,12 @@
                             "string",
                             "null"
                         ]
+                    },
+                    "tax_regime": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
                     }
                 },
                 "required": [
@@ -14276,7 +14303,8 @@
                     "updated_at",
                     "kind",
                     "industry",
-                    "ncc"
+                    "ncc",
+                    "tax_regime"
                 ],
                 "title": "PartyModel"
             },

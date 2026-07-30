@@ -28,7 +28,7 @@ final class CertifyInvoice
         private readonly FneClient $client,
     ) {}
 
-    public function certify(InvoiceModel $invoice, ?float $foreignCurrencyRate = null): InvoiceModel
+    public function certify(InvoiceModel $invoice, ?float $foreignCurrencyRate = null, ?string $sellerName = null): InvoiceModel
     {
         if ($invoice->status === 'draft' || $invoice->number === null) {
             throw FneCertificationFailed::invoiceNotValidated();
@@ -55,18 +55,19 @@ final class CertifyInvoice
         }
 
         $invoice->loadMissing('lines');
-        $payload = $this->translator->toPayload($invoice, $company, $client, $template, $foreignCurrencyRate);
+        $payload = $this->translator->toPayload($invoice, $company, $client, $template, $foreignCurrencyRate, $sellerName);
 
         // L'appel réseau reste hors transaction : il peut être long, et rien en
         // base ne doit être verrouillé pendant qu'on attend la DGI.
         $result = $this->client->sign((string) $company->fne_api_key, $payload);
 
-        DB::transaction(function () use ($invoice, $result, $template): void {
+        DB::transaction(function () use ($invoice, $result, $template, $sellerName): void {
             $invoice->update([
                 'fne_reference' => $result['reference'],
                 'fne_token' => $result['token'],
                 'fne_balance_sticker' => $result['balance_sticker'],
                 'fne_template' => $template->value,
+                'fne_seller_name' => $sellerName,
                 'fne_certified_at' => now(),
             ]);
         });

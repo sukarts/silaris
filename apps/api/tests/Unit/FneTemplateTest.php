@@ -26,10 +26,12 @@ it('n exige devise et taux qu en B2F', function (): void {
         ->and(FneTemplate::B2B->requiresForeignCurrency())->toBeFalse();
 });
 
-it('mappe le taux de TVA vers le code DGI, sans inventer d exonération', function (): void {
+it('mappe le taux de TVA vers le code DGI, TVAD pour le non taxé', function (): void {
+    // Une facture certifiée observée sur la plateforme porte TVAD (0) sur les
+    // lignes hors champ : la DGI attend un code par ligne, jamais le vide.
     expect(FneTaxCode::forRate(18.0))->toBe(['TVA'])
         ->and(FneTaxCode::forRate(9.0))->toBe(['TVAB'])
-        // Un débours douane, non taxé : hors champ, pas 0 % conventionnel.
-        ->and(FneTaxCode::forRate(0.0))->toBe([])
-        ->and(FneTaxCode::forRate(null))->toBe([]);
+        // Un débours douane, hors champ de la TVA par la loi : exonération légale.
+        ->and(FneTaxCode::forRate(0.0))->toBe(['TVAD'])
+        ->and(FneTaxCode::forRate(null))->toBe(['TVAD']);
 });

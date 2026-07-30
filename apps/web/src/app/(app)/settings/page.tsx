@@ -33,7 +33,7 @@ interface Company {
   shipment_settings: { reference_format?: string; reference_prefix?: string } | null;
   // La clé d'API n'est jamais renvoyée (chiffrée, masquée) ; on sait seulement
   // si elle est posée, pour l'afficher comme configurée sans la révéler.
-  fne_settings: { ncc?: string; point_of_sale?: string; establishment?: string; enabled?: boolean } | null;
+  fne_settings: { ncc?: string; point_of_sale?: string; establishment?: string; regime?: string; tax_center?: string; enabled?: boolean } | null;
   fne_api_key_set?: boolean;
   logo_document_id: string | null;
   branches: Branch[];
@@ -82,6 +82,8 @@ function CompanyTab({ company, canUpdate }: { company: Company; canUpdate: boole
     fne_ncc: company.fne_settings?.ncc ?? "",
     fne_point_of_sale: company.fne_settings?.point_of_sale ?? "",
     fne_establishment: company.fne_settings?.establishment ?? "",
+    fne_regime: company.fne_settings?.regime ?? "",
+    fne_tax_center: company.fne_settings?.tax_center ?? "",
     fne_enabled: company.fne_settings?.enabled ?? false,
     fne_api_key: "", // Saisie seulement pour (re)poser la clé ; jamais préremplie.
   });
@@ -120,6 +122,8 @@ function CompanyTab({ company, canUpdate }: { company: Company; canUpdate: boole
             ncc: form.fne_ncc || null,
             point_of_sale: form.fne_point_of_sale || null,
             establishment: form.fne_establishment || null,
+            regime: form.fne_regime || null,
+            tax_center: form.fne_tax_center || null,
             enabled: form.fne_enabled,
           },
           // Clé transmise seulement si saisie : vide, on ne l'écrase pas.
@@ -278,6 +282,12 @@ function CompanyTab({ company, canUpdate }: { company: Company; canUpdate: boole
           </Field>
           <Field label="Établissement">
             <input maxLength={120} value={form.fne_establishment} onChange={(e) => setForm({ ...form, fne_establishment: e.target.value })} disabled={!canUpdate} className={inputClass} />
+          </Field>
+          <Field label="Régime d'imposition">
+            <input maxLength={64} value={form.fne_regime} onChange={(e) => setForm({ ...form, fne_regime: e.target.value })} disabled={!canUpdate} placeholder="Réel, Microentreprise…" className={inputClass} />
+          </Field>
+          <Field label="Centre des impôts" className="md:col-span-2">
+            <input maxLength={120} value={form.fne_tax_center} onChange={(e) => setForm({ ...form, fne_tax_center: e.target.value })} disabled={!canUpdate} placeholder="947 Impôts des II Plateaux Djibi" className={inputClass} />
           </Field>
           <Field label="Clé d'API DGI" className="md:col-span-3">
             <input type="password" autoComplete="off" value={form.fne_api_key}

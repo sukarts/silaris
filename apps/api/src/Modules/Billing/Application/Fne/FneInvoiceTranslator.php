@@ -31,6 +31,7 @@ final class FneInvoiceTranslator
         PartyModel $client,
         FneTemplate $template,
         ?float $foreignCurrencyRate,
+        ?string $sellerName = null,
     ): array {
         $settings = $company->fne_settings ?? [];
 
@@ -56,6 +57,10 @@ final class FneInvoiceTranslator
                 fn ($line) => $this->line($line, $rates)
             )->all(),
         ];
+
+        if ($sellerName !== null && $sellerName !== '') {
+            $payload['clientSellerName'] = $sellerName;
+        }
 
         if ($template->requiresClientNcc()) {
             $payload['clientNcc'] = (string) $client->ncc;

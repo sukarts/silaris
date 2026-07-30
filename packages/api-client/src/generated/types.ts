@@ -2754,6 +2754,7 @@ export interface components {
             fne_token: string | null;
             fne_balance_sticker: number | null;
             fne_template: string | null;
+            fne_seller_name: string | null;
             /** Format: date-time */
             fne_certified_at: string | null;
         };
@@ -2898,6 +2899,7 @@ export interface components {
             kind: string;
             industry: string | null;
             ncc: string | null;
+            tax_regime: string | null;
         };
         /** PaymentModel */
         PaymentModel: {
@@ -5540,6 +5542,8 @@ export interface operations {
                         ncc?: string | null;
                         point_of_sale?: string | null;
                         establishment?: string | null;
+                        regime?: string | null;
+                        tax_center?: string | null;
                         enabled?: boolean;
                     };
                     fne_api_key?: string | null;

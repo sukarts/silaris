@@ -7,28 +7,30 @@ namespace Silaris\Modules\Billing\Domain\Fne;
 /**
  * Code de taxe FNE d'une ligne.
  *
- * La DGI ne reçoit pas un taux mais un code : TVA à 18 %, TVAB à 9 %. Une ligne
- * sans TVA — un débours douane, un poste refacturé à l'euro près — ne porte
- * aucun code : elle sort hors champ de la taxe, elle n'est pas taxée à zéro.
+ * La DGI ne reçoit pas un taux mais un code, et elle en attend un sur chaque
+ * ligne : TVA à 18 %, TVAB à 9 %, et pour ce qui n'est pas soumis à TVA le code
+ * d'exonération légale TVAD (0 %). Une facture de transit en est pleine — droits
+ * de douane, débours refacturés à l'identique : hors champ de la TVA par la loi,
+ * donc TVAD, jamais l'absence de code, qu'une facture certifiée observée sur la
+ * plateforme confirme.
  *
- * Les deux exonérations à 0 % de la DGI (TVAC conventionnelle, TVAD légale) ne
- * se déduisent pas d'un taux : elles supposent un motif d'exonération que la
- * ligne ne porte pas. On ne les invente donc pas ici.
+ * L'exonération conventionnelle TVAC, elle, suppose une convention que la ligne
+ * ne porte pas : on ne la déduit pas d'un taux.
  */
 final class FneTaxCode
 {
     /**
-     * Codes de taxe applicables à une ligne, d'après son taux de TVA.
+     * Code de taxe d'une ligne, d'après son taux de TVA. Toujours un code : une
+     * ligne non soumise à TVA relève de l'exonération légale TVAD, pas du vide.
      *
-     * @return list<string> Vide si la ligne n'est pas soumise à TVA.
+     * @return list<string>
      */
     public static function forRate(?float $ratePercent): array
     {
         return match (true) {
-            $ratePercent === null => [],
-            abs($ratePercent - 18.0) < 0.001 => ['TVA'],
-            abs($ratePercent - 9.0) < 0.001 => ['TVAB'],
-            default => [],
+            $ratePercent !== null && abs($ratePercent - 18.0) < 0.001 => ['TVA'],
+            $ratePercent !== null && abs($ratePercent - 9.0) < 0.001 => ['TVAB'],
+            default => ['TVAD'],
         };
     }
 }
