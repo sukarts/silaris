@@ -79,7 +79,9 @@ it('pousse une facture validée vers Odoo (client créé à la volée, mapping p
         app(SyncLogger::class),
     );
 
-    expect(DB::table('invoices')->where('id', $invoiceId)->value('status'))->toBe('synced')
+    // L'export réussi n'altère plus le statut : il inscrit l'état d'export à part.
+    expect(DB::table('invoices')->where('id', $invoiceId)->value('status'))->toBe('validated')
+        ->and(DB::table('invoices')->where('id', $invoiceId)->value('accounting_export_status'))->toBe('exported')
         ->and((int) DB::table('invoices')->where('id', $invoiceId)->value('odoo_id'))->toBe(9001)
         ->and((int) DB::table('odoo_entity_maps')->where('entity_type', 'invoice')->where('silaris_id', $invoiceId)->value('odoo_id'))->toBe(9001)
         ->and((int) DB::table('odoo_entity_maps')->where('entity_type', 'party')->where('silaris_id', $partyId)->value('odoo_id'))->toBe(501)
@@ -100,7 +102,7 @@ it('pousse une facture validée vers Odoo (client créé à la volée, mapping p
     });
 });
 
-it('marque la facture sync_failed en dead letter sur erreur métier Odoo', function (): void {
+it('marque l export en échec sur dead letter d une erreur métier Odoo', function (): void {
     [$tenantId, , $invoiceId] = seedOdooFixture();
 
     Http::fake([
@@ -124,7 +126,9 @@ it('marque la facture sync_failed en dead letter sur erreur métier Odoo', funct
         // fail() lève en contexte de test — attendu
     }
 
-    expect(DB::table('invoices')->where('id', $invoiceId)->value('status'))->toBe('sync_failed')
+    // La facture reste validée ; seul l'export est en échec, isolé du statut.
+    expect(DB::table('invoices')->where('id', $invoiceId)->value('status'))->toBe('validated')
+        ->and(DB::table('invoices')->where('id', $invoiceId)->value('accounting_export_status'))->toBe('failed')
         ->and(DB::table('odoo_sync_logs')->where('status', 'dead_letter')->count())->toBeGreaterThanOrEqual(1);
 });
 

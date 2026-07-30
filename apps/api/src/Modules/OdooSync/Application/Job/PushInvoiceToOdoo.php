@@ -98,10 +98,18 @@ class PushInvoiceToOdoo implements ShouldQueue
             }
 
             $map->remember('invoice', $invoice->id, 'account.move', $odooId, 'push');
-            $invoice->updateQuietly(['odoo_id' => $odooId, 'status' => 'synced']);
+            // L'export réussi n'altère pas le statut de la facture — il inscrit
+            // sa référence comptable et son issue, à part.
+            $invoice->updateQuietly([
+                'odoo_id' => $odooId,
+                'accounting_ref' => (string) $odooId,
+                'accounting_export_status' => 'exported',
+                'accounting_error' => null,
+                'accounting_exported_at' => now(),
+            ]);
             $logger->log('invoice', $invoice->id, 'push', 'success', $payload, attempts: $this->attempts(), durationMs: (int) ((hrtime(true) - $start) / 1e6));
         } catch (OdooRequestFailed $e) {
-            $invoice->updateQuietly(['status' => 'sync_failed']);
+            $invoice->updateQuietly(['accounting_export_status' => 'failed', 'accounting_error' => $e->getMessage()]);
             $logger->log('invoice', $invoice->id, 'push', 'dead_letter', null, $e->getMessage(), $this->attempts());
             $this->fail($e);
         } catch (Throwable $e) {
@@ -113,7 +121,10 @@ class PushInvoiceToOdoo implements ShouldQueue
     public function failed(Throwable $exception): void
     {
         app(TenantContext::class)->set($this->tenantId);
-        InvoiceModel::where('id', $this->invoiceId)->update(['status' => 'sync_failed']);
+        InvoiceModel::where('id', $this->invoiceId)->update([
+            'accounting_export_status' => 'failed',
+            'accounting_error' => $exception->getMessage(),
+        ]);
         app(SyncLogger::class)->log('invoice', $this->invoiceId, 'push', 'dead_letter', null, $exception->getMessage(), $this->tries);
     }
 }

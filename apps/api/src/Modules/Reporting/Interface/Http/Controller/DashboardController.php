@@ -46,7 +46,7 @@ class DashboardController
             'revenue_month' => (float) DB::table('invoices')
                 ->where('tenant_id', $tenantId)
                 ->where('type', 'invoice')
-                ->whereIn('status', ['validated', 'synced'])
+                ->where('status', 'validated')
                 ->whereBetween('issue_date', [now()->startOfMonth()->toDateString(), now()->endOfMonth()->toDateString()])
                 ->sum('total_excl_tax'),
         ];

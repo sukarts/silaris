@@ -3557,9 +3557,20 @@
                             "type": "string",
                             "enum": [
                                 "draft",
-                                "validated",
-                                "synced",
-                                "sync_failed"
+                                "validated"
+                            ]
+                        }
+                    },
+                    {
+                        "name": "accounting_export_status",
+                        "in": "query",
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "none",
+                                "pending",
+                                "exported",
+                                "failed"
                             ]
                         }
                     },
@@ -13606,6 +13617,27 @@
                             "null"
                         ],
                         "format": "date-time"
+                    },
+                    "accounting_export_status": {
+                        "type": "string"
+                    },
+                    "accounting_ref": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "accounting_error": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "accounting_exported_at": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
                     }
                 },
                 "required": [
@@ -13637,7 +13669,11 @@
                     "fne_balance_sticker",
                     "fne_template",
                     "fne_seller_name",
-                    "fne_certified_at"
+                    "fne_certified_at",
+                    "accounting_export_status",
+                    "accounting_ref",
+                    "accounting_error",
+                    "accounting_exported_at"
                 ],
                 "title": "InvoiceModel"
             },

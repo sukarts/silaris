@@ -10,10 +10,10 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 use Silaris\Modules\Billing\Application\Fne\CertifyInvoice;
+use Silaris\Modules\Billing\Domain\Accounting\AccountingLedger;
 use Silaris\Modules\Billing\Domain\Event\InvoiceValidated;
 use Silaris\Modules\Billing\Infrastructure\Persistence\Model\InvoiceModel;
 use Silaris\Modules\Billing\Infrastructure\Persistence\Model\TaxRateModel;
-use Silaris\Modules\OdooSync\Application\Job\PushInvoiceToOdoo;
 use Silaris\Modules\Shared\Domain\Service\QrSvg;
 use Silaris\Modules\Shared\Infrastructure\Events\DomainEventPublisher;
 use Silaris\Modules\Shared\Infrastructure\Tenancy\TenantContext;
@@ -29,7 +29,8 @@ class InvoiceController
     {
         $validated = $request->validate([
             'type' => ['sometimes', Rule::in(['proforma', 'invoice', 'credit_note'])],
-            'status' => ['sometimes', Rule::in(['draft', 'validated', 'synced', 'sync_failed'])],
+            'status' => ['sometimes', Rule::in(['draft', 'validated'])],
+            'accounting_export_status' => ['sometimes', Rule::in(['none', 'pending', 'exported', 'failed'])],
             'payment_status' => ['sometimes', Rule::in(['none', 'unpaid', 'partial', 'paid'])],
             'party_id' => ['sometimes', 'uuid'],
             'shipment_id' => ['sometimes', 'uuid'],
@@ -39,6 +40,7 @@ class InvoiceController
             InvoiceModel::with(['party:id,name,code', 'shipment:id,reference'])
                 ->when($validated['type'] ?? null, fn ($q, $t) => $q->where('type', $t))
                 ->when($validated['status'] ?? null, fn ($q, $s) => $q->where('status', $s))
+                ->when($validated['accounting_export_status'] ?? null, fn ($q, $s) => $q->where('accounting_export_status', $s))
                 ->when($validated['payment_status'] ?? null, fn ($q, $p) => $q->where('payment_status', $p))
                 ->when($validated['party_id'] ?? null, fn ($q, $p) => $q->where('party_id', $p))
                 ->when($validated['shipment_id'] ?? null, fn ($q, $s) => $q->where('shipment_id', $s))
@@ -183,11 +185,11 @@ class InvoiceController
      * POST /v1/invoices/{id}/validate — attribue le numéro légal (séquence sans trou
      * par société+type) et fige la facture. La sync Odoo suit (job outbox, Étape 20).
      */
-    public function validateInvoice(Request $request, string $invoiceId): JsonResponse
+    public function validateInvoice(Request $request, string $invoiceId, AccountingLedger $ledger): JsonResponse
     {
         $invoice = InvoiceModel::where('status', 'draft')->findOrFail($invoiceId);
 
-        DB::transaction(function () use ($invoice, $request): void {
+        DB::transaction(function () use ($invoice, $request, $ledger): void {
             $company = CompanyModel::findOrFail($invoice->company_id);
             $format = $company->invoice_settings['number_format'] ?? 'F-{YEAR}-{SEQ:4}';
 
@@ -209,6 +211,9 @@ class InvoiceController
                 'payment_status' => 'unpaid',
                 'validated_at' => now(),
                 'validated_by' => $request->user()?->id,
+                // Un débouché comptable branché → export à venir ; sinon rien
+                // n'est attendu d'un système extérieur.
+                'accounting_export_status' => $ledger->isConfigured() ? 'pending' : 'none',
             ]);
 
             // Notification client « facture disponible » via l'outbox (même transaction).
@@ -223,8 +228,9 @@ class InvoiceController
             ));
         });
 
-        // Sync Odoo asynchrone après commit — mode dégradé géré par le job (backoff).
-        PushInvoiceToOdoo::dispatch($this->tenant->id(), $invoice->id)->afterCommit();
+        // Report vers la comptabilité configurée, après commit. Le connecteur —
+        // Odoo ou un autre — gère ses reprises ; sans connecteur, rien ne part.
+        $ledger->queueExport($this->tenant->id(), $invoice->id);
 
         return response()->json($invoice->fresh('lines'));
     }
@@ -233,7 +239,7 @@ class InvoiceController
     public function creditNote(Request $request, string $invoiceId): JsonResponse
     {
         $original = InvoiceModel::where('type', 'invoice')
-            ->whereIn('status', ['validated', 'synced'])
+            ->where('status', 'validated')
             ->with('lines')
             ->findOrFail($invoiceId);
 
