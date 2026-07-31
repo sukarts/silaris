@@ -8166,6 +8166,7 @@
         "/v1/portal/invoices": {
             "get": {
                 "operationId": "portalInvoice.index",
+                "summary": "Relev\u00e9 du client : ses factures avec ce qui reste d\u00fb, sa balance \u00e2g\u00e9e, et\nses r\u00e8glements. Le reste d\u00fb se lit sur les imputations r\u00e9elles, pas sur le\n`payment_status` (\u00e9crit par la synchronisation comptable, absent sans elle)",
                 "tags": [
                     "PortalInvoice"
                 ],
@@ -8180,12 +8181,138 @@
                                         "data": {
                                             "type": "array",
                                             "items": {
-                                                "$ref": "#/components/schemas/InvoiceModel"
+                                                "type": "object",
+                                                "properties": {
+                                                    "id": {
+                                                        "type": "string"
+                                                    },
+                                                    "type": {
+                                                        "type": "string"
+                                                    },
+                                                    "number": {
+                                                        "type": [
+                                                            "string",
+                                                            "null"
+                                                        ]
+                                                    },
+                                                    "currency_code": {
+                                                        "type": "string"
+                                                    },
+                                                    "total_incl_tax": {
+                                                        "type": "number"
+                                                    },
+                                                    "paid": {
+                                                        "type": "number"
+                                                    },
+                                                    "outstanding": {
+                                                        "type": "number"
+                                                    },
+                                                    "pay_status": {
+                                                        "type": "string",
+                                                        "enum": [
+                                                            "paid",
+                                                            "partial",
+                                                            "unpaid",
+                                                            "n_a"
+                                                        ]
+                                                    },
+                                                    "issue_date": {
+                                                        "type": [
+                                                            "string",
+                                                            "null"
+                                                        ]
+                                                    },
+                                                    "due_date": {
+                                                        "type": [
+                                                            "string",
+                                                            "null"
+                                                        ]
+                                                    },
+                                                    "shipment": {
+                                                        "$ref": "#/components/schemas/ShipmentModel"
+                                                    }
+                                                },
+                                                "required": [
+                                                    "id",
+                                                    "type",
+                                                    "number",
+                                                    "currency_code",
+                                                    "total_incl_tax",
+                                                    "paid",
+                                                    "outstanding",
+                                                    "pay_status",
+                                                    "issue_date",
+                                                    "due_date",
+                                                    "shipment"
+                                                ]
+                                            }
+                                        },
+                                        "summary": {
+                                            "type": "object",
+                                            "properties": {
+                                                "current": {
+                                                    "type": "number"
+                                                },
+                                                "1_30": {
+                                                    "type": "number"
+                                                },
+                                                "31_60": {
+                                                    "type": "number"
+                                                },
+                                                "61_90": {
+                                                    "type": "number"
+                                                },
+                                                "over_90": {
+                                                    "type": "number"
+                                                },
+                                                "total": {
+                                                    "type": "number"
+                                                }
+                                            },
+                                            "required": [
+                                                "current",
+                                                "1_30",
+                                                "31_60",
+                                                "61_90",
+                                                "over_90",
+                                                "total"
+                                            ]
+                                        },
+                                        "receipts": {
+                                            "type": "array",
+                                            "items": {
+                                                "type": "object",
+                                                "properties": {
+                                                    "reference": {
+                                                        "type": "string"
+                                                    },
+                                                    "method": {
+                                                        "type": "string"
+                                                    },
+                                                    "amount": {
+                                                        "type": "number"
+                                                    },
+                                                    "received_on": {
+                                                        "type": "string"
+                                                    },
+                                                    "note": {
+                                                        "type": "string"
+                                                    }
+                                                },
+                                                "required": [
+                                                    "reference",
+                                                    "method",
+                                                    "amount",
+                                                    "received_on",
+                                                    "note"
+                                                ]
                                             }
                                         }
                                     },
                                     "required": [
-                                        "data"
+                                        "data",
+                                        "summary",
+                                        "receipts"
                                     ]
                                 }
                             }
@@ -13811,6 +13938,16 @@
                 ],
                 "title": "CursorPaginator"
             },
+            "Direction": {
+                "type": "string",
+                "description": "| |\n|---|\n| `import` <br/>  |\n| `export` <br/>  |\n| `transit` <br/> Transbordement / r\u00e9exp\u00e9dition \u2014 ni import ni export au pays du transitaire. |",
+                "enum": [
+                    "import",
+                    "export",
+                    "transit"
+                ],
+                "title": "Direction"
+            },
             "DocumentModel": {
                 "type": "object",
                 "properties": {
@@ -15022,6 +15159,16 @@
                 ],
                 "title": "PaymentModel"
             },
+            "Priority": {
+                "type": "string",
+                "enum": [
+                    "low",
+                    "normal",
+                    "high",
+                    "critical"
+                ],
+                "title": "Priority"
+            },
             "QuoteModel": {
                 "type": "object",
                 "properties": {
@@ -15405,6 +15552,247 @@
                     "closed_at"
                 ],
                 "title": "ShipmentListResource"
+            },
+            "ShipmentModel": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string"
+                    },
+                    "tenant_id": {
+                        "type": "string"
+                    },
+                    "reference": {
+                        "type": "string"
+                    },
+                    "client_id": {
+                        "type": "string"
+                    },
+                    "branch_id": {
+                        "type": "string"
+                    },
+                    "company_id": {
+                        "type": "string"
+                    },
+                    "agent_id": {
+                        "type": "string"
+                    },
+                    "supervisor_id": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "direction": {
+                        "$ref": "#/components/schemas/Direction"
+                    },
+                    "mode": {
+                        "$ref": "#/components/schemas/TransportMode"
+                    },
+                    "status": {
+                        "type": "string"
+                    },
+                    "workflow_definition_id": {
+                        "type": "string"
+                    },
+                    "incoterm_code": {
+                        "type": "string"
+                    },
+                    "origin_locode": {
+                        "type": "string"
+                    },
+                    "destination_locode": {
+                        "type": "string"
+                    },
+                    "priority": {
+                        "$ref": "#/components/schemas/Priority"
+                    },
+                    "etd": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "format": "date-time"
+                    },
+                    "eta": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "format": "date-time"
+                    },
+                    "atd": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "format": "date-time"
+                    },
+                    "ata": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "format": "date-time"
+                    },
+                    "eta_initial": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "format": "date-time"
+                    },
+                    "estimated_cost": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "estimated_revenue": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "currency_code": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "quote_id": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "notes": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "closed_at": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "format": "date-time"
+                    },
+                    "closed_by": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "is_archived": {
+                        "type": "boolean"
+                    },
+                    "created_at": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "format": "date-time"
+                    },
+                    "updated_at": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "format": "date-time"
+                    },
+                    "quote_waiver_status": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "quote_waiver_reason": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "quote_waiver_requested_by": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "quote_waiver_requested_at": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "quote_waiver_decided_by": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "quote_waiver_decided_at": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "quote_waiver_decision_note": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "service_id": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    }
+                },
+                "required": [
+                    "id",
+                    "tenant_id",
+                    "reference",
+                    "client_id",
+                    "branch_id",
+                    "company_id",
+                    "agent_id",
+                    "supervisor_id",
+                    "direction",
+                    "mode",
+                    "status",
+                    "workflow_definition_id",
+                    "incoterm_code",
+                    "origin_locode",
+                    "destination_locode",
+                    "priority",
+                    "etd",
+                    "eta",
+                    "atd",
+                    "ata",
+                    "eta_initial",
+                    "estimated_cost",
+                    "estimated_revenue",
+                    "currency_code",
+                    "quote_id",
+                    "notes",
+                    "closed_at",
+                    "closed_by",
+                    "is_archived",
+                    "created_at",
+                    "updated_at",
+                    "quote_waiver_status",
+                    "quote_waiver_reason",
+                    "quote_waiver_requested_by",
+                    "quote_waiver_requested_at",
+                    "quote_waiver_decided_by",
+                    "quote_waiver_decided_at",
+                    "quote_waiver_decision_note",
+                    "service_id"
+                ],
+                "title": "ShipmentModel"
             },
             "ShipmentResource": {
                 "type": "object",
@@ -15955,6 +16343,17 @@
                     "carrier_party_id"
                 ],
                 "title": "TrailerModel"
+            },
+            "TransportMode": {
+                "type": "string",
+                "enum": [
+                    "sea_fcl",
+                    "sea_lcl",
+                    "air",
+                    "road",
+                    "multimodal"
+                ],
+                "title": "TransportMode"
             },
             "TransportSegmentModel": {
                 "type": "object",
