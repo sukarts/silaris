@@ -432,6 +432,80 @@
                 }
             }
         },
+        "/v1/air-waybills/{awbId}/track": {
+            "post": {
+                "operationId": "airWaybill.track",
+                "summary": "POST /v1/air-waybills/{id}/track \u2014 interroge ShipsGo et range le relev\u00e9 :\nheures r\u00e9elles des segments, \u00e9tat d'acheminement, mouvements de vol",
+                "tags": [
+                    "AirWaybill"
+                ],
+                "parameters": [
+                    {
+                        "name": "awbId",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "status": {
+                                            "type": "string"
+                                        },
+                                        "new_events": {
+                                            "type": "integer"
+                                        },
+                                        "last_location": {
+                                            "type": [
+                                                "string",
+                                                "null"
+                                            ]
+                                        }
+                                    },
+                                    "required": [
+                                        "status",
+                                        "new_events",
+                                        "last_location"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "502": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "message": {
+                                            "type": "string"
+                                        }
+                                    },
+                                    "required": [
+                                        "message"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/AuthorizationException"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            }
+        },
         "/v1/admin/audit-logs": {
             "get": {
                 "operationId": "auditLog.index",
@@ -12478,6 +12552,31 @@
                             "string",
                             "null"
                         ]
+                    },
+                    "tracking_status": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "last_location_iata": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "last_tracked_at": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "format": "date-time"
+                    },
+                    "shipsgo_ref": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
                     }
                 },
                 "required": [
@@ -12499,7 +12598,11 @@
                     "issued_by",
                     "created_at",
                     "updated_at",
-                    "chargeable_weight_kg"
+                    "chargeable_weight_kg",
+                    "tracking_status",
+                    "last_location_iata",
+                    "last_tracked_at",
+                    "shipsgo_ref"
                 ],
                 "title": "AirWaybillModel"
             },

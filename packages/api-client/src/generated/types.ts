@@ -147,6 +147,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/air-waybills/{awbId}/track": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * POST /v1/air-waybills/{id}/track — interroge ShipsGo et range le relevé :
+         *     heures réelles des segments, état d'acheminement, mouvements de vol
+         */
+        post: operations["airWaybill.track"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/admin/audit-logs": {
         parameters: {
             query?: never;
@@ -2517,6 +2537,11 @@ export interface components {
             /** Format: date-time */
             updated_at: string | null;
             chargeable_weight_kg: string | null;
+            tracking_status: string | null;
+            last_location_iata: string | null;
+            /** Format: date-time */
+            last_tracked_at: string | null;
+            shipsgo_ref: string | null;
         };
         /** AuditLogModel */
         AuditLogModel: {
@@ -3506,6 +3531,43 @@ export interface operations {
             };
             401: components["responses"]["AuthenticationException"];
             403: components["responses"]["AuthorizationException"];
+        };
+    };
+    "airWaybill.track": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                awbId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        status: string;
+                        new_events: number;
+                        last_location: string | null;
+                    };
+                };
+            };
+            401: components["responses"]["AuthenticationException"];
+            403: components["responses"]["AuthorizationException"];
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        message: string;
+                    };
+                };
+            };
         };
     };
     "auditLog.index": {

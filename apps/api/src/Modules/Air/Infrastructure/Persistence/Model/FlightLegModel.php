@@ -10,5 +10,10 @@ class FlightLegModel extends BaseModel
 {
     protected $table = 'flight_legs';
 
-    protected $casts = ['departure_at' => 'immutable_datetime', 'arrival_at' => 'immutable_datetime'];
+    protected $casts = [
+        'departure_at' => 'immutable_datetime',
+        'arrival_at' => 'immutable_datetime',
+        'actual_departure_at' => 'immutable_datetime',
+        'actual_arrival_at' => 'immutable_datetime',
+    ];
 }

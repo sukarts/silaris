@@ -30,6 +30,7 @@ class AirWaybillModel extends BaseModel
         'volume_m3' => 'decimal:3',
         'chargeable_weight_kg' => 'decimal:3',
         'issued_at' => 'immutable_datetime',
+        'last_tracked_at' => 'immutable_datetime',
     ];
 
     public function shipment(): BelongsTo
@@ -55,5 +56,10 @@ class AirWaybillModel extends BaseModel
     public function legs(): HasMany
     {
         return $this->hasMany(FlightLegModel::class, 'awb_id')->orderBy('position');
+    }
+
+    public function trackingEvents(): HasMany
+    {
+        return $this->hasMany(AirTrackingEventModel::class, 'awb_id')->orderByDesc('occurred_at');
     }
 }
