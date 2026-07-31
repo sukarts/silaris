@@ -167,6 +167,27 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/air-waybills/{awbId}/consolidation": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * PATCH /v1/air-waybills/{id}/consolidation — rattache un HAWB à un MAWB,
+         *     ou l'en détache (parent_id nul). Un master ne se rattache pas : il est le
+         *     sommet du groupage
+         */
+        patch: operations["airWaybill.consolidate"];
+        trace?: never;
+    };
     "/v1/admin/audit-logs": {
         parameters: {
             query?: never;
@@ -3584,6 +3605,37 @@ export interface operations {
                     };
                 };
             };
+        };
+    };
+    "airWaybill.consolidate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                awbId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** Format: uuid */
+                    parent_id: string | null;
+                };
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": string;
+                };
+            };
+            401: components["responses"]["AuthenticationException"];
+            403: components["responses"]["AuthorizationException"];
+            422: components["responses"]["ValidationException"];
         };
     };
     "auditLog.index": {

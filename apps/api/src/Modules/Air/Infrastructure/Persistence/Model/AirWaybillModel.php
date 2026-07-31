@@ -15,7 +15,10 @@ use Silaris\Modules\Shipment\Infrastructure\Persistence\Model\ShipmentModel;
 /**
  * @property ShipmentModel|null $shipment
  * @property AirlineModel|null $airline
+ * @property self|null $master
+ * @property string|null $chargeable_weight_kg Colonne générée (poids taxable IATA), hors schéma vu par l'analyse statique.
  * @property Collection<int, FlightLegModel> $legs
+ * @property Collection<int, self> $houses
  */
 class AirWaybillModel extends BaseModel
 {

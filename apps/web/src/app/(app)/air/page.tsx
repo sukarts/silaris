@@ -38,6 +38,9 @@ interface Awb {
   tracking_status: string | null;
   last_location_iata: string | null;
   last_tracked_at: string | null;
+  parent_id: string | null;
+  houses_count?: number;
+  master?: { id: string; number: string } | null;
   legs: AwbLeg[];
   shipment: { id: string; reference: string } | null;
   airline: Airline | null;
@@ -171,6 +174,22 @@ export default function AirPage() {
     onError: (problem) => setError(problemMessage(problem)),
   });
 
+  const consolidate = useMutation({
+    mutationFn: async ({ houseId, parentId }: { houseId: string; parentId: string | null }) => {
+      const { error: problem } = await rawApi.PATCH(`/v1/air-waybills/${houseId}/consolidation`, {
+        body: { parent_id: parentId },
+      });
+      if (problem) throw problem;
+    },
+    onSuccess: () => {
+      setError(null);
+      queryClient.invalidateQueries({ queryKey: ["awbs"] });
+    },
+    onError: (problem) => setError(problemMessage(problem)),
+  });
+
+  const masters = (data?.data ?? []).filter((a) => a.type === "master");
+
   return (
     <div className="flex flex-col gap-4">
       <div className="flex items-start">
@@ -286,7 +305,35 @@ export default function AirPage() {
                     {awb.number}
                     {awb.airline && <span className="mono block text-[11px] font-normal text-ink-3">{awb.airline.name}</span>}
                   </td>
-                  <td className="px-3 py-2.5 text-ink-2">{awb.type === "master" ? "Master" : "House"}</td>
+                  <td className="px-3 py-2.5 text-ink-2">
+                    {awb.type === "master" ? (
+                      <div>
+                        Master
+                        {(awb.houses_count ?? 0) > 0 && (
+                          <span className="ml-1.5 rounded-full bg-sea/10 px-2 py-0.5 text-[11px] font-semibold text-sea">
+                            {awb.houses_count} HAWB
+                          </span>
+                        )}
+                      </div>
+                    ) : (
+                      <div>
+                        House
+                        {canTrack ? (
+                          <select
+                            value={awb.master?.id ?? ""}
+                            onChange={(e) => consolidate.mutate({ houseId: awb.id, parentId: e.target.value || null })}
+                            className={`${inputClass} mono mt-1 !py-0.5 text-[11px]`}
+                            title="Rattacher à un MAWB"
+                          >
+                            <option value="">— Aucun MAWB</option>
+                            {masters.map((m) => <option key={m.id} value={m.id}>{m.number}</option>)}
+                          </select>
+                        ) : (
+                          awb.master && <span className="mono block text-[11px] text-ink-3">↳ {awb.master.number}</span>
+                        )}
+                      </div>
+                    )}
+                  </td>
                   <td className="mono px-3 py-2.5">{firstLeg?.flight_number ?? "—"}</td>
                   <td className="mono px-3 py-2.5">
                     {firstLeg ? `${firstLeg.origin_iata} → ${lastLeg?.destination_iata ?? "?"}` : "—"}
