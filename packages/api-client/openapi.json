@@ -9661,6 +9661,221 @@
                 }
             }
         },
+        "/v1/reports/business": {
+            "get": {
+                "operationId": "report.business",
+                "tags": [
+                    "Report"
+                ],
+                "parameters": [
+                    {
+                        "name": "from",
+                        "in": "query",
+                        "schema": {
+                            "type": "string",
+                            "format": "date-time"
+                        }
+                    },
+                    {
+                        "name": "to",
+                        "in": "query",
+                        "schema": {
+                            "type": "string",
+                            "format": "date-time"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "period": {
+                                            "type": "object",
+                                            "properties": {
+                                                "from": {
+                                                    "type": "string"
+                                                },
+                                                "to": {
+                                                    "type": "string"
+                                                }
+                                            },
+                                            "required": [
+                                                "from",
+                                                "to"
+                                            ]
+                                        },
+                                        "margin": {
+                                            "type": "object",
+                                            "properties": {
+                                                "totals": {
+                                                    "type": "object",
+                                                    "properties": {
+                                                        "revenue": {
+                                                            "type": "number"
+                                                        },
+                                                        "cost": {
+                                                            "type": "number"
+                                                        },
+                                                        "margin": {
+                                                            "type": "number"
+                                                        },
+                                                        "rate": {
+                                                            "type": "number"
+                                                        },
+                                                        "won_count": {
+                                                            "type": "integer"
+                                                        }
+                                                    },
+                                                    "required": [
+                                                        "revenue",
+                                                        "cost",
+                                                        "margin",
+                                                        "rate",
+                                                        "won_count"
+                                                    ]
+                                                },
+                                                "by_month": {
+                                                    "type": "array",
+                                                    "items": {
+                                                        "type": "object",
+                                                        "properties": {
+                                                            "month": {
+                                                                "type": "string"
+                                                            },
+                                                            "revenue": {
+                                                                "type": "number"
+                                                            },
+                                                            "cost": {
+                                                                "type": "number"
+                                                            },
+                                                            "margin": {
+                                                                "type": "number"
+                                                            }
+                                                        },
+                                                        "required": [
+                                                            "month",
+                                                            "revenue",
+                                                            "cost",
+                                                            "margin"
+                                                        ]
+                                                    }
+                                                },
+                                                "by_mode": {
+                                                    "type": "array",
+                                                    "items": {
+                                                        "type": "object",
+                                                        "properties": {
+                                                            "mode": {
+                                                                "type": "string"
+                                                            },
+                                                            "revenue": {
+                                                                "type": "number"
+                                                            },
+                                                            "cost": {
+                                                                "type": "number"
+                                                            },
+                                                            "margin": {
+                                                                "type": "number"
+                                                            },
+                                                            "rate": {
+                                                                "type": "number"
+                                                            },
+                                                            "won_count": {
+                                                                "type": "integer"
+                                                            }
+                                                        },
+                                                        "required": [
+                                                            "mode",
+                                                            "revenue",
+                                                            "cost",
+                                                            "margin",
+                                                            "rate",
+                                                            "won_count"
+                                                        ]
+                                                    }
+                                                }
+                                            },
+                                            "required": [
+                                                "totals",
+                                                "by_month",
+                                                "by_mode"
+                                            ]
+                                        },
+                                        "revenue": {
+                                            "type": "object",
+                                            "properties": {
+                                                "total": {
+                                                    "type": "number"
+                                                },
+                                                "by_month": {
+                                                    "type": "array",
+                                                    "items": {
+                                                        "type": "object",
+                                                        "properties": {
+                                                            "month": {
+                                                                "type": "string"
+                                                            },
+                                                            "invoiced": {
+                                                                "type": "number"
+                                                            }
+                                                        },
+                                                        "required": [
+                                                            "month",
+                                                            "invoiced"
+                                                        ]
+                                                    }
+                                                },
+                                                "by_company": {
+                                                    "type": "array",
+                                                    "items": {
+                                                        "type": "object",
+                                                        "properties": {
+                                                            "company": {
+                                                                "type": "string"
+                                                            },
+                                                            "invoiced": {
+                                                                "type": "number"
+                                                            }
+                                                        },
+                                                        "required": [
+                                                            "company",
+                                                            "invoiced"
+                                                        ]
+                                                    }
+                                                }
+                                            },
+                                            "required": [
+                                                "total",
+                                                "by_month",
+                                                "by_company"
+                                            ]
+                                        }
+                                    },
+                                    "required": [
+                                        "period",
+                                        "margin",
+                                        "revenue"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationException"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/AuthorizationException"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            }
+        },
         "/v1/admin/roles": {
             "get": {
                 "operationId": "role.index",
