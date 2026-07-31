@@ -9,10 +9,12 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Validation\Rule;
+use Silaris\Modules\Air\Application\Service\AirTrackingService;
 use Silaris\Modules\Air\Application\Service\AwbBuilder;
 use Silaris\Modules\Air\Infrastructure\Persistence\Model\AirWaybillModel;
 use Silaris\Modules\Tenancy\Application\Service\BrandingResolver;
 use Silaris\Modules\Tenancy\Infrastructure\Persistence\Model\CompanyModel;
+use Silaris\Modules\Tracking\Domain\Contract\CarrierUnavailable;
 
 class AirWaybillController
 {
@@ -35,8 +37,10 @@ class AirWaybillController
     public function show(string $awbId): JsonResponse
     {
         return response()->json(
-            AirWaybillModel::with(['legs', 'shipment:id,reference', 'airline:id,name,iata,awb_prefix', 'houses'])
-                ->findOrFail($awbId),
+            AirWaybillModel::with([
+                'legs', 'shipment:id,reference', 'airline:id,name,iata,awb_prefix', 'houses',
+                'trackingEvents',
+            ])->findOrFail($awbId),
         );
     }
 
@@ -100,5 +104,22 @@ class AirWaybillController
             'company' => $company,
             'logo' => app(BrandingResolver::class)->logoDataUri($company),
         ])->download(AwbBuilder::fileName($awb));
+    }
+
+    /**
+     * POST /v1/air-waybills/{id}/track — interroge ShipsGo et range le relevé :
+     * heures réelles des segments, état d'acheminement, mouvements de vol.
+     */
+    public function track(string $awbId, AirTrackingService $tracker): JsonResponse
+    {
+        $awb = AirWaybillModel::findOrFail($awbId);
+
+        try {
+            $summary = $tracker->track($awb);
+        } catch (CarrierUnavailable $e) {
+            return response()->json(['message' => $e->getMessage()], 502);
+        }
+
+        return response()->json($summary);
     }
 }

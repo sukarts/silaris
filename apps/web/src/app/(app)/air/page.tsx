@@ -35,6 +35,9 @@ interface Awb {
   packages_count: number | null;
   goods_description: string | null;
   issued_at: string | null;
+  tracking_status: string | null;
+  last_location_iata: string | null;
+  last_tracked_at: string | null;
   legs: AwbLeg[];
   shipment: { id: string; reference: string } | null;
   airline: Airline | null;
@@ -44,6 +47,21 @@ const STATUS_LABEL: Record<string, string> = { draft: "Brouillon", issued: "Émi
 const STATUS_TONE: Record<string, string> = {
   draft: "bg-paper text-ink-3",
   issued: "bg-ok-soft text-ok",
+};
+
+const TRACK_LABEL: Record<string, string> = {
+  booked: "Réservée",
+  en_route: "En vol",
+  landed: "Arrivée",
+  delivered: "Livrée",
+  unknown: "Inconnu",
+};
+const TRACK_TONE: Record<string, string> = {
+  booked: "bg-paper text-ink-3",
+  en_route: "bg-sea/10 text-sea",
+  landed: "bg-warn-soft text-warn",
+  delivered: "bg-ok-soft text-ok",
+  unknown: "bg-paper text-ink-3",
 };
 
 const emptyForm = {
@@ -64,6 +82,7 @@ export default function AirPage() {
   const queryClient = useQueryClient();
   const canCreate = useCan("awb.create");
   const canIssue = useCan("awb.issue");
+  const canTrack = useCan("awb.update");
   const [typeFilter, setTypeFilter] = useState<string>("");
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState(emptyForm);
@@ -131,6 +150,18 @@ export default function AirPage() {
   const issue = useMutation({
     mutationFn: async (awbId: string) => {
       const { error: problem } = await rawApi.POST(`/v1/air-waybills/${awbId}/issue`);
+      if (problem) throw problem;
+    },
+    onSuccess: () => {
+      setError(null);
+      queryClient.invalidateQueries({ queryKey: ["awbs"] });
+    },
+    onError: (problem) => setError(problemMessage(problem)),
+  });
+
+  const track = useMutation({
+    mutationFn: async (awbId: string) => {
+      const { error: problem } = await rawApi.POST(`/v1/air-waybills/${awbId}/track`);
       if (problem) throw problem;
     },
     onSuccess: () => {
@@ -237,12 +268,13 @@ export default function AirPage() {
               <th className="px-3 py-2.5 text-right">Colis</th>
               <th className="px-3 py-2.5">Dossier</th>
               <th className="px-3 py-2.5">Statut</th>
+              <th className="px-3 py-2.5">Suivi</th>
               <th className="px-3 py-2.5" />
             </tr>
           </thead>
           <tbody>
             {isLoading && (
-              <tr><td colSpan={10} className="px-3 py-8 text-center text-ink-3">Chargement…</td></tr>
+              <tr><td colSpan={11} className="px-3 py-8 text-center text-ink-3">Chargement…</td></tr>
             )}
             {data?.data.map((awb) => {
               const legs = awb.legs ?? [];
@@ -273,7 +305,28 @@ export default function AirPage() {
                     </span>
                   </td>
                   <td className="px-3 py-2.5">
+                    {awb.tracking_status ? (
+                      <div>
+                        <span className={`rounded-full px-2.5 py-0.5 text-[11px] font-semibold ${TRACK_TONE[awb.tracking_status] ?? "bg-paper text-ink-3"}`}>
+                          {TRACK_LABEL[awb.tracking_status] ?? awb.tracking_status}
+                        </span>
+                        {awb.last_location_iata && <span className="mono ml-1.5 text-[11px] text-ink-3">{awb.last_location_iata}</span>}
+                      </div>
+                    ) : (
+                      <span className="text-[11px] text-ink-3">—</span>
+                    )}
+                  </td>
+                  <td className="px-3 py-2.5">
                     <div className="flex items-center justify-end gap-3">
+                      {canTrack && (
+                        <button
+                          onClick={() => track.mutate(awb.id)}
+                          disabled={track.isPending}
+                          className="text-xs font-semibold text-sea hover:underline"
+                        >
+                          {track.isPending && track.variables === awb.id ? "…" : "Suivre"}
+                        </button>
+                      )}
                       <button
                         onClick={() => downloadFile(`/v1/air-waybills/${awb.id}/lta`, `lta-${awb.number}.pdf`).catch(() => setError("LTA indisponible."))}
                         className="text-xs font-semibold text-sea hover:underline"
