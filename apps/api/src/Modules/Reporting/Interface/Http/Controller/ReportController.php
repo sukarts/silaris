@@ -4,11 +4,16 @@ declare(strict_types=1);
 
 namespace Silaris\Modules\Reporting\Interface\Http\Controller;
 
+use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
+use Maatwebsite\Excel\Facades\Excel;
+use Silaris\Modules\Reporting\Infrastructure\Export\BusinessReportExport;
 use Silaris\Modules\Shared\Infrastructure\Tenancy\TenantContext;
+use Symfony\Component\HttpFoundation\BinaryFileResponse;
+use Symfony\Component\HttpFoundation\Response;
 
 /**
  * Rapports de gestion — marge et chiffre d'affaires.
@@ -27,20 +32,57 @@ class ReportController
 
     public function business(Request $request): JsonResponse
     {
+        [$from, $to] = $this->range($request);
+
+        return response()->json($this->payload($from, $to));
+    }
+
+    /**
+     * GET /v1/reports/business/export — le même rapport en classeur Excel ou en
+     * PDF, à joindre à un conseil ou à retravailler hors ligne.
+     */
+    public function export(Request $request): Response|BinaryFileResponse
+    {
+        [$from, $to] = $this->range($request);
+        $format = $request->validate(['format' => ['sometimes', 'in:xlsx,pdf']])['format'] ?? 'xlsx';
+        $payload = $this->payload($from, $to);
+        $name = 'rapport-gestion-'.$from->toDateString().'_'.$to->toDateString();
+
+        if ($format === 'pdf') {
+            return Pdf::loadView('pdf.report-business', $payload)->download($name.'.pdf');
+        }
+
+        return Excel::download(new BusinessReportExport($payload), $name.'.xlsx');
+    }
+
+    /**
+     * Bornes de la période : les dates fournies, sinon les six derniers mois.
+     *
+     * @return array{0: Carbon, 1: Carbon}
+     */
+    private function range(Request $request): array
+    {
         $validated = $request->validate([
             'from' => ['sometimes', 'date'],
             'to' => ['sometimes', 'date', 'after_or_equal:from'],
         ]);
 
-        $from = isset($validated['from']) ? Carbon::parse($validated['from'])->startOfDay() : now()->subMonths(5)->startOfMonth();
-        $to = isset($validated['to']) ? Carbon::parse($validated['to'])->endOfDay() : now()->endOfDay();
+        return [
+            isset($validated['from']) ? Carbon::parse($validated['from'])->startOfDay() : now()->subMonths(5)->startOfMonth(),
+            isset($validated['to']) ? Carbon::parse($validated['to'])->endOfDay() : now()->endOfDay(),
+        ];
+    }
+
+    /** @return array<string, mixed> */
+    private function payload(Carbon $from, Carbon $to): array
+    {
         $tenantId = $this->tenant->id();
 
-        return response()->json([
+        return [
             'period' => ['from' => $from->toDateString(), 'to' => $to->toDateString()],
             'margin' => $this->margin($tenantId, $from, $to),
             'revenue' => $this->revenue($tenantId, $from, $to),
-        ]);
+        ];
     }
 
     /**

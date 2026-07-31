@@ -10,3 +10,4 @@ Route::get('/dashboard', [DashboardController::class, 'show'])->can('dashboard.r
 
 // Rapports de gestion : marge (offres gagnées) et chiffre d'affaires (facturé).
 Route::get('/reports/business', [ReportController::class, 'business'])->can('reports.read');
+Route::get('/reports/business/export', [ReportController::class, 'export'])->can('reports.export');
