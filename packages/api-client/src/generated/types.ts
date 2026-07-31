@@ -2029,6 +2029,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/reports/business": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["report.business"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/admin/roles": {
         parameters: {
             query?: never;
@@ -7665,6 +7681,70 @@ export interface operations {
             };
             401: components["responses"]["AuthenticationException"];
             404: components["responses"]["ModelNotFoundException"];
+            422: components["responses"]["ValidationException"];
+        };
+    };
+    "report.business": {
+        parameters: {
+            query?: {
+                from?: string;
+                to?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        period: {
+                            from: string;
+                            to: string;
+                        };
+                        margin: {
+                            totals: {
+                                revenue: number;
+                                cost: number;
+                                margin: number;
+                                rate: number;
+                                won_count: number;
+                            };
+                            by_month: {
+                                month: string;
+                                revenue: number;
+                                cost: number;
+                                margin: number;
+                            }[];
+                            by_mode: {
+                                mode: string;
+                                revenue: number;
+                                cost: number;
+                                margin: number;
+                                rate: number;
+                                won_count: number;
+                            }[];
+                        };
+                        revenue: {
+                            total: number;
+                            by_month: {
+                                month: string;
+                                invoiced: number;
+                            }[];
+                            by_company: {
+                                company: string;
+                                invoiced: number;
+                            }[];
+                        };
+                    };
+                };
+            };
+            401: components["responses"]["AuthenticationException"];
+            403: components["responses"]["AuthorizationException"];
             422: components["responses"]["ValidationException"];
         };
     };

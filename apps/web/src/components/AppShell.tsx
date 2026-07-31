@@ -30,6 +30,7 @@ const NAV = [
       { href: "/quotes", label: "Cotations", perm: "quotes.read" },
       { href: "/billing", label: "Facturation", perm: "invoices.read" },
       { href: "/receivables", label: "Recouvrement", perm: "payments.read" },
+      { href: "/reports", label: "Rapports", perm: "reports.read" },
     ],
   },
   {
