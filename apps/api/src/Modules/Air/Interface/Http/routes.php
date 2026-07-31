@@ -12,4 +12,5 @@ Route::prefix('air-waybills')->group(function (): void {
     Route::get('/{awbId}/lta', [AirWaybillController::class, 'lta'])->whereUuid('awbId')->can('awb.read');
     Route::post('/{awbId}/issue', [AirWaybillController::class, 'issue'])->whereUuid('awbId')->can('awb.issue');
     Route::post('/{awbId}/track', [AirWaybillController::class, 'track'])->whereUuid('awbId')->can('awb.update');
+    Route::patch('/{awbId}/consolidation', [AirWaybillController::class, 'consolidate'])->whereUuid('awbId')->can('awb.update');
 });

@@ -506,6 +506,68 @@
                 }
             }
         },
+        "/v1/air-waybills/{awbId}/consolidation": {
+            "patch": {
+                "operationId": "airWaybill.consolidate",
+                "summary": "PATCH /v1/air-waybills/{id}/consolidation \u2014 rattache un HAWB \u00e0 un MAWB,\nou l'en d\u00e9tache (parent_id nul). Un master ne se rattache pas : il est le\nsommet du groupage",
+                "tags": [
+                    "AirWaybill"
+                ],
+                "parameters": [
+                    {
+                        "name": "awbId",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "parent_id": {
+                                        "type": [
+                                            "string",
+                                            "null"
+                                        ],
+                                        "format": "uuid"
+                                    }
+                                },
+                                "required": [
+                                    "parent_id"
+                                ]
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationException"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/AuthorizationException"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            }
+        },
         "/v1/admin/audit-logs": {
             "get": {
                 "operationId": "auditLog.index",

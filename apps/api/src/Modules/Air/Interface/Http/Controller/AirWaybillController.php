@@ -26,7 +26,8 @@ class AirWaybillController
         ]);
 
         return response()->json(
-            AirWaybillModel::with(['legs', 'shipment:id,reference', 'airline:id,name,iata,awb_prefix'])
+            AirWaybillModel::with(['legs', 'shipment:id,reference', 'airline:id,name,iata,awb_prefix', 'master:id,number'])
+                ->withCount('houses')
                 ->when($validated['shipment_id'] ?? null, fn ($q, $s) => $q->where('shipment_id', $s))
                 ->when($validated['type'] ?? null, fn ($q, $t) => $q->where('type', $t))
                 ->orderByDesc('created_at')
@@ -36,12 +37,25 @@ class AirWaybillController
 
     public function show(string $awbId): JsonResponse
     {
-        return response()->json(
-            AirWaybillModel::with([
-                'legs', 'shipment:id,reference', 'airline:id,name,iata,awb_prefix', 'houses',
-                'trackingEvents',
-            ])->findOrFail($awbId),
-        );
+        $awb = AirWaybillModel::with([
+            'legs', 'shipment:id,reference', 'airline:id,name,iata,awb_prefix',
+            'houses:id,parent_id,number,gross_weight_kg,chargeable_weight_kg,packages_count',
+            'master:id,number', 'trackingEvents',
+        ])->findOrFail($awbId);
+
+        $payload = $awb->toArray();
+        // Sur un MAWB, le récapitulatif de groupage : ce que pèsent ses HAWB
+        // réunis, à rapprocher du poids déclaré du master.
+        if ($awb->type === 'master') {
+            $payload['consolidation'] = [
+                'houses_count' => $awb->houses->count(),
+                'gross_weight_kg' => round((float) $awb->houses->sum(fn ($h) => (float) $h->gross_weight_kg), 3),
+                'chargeable_weight_kg' => round((float) $awb->houses->sum(fn ($h) => (float) $h->chargeable_weight_kg), 3),
+                'packages_count' => (int) $awb->houses->sum(fn ($h) => (int) $h->packages_count),
+            ];
+        }
+
+        return response()->json($payload);
     }
 
     public function store(Request $request): JsonResponse
@@ -121,5 +135,22 @@ class AirWaybillController
         }
 
         return response()->json($summary);
+    }
+
+    /**
+     * PATCH /v1/air-waybills/{id}/consolidation — rattache un HAWB à un MAWB,
+     * ou l'en détache (parent_id nul). Un master ne se rattache pas : il est le
+     * sommet du groupage.
+     */
+    public function consolidate(Request $request, string $awbId): JsonResponse
+    {
+        $data = $request->validate([
+            'parent_id' => ['present', 'nullable', 'uuid', Rule::exists('air_waybills', 'id')->where('type', 'master')],
+        ]);
+
+        $awb = AirWaybillModel::where('type', 'house')->findOrFail($awbId);
+        $awb->update(['parent_id' => $data['parent_id']]);
+
+        return response()->json($awb->fresh(['master:id,number']));
     }
 }
