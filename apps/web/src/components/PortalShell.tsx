@@ -9,7 +9,7 @@ import { useAuth } from "@/stores/auth";
 const NAV = [
   { href: "/portal", label: "Mes expéditions", exact: true },
   { href: "/portal/documents", label: "Documents" },
-  { href: "/portal/invoices", label: "Factures" },
+  { href: "/portal/invoices", label: "Factures & règlements" },
   { href: "/portal/quotes", label: "Devis" },
 ];
 

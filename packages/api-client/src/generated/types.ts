@@ -1717,6 +1717,11 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /**
+         * Relevé du client : ses factures avec ce qui reste dû, sa balance âgée, et
+         *     ses règlements. Le reste dû se lit sur les imputations réelles, pas sur le
+         *     `payment_status` (écrit par la synchronisation comptable, absent sans elle)
+         */
         get: operations["portalInvoice.index"];
         put?: never;
         post?: never;
@@ -2787,6 +2792,16 @@ export interface components {
             /** Format: uri */
             prev_page_url: string | null;
         };
+        /**
+         * Direction
+         * @description | |
+         *     |---|
+         *     | `import` <br/>  |
+         *     | `export` <br/>  |
+         *     | `transit` <br/> Transbordement / réexpédition — ni import ni export au pays du transitaire. |
+         * @enum {string}
+         */
+        Direction: "import" | "export" | "transit";
         /** DocumentModel */
         DocumentModel: {
             id: string;
@@ -3050,6 +3065,11 @@ export interface components {
             /** Format: date-time */
             updated_at: string | null;
         };
+        /**
+         * Priority
+         * @enum {string}
+         */
+        Priority: "low" | "normal" | "high" | "critical";
         /** QuoteModel */
         QuoteModel: {
             id: string;
@@ -3142,6 +3162,56 @@ export interface components {
             active_containers: number;
             open_tasks: number;
             closed_at: string;
+        };
+        /** ShipmentModel */
+        ShipmentModel: {
+            id: string;
+            tenant_id: string;
+            reference: string;
+            client_id: string;
+            branch_id: string;
+            company_id: string;
+            agent_id: string;
+            supervisor_id: string | null;
+            direction: components["schemas"]["Direction"];
+            mode: components["schemas"]["TransportMode"];
+            status: string;
+            workflow_definition_id: string;
+            incoterm_code: string;
+            origin_locode: string;
+            destination_locode: string;
+            priority: components["schemas"]["Priority"];
+            /** Format: date-time */
+            etd: string | null;
+            /** Format: date-time */
+            eta: string | null;
+            /** Format: date-time */
+            atd: string | null;
+            /** Format: date-time */
+            ata: string | null;
+            /** Format: date-time */
+            eta_initial: string | null;
+            estimated_cost: string | null;
+            estimated_revenue: string | null;
+            currency_code: string | null;
+            quote_id: string | null;
+            notes: string | null;
+            /** Format: date-time */
+            closed_at: string | null;
+            closed_by: string | null;
+            is_archived: boolean;
+            /** Format: date-time */
+            created_at: string | null;
+            /** Format: date-time */
+            updated_at: string | null;
+            quote_waiver_status: string | null;
+            quote_waiver_reason: string | null;
+            quote_waiver_requested_by: string | null;
+            quote_waiver_requested_at: string | null;
+            quote_waiver_decided_by: string | null;
+            quote_waiver_decided_at: string | null;
+            quote_waiver_decision_note: string | null;
+            service_id: string | null;
         };
         /** ShipmentResource */
         ShipmentResource: {
@@ -3285,6 +3355,11 @@ export interface components {
             updated_at: string | null;
             carrier_party_id: string | null;
         };
+        /**
+         * TransportMode
+         * @enum {string}
+         */
+        TransportMode: "sea_fcl" | "sea_lcl" | "air" | "road" | "multimodal";
         /** TransportSegmentModel */
         TransportSegmentModel: {
             id: string;
@@ -7046,7 +7121,35 @@ export interface operations {
                 };
                 content: {
                     "application/json": {
-                        data: components["schemas"]["InvoiceModel"][];
+                        data: {
+                            id: string;
+                            type: string;
+                            number: string | null;
+                            currency_code: string;
+                            total_incl_tax: number;
+                            paid: number;
+                            outstanding: number;
+                            /** @enum {string} */
+                            pay_status: "paid" | "partial" | "unpaid" | "n_a";
+                            issue_date: string | null;
+                            due_date: string | null;
+                            shipment: components["schemas"]["ShipmentModel"];
+                        }[];
+                        summary: {
+                            current: number;
+                            "1_30": number;
+                            "31_60": number;
+                            "61_90": number;
+                            over_90: number;
+                            total: number;
+                        };
+                        receipts: {
+                            reference: string;
+                            method: string;
+                            amount: number;
+                            received_on: string;
+                            note: string;
+                        }[];
                     };
                 };
             };
