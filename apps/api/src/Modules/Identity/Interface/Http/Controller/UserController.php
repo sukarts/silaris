@@ -24,7 +24,7 @@ class UserController
         ]);
 
         return response()->json(
-            UserModel::with(['roles:id,key,name', 'branches:id,code,name'])
+            UserModel::with(['roles:id,key,name', 'branches:id,code,name', 'service:id,code,name'])
                 ->when($validated['search'] ?? null, fn ($q, $s) => $q->where(
                     fn ($w) => $w->whereLike('first_name', "%{$s}%")->orWhereLike('last_name', "%{$s}%")->orWhereLike('email', "%{$s}%"),
                 ))
