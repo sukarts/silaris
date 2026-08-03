@@ -22,18 +22,39 @@ it('ouvre le CRM au responsable financier', function (): void {
     $this->withToken(tokenFor($finance))->getJson('/api/v1/parties?type=client')->assertOk();
 });
 
-it('laisse le comptable créer et corriger une fiche client', function (): void {
+it('laisse le comptable créer une fiche mais lui ferme la modification', function (): void {
     $ids = seedCore();
     $token = tokenFor($ids['user_accountant']);
 
+    // La création reste ouverte…
     $party = $this->withToken($token)->postJson('/api/v1/parties', [
         'type' => 'client', 'kind' => 'company', 'name' => 'Nouvelle SARL',
         'currency_code' => 'XOF', 'payment_terms_days' => 45,
     ])->assertCreated()->json();
 
-    $this->withToken($token)->patchJson("/api/v1/parties/{$party['id']}", [
-        'tax_id' => 'CI-ABJ-2026-B-99887', 'payment_terms_days' => 30,
-    ])->assertOk()->assertJsonPath('payment_terms_days', 30);
+    // …mais corriger une fiche existante est réservé (admin, direction, finance).
+    $this->withToken($token)->patchJson("/api/v1/parties/{$party['id']}", ['payment_terms_days' => 30])
+        ->assertForbidden();
+});
+
+it('ferme la modification d\'un tiers au commercial, sans toucher la création', function (): void {
+    $ids = seedCore();
+    $token = tokenFor(seedUserWithRole($ids, 'sales', 'sales@test.local'));
+
+    $party = $this->withToken($token)->postJson('/api/v1/parties', [
+        'type' => 'prospect', 'kind' => 'company', 'name' => 'Prospect SA', 'currency_code' => 'XOF',
+    ])->assertCreated()->json();
+
+    $this->withToken($token)->patchJson("/api/v1/parties/{$party['id']}", ['payment_terms_days' => 15])
+        ->assertForbidden();
+});
+
+it('réserve la modification d\'un tiers à la direction', function (): void {
+    $ids = seedCore();
+
+    $this->withToken(tokenFor($ids['user_director']))
+        ->patchJson("/api/v1/parties/{$ids['client']}", ['payment_terms_days' => 60])
+        ->assertOk()->assertJsonPath('payment_terms_days', 60);
 });
 
 it('laisse le responsable financier créer et corriger une fiche client', function (): void {

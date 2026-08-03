@@ -105,7 +105,10 @@ class PermissionSeeder extends Seeder
             // l'aval interne (quotes.approve) reste au directeur, à
             // l'administration et au responsable commercial, pour qu'un prix
             // ne parte pas au client sur la seule signature de celui qui l'a fait.
-            'crm.*', 'complaints.read', 'complaints.create', 'tariffs.read',
+            // Il crée et convertit ses tiers, mais la modification d'une fiche
+            // existante est réservée (admin, direction, responsable financier).
+            'crm.read', 'crm.create', 'crm.delete', 'crm.export', 'crm.convert',
+            'complaints.read', 'complaints.create', 'tariffs.read',
             'quotes.read', 'quotes.create', 'quotes.update', 'quotes.delete', 'quotes.send', 'quotes.accept',
             'shipments.read', 'tracking.read', 'invoices.read',
             'documents.read', 'documents.download', 'notifications.read', 'dashboard.read', 'dashboard.customize',
@@ -117,9 +120,9 @@ class PermissionSeeder extends Seeder
             // Il encaisse et impute ; l'annulation d'un règlement déjà porté en
             // caisse relève du responsable financier.
             'payments.read', 'payments.create',
-            // Il tient les données de facturation du client — RCCM, adresse,
-            // conditions de règlement — et doit donc pouvoir les corriger.
-            'quotes.read', 'crm.read', 'crm.create', 'crm.update', 'shipments.read',
+            // Il ouvre une fiche client au besoin ; la modification d'un tiers
+            // existant reste à l'admin, la direction et le responsable financier.
+            'quotes.read', 'crm.read', 'crm.create', 'shipments.read',
             'odoo.*', 'reports.read', 'reports.export', 'dashboard.read', 'documents.read', 'documents.download',
         ]],
         'finance_manager' => ['label' => 'Responsable financier', 'perms' => [
@@ -129,7 +132,10 @@ class PermissionSeeder extends Seeder
             'documents.read', 'documents.download', 'notifications.read',
         ]],
         'sales_manager' => ['label' => 'Responsable commercial', 'perms' => [
-            'crm.*', 'complaints.*', 'quotes.*', 'tariffs.*',
+            // Modification d'un tiers réservée (admin, direction, responsable
+            // financier) : il crée et convertit, sans corriger une fiche existante.
+            'crm.read', 'crm.create', 'crm.delete', 'crm.export', 'crm.convert',
+            'complaints.*', 'quotes.*', 'tariffs.*',
             'shipments.read', 'tracking.read', 'invoices.read',
             'documents.read', 'documents.download', 'reports.*', 'dashboard.*',
             'notifications.read', 'users.read',
