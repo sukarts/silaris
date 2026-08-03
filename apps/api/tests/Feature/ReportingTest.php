@@ -79,3 +79,34 @@ it('refuse les rapports à un rôle sans reports.read', function (): void {
     $this->withToken(tokenFor($ids['user_driver']))->getJson('/api/v1/reports/business')
         ->assertForbidden();
 });
+
+it('exporte le rapport en Excel', function (): void {
+    $ids = seedCore();
+    seedInvoice($ids, 'F-2026-0001', 'invoice', 'validated', 100_000);
+
+    $response = $this->withToken(tokenFor($ids['user_admin']))
+        ->get('/api/v1/reports/business/export');
+
+    $response->assertOk();
+    expect($response->headers->get('content-disposition'))->toContain('.xlsx');
+});
+
+it('exporte le rapport en PDF', function (): void {
+    $ids = seedCore();
+    seedInvoice($ids, 'F-2026-0001', 'invoice', 'validated', 100_000);
+
+    $response = $this->withToken(tokenFor($ids['user_admin']))
+        ->get('/api/v1/reports/business/export?format=pdf');
+
+    $response->assertOk()->assertHeader('Content-Type', 'application/pdf');
+    expect(str_starts_with((string) $response->getContent(), '%PDF'))->toBeTrue();
+});
+
+it('réserve l\'export à reports.export : le chef de service lit mais n\'exporte pas', function (): void {
+    $ids = seedCore();
+
+    // Il consulte le rapport…
+    $this->withToken(tokenFor($ids['user_service_manager']))->getJson('/api/v1/reports/business')->assertOk();
+    // …mais l'export lui est fermé.
+    $this->withToken(tokenFor($ids['user_service_manager']))->get('/api/v1/reports/business/export')->assertForbidden();
+});

@@ -2071,6 +2071,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/reports/business/export": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * GET /v1/reports/business/export — le même rapport en classeur Excel ou en
+         *     PDF, à joindre à un conseil ou à retravailler hors ligne
+         */
+        get: operations["report.export"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/admin/roles": {
         parameters: {
             query?: never;
@@ -7841,10 +7861,7 @@ export interface operations {
     };
     "report.business": {
         parameters: {
-            query?: {
-                from?: string;
-                to?: string;
-            };
+            query?: never;
             header?: never;
             path?: never;
             cookie?: never;
@@ -7896,6 +7913,29 @@ export interface operations {
                             }[];
                         };
                     };
+                };
+            };
+            401: components["responses"]["AuthenticationException"];
+            403: components["responses"]["AuthorizationException"];
+        };
+    };
+    "report.export": {
+        parameters: {
+            query?: {
+                format?: "xlsx" | "pdf";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": Record<string, never>;
                 };
             };
             401: components["responses"]["AuthenticationException"];

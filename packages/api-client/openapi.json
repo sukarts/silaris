@@ -9856,24 +9856,6 @@
                 "tags": [
                     "Report"
                 ],
-                "parameters": [
-                    {
-                        "name": "from",
-                        "in": "query",
-                        "schema": {
-                            "type": "string",
-                            "format": "date-time"
-                        }
-                    },
-                    {
-                        "name": "to",
-                        "in": "query",
-                        "schema": {
-                            "type": "string",
-                            "format": "date-time"
-                        }
-                    }
-                ],
                 "responses": {
                     "200": {
                         "description": "",
@@ -10049,6 +10031,46 @@
                                         "margin",
                                         "revenue"
                                     ]
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/AuthorizationException"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            }
+        },
+        "/v1/reports/business/export": {
+            "get": {
+                "operationId": "report.export",
+                "summary": "GET /v1/reports/business/export \u2014 le m\u00eame rapport en classeur Excel ou en\nPDF, \u00e0 joindre \u00e0 un conseil ou \u00e0 retravailler hors ligne",
+                "tags": [
+                    "Report"
+                ],
+                "parameters": [
+                    {
+                        "name": "format",
+                        "in": "query",
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "xlsx",
+                                "pdf"
+                            ]
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object"
                                 }
                             }
                         }

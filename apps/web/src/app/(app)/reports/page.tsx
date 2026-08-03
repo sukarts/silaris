@@ -2,8 +2,9 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
-import { rawApi } from "@/lib/api";
-import { Field, inputClass } from "@/components/Field";
+import { downloadFile, rawApi } from "@/lib/api";
+import { Field, buttonSecondary, inputClass } from "@/components/Field";
+import { useCan } from "@/stores/auth";
 
 interface MonthMargin { month: string; revenue: number; cost: number; margin: number }
 interface ModeMargin { mode: string; revenue: number; cost: number; margin: number; rate: number; won_count: number }
@@ -30,6 +31,12 @@ const monthLabel = (m: string) => {
 export default function ReportsPage() {
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
+  const canExport = useCan("reports.export");
+
+  const exportReport = (format: "xlsx" | "pdf") => {
+    const params = new URLSearchParams({ format, ...(from ? { from } : {}), ...(to ? { to } : {}) });
+    downloadFile(`/v1/reports/business/export?${params.toString()}`, `rapport-gestion.${format}`).catch(() => undefined);
+  };
 
   const { data, isLoading } = useQuery({
     queryKey: ["reports", "business", from, to],
@@ -54,6 +61,12 @@ export default function ReportsPage() {
         <div className="ml-auto flex items-end gap-2">
           <Field label="Du"><input type="date" value={from} onChange={(e) => setFrom(e.target.value)} className={inputClass} /></Field>
           <Field label="Au"><input type="date" value={to} onChange={(e) => setTo(e.target.value)} className={inputClass} /></Field>
+          {canExport && (
+            <>
+              <button onClick={() => exportReport("xlsx")} className={buttonSecondary}>Excel</button>
+              <button onClick={() => exportReport("pdf")} className={buttonSecondary}>PDF</button>
+            </>
+          )}
         </div>
       </div>
 
