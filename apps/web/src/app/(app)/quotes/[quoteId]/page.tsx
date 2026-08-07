@@ -6,7 +6,7 @@ import { useParams, useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 import { downloadFile, problemMessage, rawApi } from "@/lib/api";
 import { buttonPrimary, buttonSecondary, inputClass } from "@/components/Field";
-import { ServiceCatalogDatalist, useServiceCatalog } from "@/components/ServiceCatalog";
+import { ServiceCatalogDatalist, suggestedAmount, useServiceCatalog } from "@/components/ServiceCatalog";
 import { useCan } from "@/stores/auth";
 
 type LineCategory = "customs" | "other";
@@ -350,10 +350,19 @@ function LineEditor({
   const catalog = useServiceCatalog();
   const update = (index: number, patch: Partial<QuoteLine>) =>
     onChange(lines.map((line, i) => (i === index ? { ...line, ...patch } : line)));
-  // Poste connu → code + famille renseignés ; ligne libre préservée.
+  // Poste connu → code + famille + tarif standard ; ligne libre préservée, et
+  // le tarif ne remplace jamais un prix déjà saisi.
   const setDescription = (index: number, value: string) => {
     const item = catalog.resolve(value);
-    update(index, item ? { description: item.label, service_code: item.code, category: item.family } : { description: value });
+    if (!item) { update(index, { description: value }); return; }
+    const suggested = suggestedAmount(item);
+    const priceEmpty = lines[index]?.unit_price === "" || lines[index]?.unit_price === "0";
+    update(index, {
+      description: item.label,
+      service_code: item.code,
+      category: item.family,
+      ...(suggested !== null && priceEmpty ? { unit_price: String(suggested) } : {}),
+    });
   };
   const remove = (index: number) => onChange(lines.filter((_, i) => i !== index));
   const add = (category: LineCategory) =>

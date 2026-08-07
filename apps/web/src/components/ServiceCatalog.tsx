@@ -8,6 +8,26 @@ export interface CatalogItem {
   label: string;
   family: "customs" | "other";
   scope: "general" | "vehicle";
+  default_tc20: string | null;
+  default_tc40: string | null;
+  pricing_note: string | null;
+}
+
+/** Tarif standard proposé pour un poste (TC40 de préférence), ou null. */
+export function suggestedAmount(item: CatalogItem): number | null {
+  const raw = item.default_tc40 ?? item.default_tc20;
+  return raw === null ? null : Number(raw);
+}
+
+/** Note de tarif lisible à afficher en aide (barème ou base de calcul). */
+export function tariffHint(item: CatalogItem): string | null {
+  const tc20 = item.default_tc20 === null ? null : Number(item.default_tc20);
+  const tc40 = item.default_tc40 === null ? null : Number(item.default_tc40);
+  if (tc20 !== null && tc40 !== null && tc20 !== tc40) {
+    return `TC20 ${tc20.toLocaleString("fr-FR")} · TC40 ${tc40.toLocaleString("fr-FR")}`;
+  }
+  if (tc40 !== null) return `${tc40.toLocaleString("fr-FR")} F`;
+  return item.pricing_note;
 }
 
 /**
@@ -50,7 +70,7 @@ export function ServiceCatalogDatalist({ items }: { items: CatalogItem[] }) {
         // seul : c'est elle qui remplit le champ à la sélection, et que
         // `resolve()` retrouve pour poser code et famille.
         <option key={item.code} value={item.label}>
-          {item.label} · {familyLabel(item)}
+          {item.label} · {familyLabel(item)}{tariffHint(item) ? ` · ${tariffHint(item)}` : ""}
         </option>
       ))}
     </datalist>
