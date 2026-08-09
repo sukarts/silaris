@@ -30,6 +30,7 @@ class PermissionSeeder extends Seeder
         'pod' => ['read', 'create'],
         'tracking' => ['read', 'refresh', 'manual_event'],
         'crm' => ['read', 'create', 'update', 'delete', 'export', 'convert'],
+        'expenses' => ['read', 'create', 'update', 'delete', 'validate'],
         'complaints' => ['read', 'create', 'update', 'resolve'],
         'quotes' => ['read', 'create', 'update', 'delete', 'approve', 'send', 'accept'],
         'tariffs' => ['read', 'create', 'update', 'delete', 'import'],
@@ -61,7 +62,7 @@ class PermissionSeeder extends Seeder
             'consolidations.read', 'awb.read', 'road.read', 'pod.read', 'tracking.read',
             'crm.*', 'complaints.read', 'quotes.read', 'tariffs.read', 'invoices.read', 'invoices.export',
             'documents.read', 'documents.download', 'reports.*', 'dashboard.*', 'audit.read', 'audit.export',
-            'users.read', 'odoo.read',
+            'users.read', 'odoo.read', 'expenses.*',
             // Ouverture exceptionnelle d'un dossier sans accord client : le
             // directeur en répond, la trace le nomme.
             'shipments.create', 'derogations.open_shipment_without_quote',
@@ -78,6 +79,7 @@ class PermissionSeeder extends Seeder
             'bookings.*', 'containers.*', 'bl.*', 'consolidations.*', 'awb.*',
             'road.*', 'pod.*', 'tracking.*', 'crm.read', 'complaints.*',
             'quotes.read', 'invoices.read', 'invoices.create',
+            'expenses.read', 'expenses.create', 'expenses.update',
             'documents.*', 'notifications.read', 'reports.read', 'dashboard.*',
         ]],
         'ops_manager' => ['label' => 'Responsable transit / exploitation', 'perms' => [
@@ -85,6 +87,7 @@ class PermissionSeeder extends Seeder
             'shipments.*', 'bookings.*', 'containers.*', 'bl.*', 'consolidations.*', 'awb.*',
             'road.*', 'pod.*', 'tracking.*', 'crm.read', 'complaints.*', 'quotes.read',
             'invoices.read', 'invoices.create', 'invoices.validate',
+            'expenses.read', 'expenses.create', 'expenses.update', 'expenses.delete',
             'documents.*', 'notifications.read', 'reports.read', 'reports.export', 'dashboard.*', 'users.read',
         ]],
         'transit_agent' => ['label' => 'Agent Transit', 'perms' => [
@@ -96,6 +99,7 @@ class PermissionSeeder extends Seeder
             'awb.read', 'awb.create', 'awb.update', 'road.read', 'road.create', 'road.update', 'pod.read',
             'tracking.*', 'crm.read', 'complaints.read', 'complaints.create',
             'quotes.read', 'invoices.read', 'invoices.create',
+            'expenses.read', 'expenses.create', 'expenses.update',
             'documents.read', 'documents.create', 'documents.update', 'documents.download',
             'notifications.read', 'dashboard.read', 'dashboard.customize',
         ]],
@@ -123,11 +127,14 @@ class PermissionSeeder extends Seeder
             // Il ouvre une fiche client au besoin ; la modification d'un tiers
             // existant reste à l'admin, la direction et le responsable financier.
             'quotes.read', 'crm.read', 'crm.create', 'shipments.read',
+            // Il saisit et contrôle les factures fournisseurs des dossiers.
+            'expenses.read', 'expenses.create', 'expenses.update', 'expenses.validate',
             'odoo.*', 'reports.read', 'reports.export', 'dashboard.read', 'documents.read', 'documents.download',
         ]],
         'finance_manager' => ['label' => 'Responsable financier', 'perms' => [
             'packages.force_delivery',
             'invoices.*', 'payments.*', 'quotes.read', 'tariffs.read', 'crm.read', 'crm.create', 'crm.update',
+            'expenses.*',
             'shipments.read', 'odoo.*', 'reports.*', 'dashboard.*', 'audit.read',
             'documents.read', 'documents.download', 'notifications.read',
         ]],

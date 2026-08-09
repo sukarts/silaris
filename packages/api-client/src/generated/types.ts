@@ -716,6 +716,59 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/shipments/{shipmentId}/expenses": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** GET /v1/shipments/{id}/expenses — dépenses du dossier + marge */
+        get: operations["expense.index"];
+        put?: never;
+        /** POST /v1/shipments/{id}/expenses */
+        post: operations["expense.store"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/expenses/{expenseId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** DELETE /v1/expenses/{id} */
+        delete: operations["expense.destroy"];
+        options?: never;
+        head?: never;
+        /** PATCH /v1/expenses/{id} */
+        patch: operations["expense.update"];
+        trace?: never;
+    };
+    "/v1/expenses/{expenseId}/validate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** POST /v1/expenses/{id}/validate — contrôle d'une dépense avant qu'elle pèse dans la marge */
+        post: operations["expense.validateExpense"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/fleet/trucks": {
         parameters: {
             query?: never;
@@ -2876,6 +2929,33 @@ export interface components {
             updated_at: string | null;
             carrier_party_id: string | null;
         };
+        /** ExpenseModel */
+        ExpenseModel: {
+            id: string;
+            tenant_id: string;
+            company_id: string;
+            shipment_id: string;
+            supplier_id: string | null;
+            service_code: string | null;
+            label: string;
+            amount: string;
+            currency_code: string;
+            supplier_invoice_number: string | null;
+            /** Format: date-time */
+            invoice_date: string | null;
+            /** Format: date-time */
+            due_date: string | null;
+            status: string;
+            note: string | null;
+            recorded_by: string | null;
+            validated_by: string | null;
+            /** Format: date-time */
+            validated_at: string | null;
+            /** Format: date-time */
+            created_at: string | null;
+            /** Format: date-time */
+            updated_at: string | null;
+        };
         /** InvoiceModel */
         InvoiceModel: {
             id: string;
@@ -4992,6 +5072,147 @@ export interface operations {
             };
             401: components["responses"]["AuthenticationException"];
             403: components["responses"]["AuthorizationException"];
+        };
+    };
+    "expense.index": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                shipmentId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: components["schemas"]["ExpenseModel"][];
+                        margin: {
+                            forecast: {
+                                sell: number;
+                                cost: number;
+                                margin: number;
+                                rate: number;
+                            };
+                            real: {
+                                revenue: number;
+                                cost: number;
+                                pending_cost: number;
+                                margin: number;
+                                rate: number;
+                            };
+                            /** @description Écart de marge : positif = mieux que prévu, négatif = dérapage. */
+                            variance: number;
+                        };
+                    };
+                };
+            };
+            401: components["responses"]["AuthenticationException"];
+            403: components["responses"]["AuthorizationException"];
+        };
+    };
+    "expense.store": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                shipmentId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ExpenseModel"] | null;
+                };
+            };
+            401: components["responses"]["AuthenticationException"];
+            403: components["responses"]["AuthorizationException"];
+        };
+    };
+    "expense.destroy": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                expenseId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["AuthenticationException"];
+            403: components["responses"]["AuthorizationException"];
+        };
+    };
+    "expense.update": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                expenseId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": string;
+                };
+            };
+            401: components["responses"]["AuthenticationException"];
+            403: components["responses"]["AuthorizationException"];
+        };
+    };
+    "expense.validateExpense": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                expenseId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** @enum {string} */
+                    status: "validated" | "paid";
+                };
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": string;
+                };
+            };
+            401: components["responses"]["AuthenticationException"];
+            403: components["responses"]["AuthorizationException"];
+            422: components["responses"]["ValidationException"];
         };
     };
     "fleet.trucks": {
