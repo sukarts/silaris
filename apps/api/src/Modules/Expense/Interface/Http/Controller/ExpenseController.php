@@ -19,6 +19,25 @@ class ExpenseController
 {
     public function __construct(private readonly MarginCalculator $margin) {}
 
+    /** GET /v1/expenses — toutes les dépenses, tous dossiers, filtrables. */
+    public function all(Request $request): JsonResponse
+    {
+        $filters = $request->validate([
+            'status' => ['sometimes', Rule::in(['recorded', 'validated', 'paid', 'cancelled'])],
+            'shipment_id' => ['sometimes', 'uuid'],
+            'search' => ['sometimes', 'string', 'max:100'],
+        ]);
+
+        return response()->json(
+            ExpenseModel::with(['supplier:id,code,name', 'shipment:id,reference'])
+                ->when($filters['status'] ?? null, fn ($q, $s) => $q->where('status', $s))
+                ->when($filters['shipment_id'] ?? null, fn ($q, $id) => $q->where('shipment_id', $id))
+                ->when($filters['search'] ?? null, fn ($q, $s) => $q->whereLike('label', "%{$s}%"))
+                ->orderByDesc('created_at')
+                ->cursorPaginate(30),
+        );
+    }
+
     /** GET /v1/shipments/{id}/expenses — dépenses du dossier + marge. */
     public function index(string $shipmentId): JsonResponse
     {
@@ -89,7 +108,7 @@ class ExpenseController
         $req = $partial ? 'sometimes' : 'required';
 
         return $request->validate([
-            'supplier_id' => ['nullable', 'uuid', Rule::exists('parties', 'id')->where('type', 'fournisseur')],
+            'supplier_id' => ['nullable', 'uuid', Rule::exists('parties', 'id')->where('type', 'supplier')],
             'service_code' => ['nullable', 'string', 'max:32'],
             'label' => [$req, 'string', 'max:200'],
             'amount' => [$req, 'numeric', 'min:0'],

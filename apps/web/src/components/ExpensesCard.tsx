@@ -49,9 +49,9 @@ export function ExpensesCard({ shipmentId }: { shipmentId: string }) {
     },
   });
   const { data: suppliers } = useQuery({
-    queryKey: ["parties", "fournisseur"],
+    queryKey: ["parties", "supplier"],
     queryFn: async () => {
-      const { data: r } = await rawApi.GET("/v1/parties", { params: { query: { type: "fournisseur", per_page: 100 } } });
+      const { data: r } = await rawApi.GET("/v1/parties", { params: { query: { type: "supplier", per_page: 100 } } });
       return (r as { data: { id: string; name: string; code: string }[] }).data;
     },
     enabled: canCreate,

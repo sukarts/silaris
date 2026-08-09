@@ -72,3 +72,26 @@ it('refuse la saisie d\'une dépense à un rôle sans expenses.create', function
         ->postJson("/api/v1/shipments/{$shipmentId}/expenses", ['label' => 'X', 'amount' => 1000, 'currency_code' => 'XOF'])
         ->assertForbidden();
 });
+
+it('rattache un fournisseur à la dépense et la liste globalement', function (): void {
+    $ids = seedCore();
+    $shipmentId = seedDossierWithForecast($ids);
+    $token = tokenFor($ids['user_finance_manager']);
+
+    $supplierId = (string) Str::uuid7();
+    DB::table('parties')->insert([
+        'id' => $supplierId, 'tenant_id' => $ids['tenant'], 'type' => 'supplier', 'supplier_kind' => 'trucker',
+        'code' => 'FOU-0001', 'name' => 'Transporteur SARL', 'payment_terms_days' => 30,
+        'notification_prefs' => '{}', 'tags' => '[]', 'created_at' => now(), 'updated_at' => now(),
+    ]);
+
+    $this->withToken($token)->postJson("/api/v1/shipments/{$shipmentId}/expenses", [
+        'label' => 'Transport', 'amount' => 150_000, 'currency_code' => 'XOF', 'supplier_id' => $supplierId,
+    ])->assertCreated()->assertJsonPath('supplier.name', 'Transporteur SARL');
+
+    // Endpoint global : la dépense remonte avec son dossier et son fournisseur.
+    $row = collect($this->withToken($token)->getJson('/api/v1/expenses')->assertOk()->json('data'))
+        ->firstWhere('label', 'Transport');
+    expect($row['shipment']['reference'])->toBe('IMP-EXP-0001')
+        ->and($row['supplier']['name'])->toBe('Transporteur SARL');
+});
