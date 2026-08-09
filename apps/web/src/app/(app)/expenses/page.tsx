@@ -3,8 +3,8 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
 import { useState } from "react";
-import { rawApi } from "@/lib/api";
-import { inputClass } from "@/components/Field";
+import { problemMessage, rawApi } from "@/lib/api";
+import { Field, buttonPrimary, inputClass } from "@/components/Field";
 import { useCan } from "@/stores/auth";
 
 interface Expense {
@@ -28,13 +28,18 @@ const STATUS: Record<string, [string, string]> = {
 const FILTERS: [string, string][] = [["", "Toutes"], ["recorded", "À valider"], ["validated", "Validées"], ["paid", "Réglées"], ["cancelled", "Annulées"]];
 const money = (n: number, cur = "XOF") => `${new Intl.NumberFormat("fr-FR").format(Math.round(n))} ${cur}`;
 const date = (d: string | null) => (d ? new Date(d).toLocaleDateString("fr-FR") : "—");
+const emptyForm = { dossier_id: "", label: "", amount: "", currency_code: "XOF", supplier_id: "", supplier_invoice_number: "", invoice_date: "" };
 
 export default function ExpensesPage() {
   const queryClient = useQueryClient();
+  const canCreate = useCan("expenses.create");
   const canValidate = useCan("expenses.validate");
   const canDelete = useCan("expenses.delete");
   const [status, setStatus] = useState("");
   const [search, setSearch] = useState("");
+  const [open, setOpen] = useState(false);
+  const [form, setForm] = useState(emptyForm);
+  const [error, setError] = useState<string | null>(null);
 
   const key = ["expenses", "all", status, search];
   const { data, isLoading } = useQuery({
@@ -47,7 +52,41 @@ export default function ExpensesPage() {
     },
   });
 
+  const { data: shipments } = useQuery({
+    queryKey: ["shipments", "picker"],
+    enabled: canCreate,
+    queryFn: async () => {
+      const { data: r } = await rawApi.GET("/v1/shipments", { params: { query: { per_page: 100 } } });
+      return (r as { data: { id: string; reference: string }[] }).data;
+    },
+  });
+  const { data: suppliers } = useQuery({
+    queryKey: ["parties", "supplier"],
+    enabled: canCreate,
+    queryFn: async () => {
+      const { data: r } = await rawApi.GET("/v1/parties", { params: { query: { type: "supplier", per_page: 100 } } });
+      return (r as { data: { id: string; name: string; code: string }[] }).data;
+    },
+  });
+
   const invalidate = () => queryClient.invalidateQueries({ queryKey: ["expenses"] });
+  const add = useMutation({
+    mutationFn: async () => {
+      const { error: problem } = await rawApi.POST(`/v1/shipments/${form.dossier_id}/expenses`, {
+        body: {
+          label: form.label,
+          amount: Number(form.amount) || 0,
+          currency_code: form.currency_code,
+          supplier_id: form.supplier_id || null,
+          supplier_invoice_number: form.supplier_invoice_number || null,
+          invoice_date: form.invoice_date || null,
+        },
+      });
+      if (problem) throw problem;
+    },
+    onSuccess: () => { setForm(emptyForm); setOpen(false); setError(null); invalidate(); },
+    onError: (problem) => setError(problemMessage(problem)),
+  });
   const validate = useMutation({
     mutationFn: async (id: string) => { const { error } = await rawApi.POST(`/v1/expenses/${id}/validate`, { body: { status: "validated" } }); if (error) throw error; },
     onSuccess: invalidate,
@@ -59,10 +98,60 @@ export default function ExpensesPage() {
 
   return (
     <div className="flex flex-col gap-4">
-      <div>
-        <h1 className="text-xl font-bold">Dépenses</h1>
-        <p className="text-[13px] text-ink-3">Factures fournisseurs de tous les dossiers. La saisie se fait dans le dossier concerné.</p>
+      <div className="flex items-start">
+        <div>
+          <h1 className="text-xl font-bold">Dépenses</h1>
+          <p className="text-[13px] text-ink-3">Factures fournisseurs de tous les dossiers.</p>
+        </div>
+        {canCreate && (
+          <button onClick={() => setOpen((v) => !v)} className={`ml-auto ${buttonPrimary}`}>
+            {open ? "Fermer" : "+ Dépense"}
+          </button>
+        )}
       </div>
+
+      {open && canCreate && (
+        <form
+          onSubmit={(e) => { e.preventDefault(); add.mutate(); }}
+          className="grid gap-3 rounded-xl border border-line bg-surface p-5 shadow-sm md:grid-cols-4"
+        >
+          <Field label="Dossier" className="md:col-span-2">
+            <select required value={form.dossier_id} onChange={(e) => setForm({ ...form, dossier_id: e.target.value })} className={inputClass}>
+              <option value="">— Choisir un dossier —</option>
+              {(shipments ?? []).map((s) => <option key={s.id} value={s.id}>{s.reference}</option>)}
+            </select>
+          </Field>
+          <Field label="Libellé" className="md:col-span-2">
+            <input required value={form.label} onChange={(e) => setForm({ ...form, label: e.target.value })} className={inputClass} placeholder="Acconage, transport…" />
+          </Field>
+          <Field label="Montant">
+            <input required type="number" min={0} step="1" value={form.amount} onChange={(e) => setForm({ ...form, amount: e.target.value })} className={`${inputClass} mono`} />
+          </Field>
+          <Field label="Devise">
+            <select value={form.currency_code} onChange={(e) => setForm({ ...form, currency_code: e.target.value })} className={inputClass}>
+              {["XOF", "EUR", "USD"].map((c) => <option key={c} value={c}>{c}</option>)}
+            </select>
+          </Field>
+          <Field label="Fournisseur">
+            <select value={form.supplier_id} onChange={(e) => setForm({ ...form, supplier_id: e.target.value })} className={inputClass}>
+              <option value="">—</option>
+              {(suppliers ?? []).map((s) => <option key={s.id} value={s.id}>{s.name} ({s.code})</option>)}
+            </select>
+          </Field>
+          <Field label="N° facture fourn.">
+            <input value={form.supplier_invoice_number} onChange={(e) => setForm({ ...form, supplier_invoice_number: e.target.value })} className={`${inputClass} mono`} />
+          </Field>
+          <Field label="Date facture">
+            <input type="date" value={form.invoice_date} onChange={(e) => setForm({ ...form, invoice_date: e.target.value })} className={inputClass} />
+          </Field>
+          {error && <p className="rounded-lg bg-crit-soft px-3 py-2 text-xs text-crit md:col-span-4">{error}</p>}
+          <div className="md:col-span-4">
+            <button type="submit" disabled={add.isPending || !form.dossier_id} className={buttonPrimary}>
+              {add.isPending ? "Enregistrement…" : "Enregistrer la dépense"}
+            </button>
+          </div>
+        </form>
+      )}
 
       <div className="flex flex-wrap items-center gap-2">
         {FILTERS.map(([value, label]) => (
