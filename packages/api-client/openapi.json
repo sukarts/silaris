@@ -10487,6 +10487,92 @@
                 }
             }
         },
+        "/v1/reports/agents": {
+            "get": {
+                "operationId": "report.agents",
+                "summary": "GET /v1/reports/agents \u2014 efficacit\u00e9 par agent de transit : ce que ses\ndossiers de la p\u00e9riode promettaient (marge pr\u00e9vue) face \u00e0 ce qu'ils ont\nr\u00e9ellement d\u00e9gag\u00e9 (CA factur\u00e9 net \u2212 d\u00e9penses valid\u00e9es)",
+                "tags": [
+                    "Report"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "period": {
+                                            "type": "object",
+                                            "properties": {
+                                                "from": {
+                                                    "type": "string"
+                                                },
+                                                "to": {
+                                                    "type": "string"
+                                                }
+                                            },
+                                            "required": [
+                                                "from",
+                                                "to"
+                                            ]
+                                        },
+                                        "agents": {
+                                            "type": "array",
+                                            "items": {
+                                                "type": "object",
+                                                "properties": {
+                                                    "agent_id": {
+                                                        "type": "string"
+                                                    },
+                                                    "agent": {
+                                                        "type": "string"
+                                                    },
+                                                    "dossiers": {
+                                                        "type": "integer"
+                                                    },
+                                                    "forecast_margin": {
+                                                        "type": "number"
+                                                    },
+                                                    "real_margin": {
+                                                        "type": "number"
+                                                    },
+                                                    "variance": {
+                                                        "type": "number"
+                                                    },
+                                                    "real_rate": {
+                                                        "type": "number"
+                                                    }
+                                                },
+                                                "required": [
+                                                    "agent_id",
+                                                    "agent",
+                                                    "dossiers",
+                                                    "forecast_margin",
+                                                    "real_margin",
+                                                    "variance",
+                                                    "real_rate"
+                                                ]
+                                            }
+                                        }
+                                    },
+                                    "required": [
+                                        "period",
+                                        "agents"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/AuthorizationException"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            }
+        },
         "/v1/admin/roles": {
             "get": {
                 "operationId": "role.index",

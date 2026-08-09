@@ -192,3 +192,32 @@ function seedAwb(array $ids, string $airlineId): string
 
     return $awbId;
 }
+
+/** Dossier avec sa cotation acceptée (vente 1 000 000, coût estimé 700 000) et une facture 1 200 000 HT. */
+function seedDossierWithForecast(array $ids): string
+{
+    $quoteId = (string) Str::uuid7();
+    DB::table('quotes')->insert([
+        'id' => $quoteId, 'tenant_id' => $ids['tenant'], 'company_id' => $ids['company'],
+        'number' => 'Q-2026-0500', 'party_id' => $ids['client'], 'owner_id' => $ids['user_admin'],
+        'status' => 'accepted', 'mode' => 'sea_fcl', 'direction' => 'import',
+        'origin_locode' => 'CNSHA', 'destination_locode' => 'CIABJ', 'incoterm_code' => 'CIF',
+        'currency_code' => 'XOF', 'total_amount' => 1_000_000, 'total_buy_amount' => 700_000,
+        'accepted_at' => now(), 'valid_until' => now()->addDays(30)->toDateString(),
+        'created_at' => now(), 'updated_at' => now(),
+    ]);
+
+    $shipmentId = seedShipmentFor($ids, $ids['client'], 'IMP-EXP-0001');
+    DB::table('shipments')->where('id', $shipmentId)->update(['quote_id' => $quoteId]);
+
+    DB::table('invoices')->insert([
+        'id' => (string) Str::uuid7(), 'tenant_id' => $ids['tenant'], 'company_id' => $ids['company'],
+        'type' => 'invoice', 'number' => 'F-2026-0500', 'party_id' => $ids['client'],
+        'status' => 'validated', 'currency_code' => 'XOF',
+        'total_excl_tax' => 1_200_000, 'total_tax' => 0, 'total_incl_tax' => 1_200_000,
+        'issue_date' => now()->toDateString(), 'shipment_id' => $shipmentId,
+        'created_at' => now(), 'updated_at' => now(),
+    ]);
+
+    return $shipmentId;
+}

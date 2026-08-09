@@ -19,6 +19,15 @@ interface Business {
   };
   revenue: { total: number; by_month: MonthRevenue[]; by_company: CompanyRevenue[] };
 }
+interface AgentRow {
+  agent_id: string;
+  agent: string;
+  dossiers: number;
+  forecast_margin: number;
+  real_margin: number;
+  variance: number;
+  real_rate: number;
+}
 
 const MODE_LABEL: Record<string, string> = { sea_fcl: "Maritime FCL", sea_lcl: "Maritime LCL", air: "Aérien", road: "Terrestre" };
 const money = (n: number) => new Intl.NumberFormat("fr-FR", { notation: n >= 1_000_000 ? "compact" : "standard", maximumFractionDigits: 1 }).format(n);
@@ -45,6 +54,16 @@ export default function ReportsPage() {
         params: { query: { ...(from ? { from } : {}), ...(to ? { to } : {}) } },
       });
       return response as Business;
+    },
+  });
+
+  const { data: agents } = useQuery({
+    queryKey: ["reports", "agents", from, to],
+    queryFn: async () => {
+      const { data: response } = await rawApi.GET("/v1/reports/agents", {
+        params: { query: { ...(from ? { from } : {}), ...(to ? { to } : {}) } },
+      });
+      return (response as { agents: AgentRow[] }).agents;
     },
   });
 
@@ -182,6 +201,39 @@ export default function ReportsPage() {
                   </tbody>
                 </table>
               </div>
+            </div>
+          </section>
+
+          {/* ——— Efficacité par agent ——— */}
+          <section className="flex flex-col gap-3">
+            <h2 className="text-[13px] font-semibold text-ink-2">Efficacité par agent de transit</h2>
+            <p className="text-[11px] text-ink-3">Marge prévue (cotation) vs réelle (CA facturé − dépenses validées) sur les dossiers ouverts dans la période.</p>
+            <div className="overflow-x-auto rounded-xl border border-line bg-surface p-4 shadow-sm">
+              <table className="w-full text-[13px]">
+                <thead>
+                  <tr className="border-b border-line text-left text-[10px] uppercase tracking-wider text-ink-3">
+                    <th className="py-1.5">Agent</th>
+                    <th className="py-1.5 text-right">Dossiers</th>
+                    <th className="py-1.5 text-right">Marge prévue</th>
+                    <th className="py-1.5 text-right">Marge réelle</th>
+                    <th className="py-1.5 text-right">Écart</th>
+                    <th className="py-1.5 text-right">Taux réel</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {(agents?.length ?? 0) === 0 && <tr><td colSpan={6} className="py-4 text-center text-ink-3">Aucun dossier sur la période.</td></tr>}
+                  {agents?.map((a) => (
+                    <tr key={a.agent_id} className="border-b border-line last:border-0">
+                      <td className="py-1.5">{a.agent}</td>
+                      <td className="mono py-1.5 text-right">{a.dossiers}</td>
+                      <td className="mono py-1.5 text-right text-ink-2">{money(a.forecast_margin)}</td>
+                      <td className="mono py-1.5 text-right font-semibold">{money(a.real_margin)}</td>
+                      <td className={`mono py-1.5 text-right ${a.variance >= 0 ? "text-ok" : "text-crit"}`}>{a.variance >= 0 ? "+" : ""}{money(a.variance)}</td>
+                      <td className="mono py-1.5 text-right">{a.real_rate} %</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           </section>
         </>

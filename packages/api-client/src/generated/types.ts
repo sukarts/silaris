@@ -2161,6 +2161,27 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/reports/agents": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * GET /v1/reports/agents — efficacité par agent de transit : ce que ses
+         *     dossiers de la période promettaient (marge prévue) face à ce qu'ils ont
+         *     réellement dégagé (CA facturé net − dépenses validées)
+         */
+        get: operations["report.agents"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/admin/roles": {
         parameters: {
             query?: never;
@@ -8219,6 +8240,41 @@ export interface operations {
             401: components["responses"]["AuthenticationException"];
             403: components["responses"]["AuthorizationException"];
             422: components["responses"]["ValidationException"];
+        };
+    };
+    "report.agents": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        period: {
+                            from: string;
+                            to: string;
+                        };
+                        agents: {
+                            agent_id: string;
+                            agent: string;
+                            dossiers: number;
+                            forecast_margin: number;
+                            real_margin: number;
+                            variance: number;
+                            real_rate: number;
+                        }[];
+                    };
+                };
+            };
+            401: components["responses"]["AuthenticationException"];
+            403: components["responses"]["AuthorizationException"];
         };
     };
     "role.index": {
