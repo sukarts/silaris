@@ -716,6 +716,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/expenses": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** GET /v1/expenses — toutes les dépenses, tous dossiers, filtrables */
+        get: operations["expense.all"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/shipments/{shipmentId}/expenses": {
         parameters: {
             query?: never;
@@ -5072,6 +5089,46 @@ export interface operations {
             };
             401: components["responses"]["AuthenticationException"];
             403: components["responses"]["AuthorizationException"];
+        };
+    };
+    "expense.all": {
+        parameters: {
+            query?: {
+                status?: "recorded" | "validated" | "paid" | "cancelled";
+                shipment_id?: string;
+                search?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: components["schemas"]["ExpenseModel"][];
+                        /** @description Base path for paginator generated URLs. */
+                        path: string | null;
+                        /** @description Number of items shown per page. */
+                        per_page: number;
+                        /** @description The "cursor" that points to the next set of items. */
+                        next_cursor: string | null;
+                        /** Format: uri */
+                        next_page_url: string | null;
+                        /** @description The "cursor" that points to the previous set of items. */
+                        prev_cursor: string | null;
+                        /** Format: uri */
+                        prev_page_url: string | null;
+                    };
+                };
+            };
+            401: components["responses"]["AuthenticationException"];
+            403: components["responses"]["AuthorizationException"];
+            422: components["responses"]["ValidationException"];
         };
     };
     "expense.index": {
