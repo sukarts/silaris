@@ -7,6 +7,7 @@ import { problemMessage, rawApi } from "@/lib/api";
 import { Field, buttonPrimary, inputClass } from "@/components/Field";
 import { StatusPill } from "@/components/StatusPill";
 import { WorkflowStepper } from "@/components/WorkflowStepper";
+import { ExpensesCard } from "@/components/ExpensesCard";
 import { useCan } from "@/stores/auth";
 
 interface ShipmentDetail {
@@ -111,6 +112,7 @@ export default function ShipmentDetailPage({ params }: { params: Promise<{ shipm
   const queryClient = useQueryClient();
   const canAdvance = useCan("shipments.advance");
   const canUpdate = useCan("shipments.update");
+  const canReadExpenses = useCan("expenses.read");
   const [error, setError] = useState<string | null>(null);
   const [refreshInfo, setRefreshInfo] = useState<string | null>(null);
   // À l'import, le dossier démarre souvent avec le seul connaissement : la
@@ -351,6 +353,8 @@ export default function ShipmentDetailPage({ params }: { params: Promise<{ shipm
           {data.free_time && (
             <FreeTimeCard shipmentId={shipmentId} freeTime={data.free_time} canUpdate={canUpdate} />
           )}
+
+          {canReadExpenses && <ExpensesCard shipmentId={shipmentId} />}
 
           <div className="rounded-xl border border-line bg-surface shadow-sm">
             <div className="flex items-center border-b border-line px-4 py-3">

@@ -3593,6 +3593,288 @@
                 }
             }
         },
+        "/v1/shipments/{shipmentId}/expenses": {
+            "get": {
+                "operationId": "expense.index",
+                "summary": "GET /v1/shipments/{id}/expenses \u2014 d\u00e9penses du dossier + marge",
+                "tags": [
+                    "Expense"
+                ],
+                "parameters": [
+                    {
+                        "name": "shipmentId",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/components/schemas/ExpenseModel"
+                                            }
+                                        },
+                                        "margin": {
+                                            "type": "object",
+                                            "properties": {
+                                                "forecast": {
+                                                    "type": "object",
+                                                    "properties": {
+                                                        "sell": {
+                                                            "type": "number"
+                                                        },
+                                                        "cost": {
+                                                            "type": "number"
+                                                        },
+                                                        "margin": {
+                                                            "type": "number"
+                                                        },
+                                                        "rate": {
+                                                            "type": "number"
+                                                        }
+                                                    },
+                                                    "required": [
+                                                        "sell",
+                                                        "cost",
+                                                        "margin",
+                                                        "rate"
+                                                    ]
+                                                },
+                                                "real": {
+                                                    "type": "object",
+                                                    "properties": {
+                                                        "revenue": {
+                                                            "type": "number"
+                                                        },
+                                                        "cost": {
+                                                            "type": "number"
+                                                        },
+                                                        "pending_cost": {
+                                                            "type": "number"
+                                                        },
+                                                        "margin": {
+                                                            "type": "number"
+                                                        },
+                                                        "rate": {
+                                                            "type": "number"
+                                                        }
+                                                    },
+                                                    "required": [
+                                                        "revenue",
+                                                        "cost",
+                                                        "pending_cost",
+                                                        "margin",
+                                                        "rate"
+                                                    ]
+                                                },
+                                                "variance": {
+                                                    "type": "number",
+                                                    "description": "\u00c9cart de marge : positif = mieux que pr\u00e9vu, n\u00e9gatif = d\u00e9rapage."
+                                                }
+                                            },
+                                            "required": [
+                                                "forecast",
+                                                "real",
+                                                "variance"
+                                            ]
+                                        }
+                                    },
+                                    "required": [
+                                        "data",
+                                        "margin"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/AuthorizationException"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            },
+            "post": {
+                "operationId": "expense.store",
+                "summary": "POST /v1/shipments/{id}/expenses",
+                "tags": [
+                    "Expense"
+                ],
+                "parameters": [
+                    {
+                        "name": "shipmentId",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "anyOf": [
+                                        {
+                                            "$ref": "#/components/schemas/ExpenseModel"
+                                        },
+                                        {
+                                            "type": "null"
+                                        }
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/AuthorizationException"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            }
+        },
+        "/v1/expenses/{expenseId}": {
+            "patch": {
+                "operationId": "expense.update",
+                "summary": "PATCH /v1/expenses/{id}",
+                "tags": [
+                    "Expense"
+                ],
+                "parameters": [
+                    {
+                        "name": "expenseId",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/AuthorizationException"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            },
+            "delete": {
+                "operationId": "expense.destroy",
+                "summary": "DELETE /v1/expenses/{id}",
+                "tags": [
+                    "Expense"
+                ],
+                "parameters": [
+                    {
+                        "name": "expenseId",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No content"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/AuthorizationException"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            }
+        },
+        "/v1/expenses/{expenseId}/validate": {
+            "post": {
+                "operationId": "expense.validateExpense",
+                "summary": "POST /v1/expenses/{id}/validate \u2014 contr\u00f4le d'une d\u00e9pense avant qu'elle p\u00e8se dans la marge",
+                "tags": [
+                    "Expense"
+                ],
+                "parameters": [
+                    {
+                        "name": "expenseId",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "status": {
+                                        "type": "string",
+                                        "enum": [
+                                            "validated",
+                                            "paid"
+                                        ]
+                                    }
+                                },
+                                "required": [
+                                    "status"
+                                ]
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationException"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/AuthorizationException"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            }
+        },
         "/v1/fleet/trucks": {
             "get": {
                 "operationId": "fleet.trucks",
@@ -14200,6 +14482,128 @@
                     "carrier_party_id"
                 ],
                 "title": "DriverModel"
+            },
+            "ExpenseModel": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string"
+                    },
+                    "tenant_id": {
+                        "type": "string"
+                    },
+                    "company_id": {
+                        "type": "string"
+                    },
+                    "shipment_id": {
+                        "type": "string"
+                    },
+                    "supplier_id": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "service_code": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "label": {
+                        "type": "string"
+                    },
+                    "amount": {
+                        "type": "string"
+                    },
+                    "currency_code": {
+                        "type": "string"
+                    },
+                    "supplier_invoice_number": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "invoice_date": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "format": "date-time"
+                    },
+                    "due_date": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "format": "date-time"
+                    },
+                    "status": {
+                        "type": "string"
+                    },
+                    "note": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "recorded_by": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "validated_by": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "validated_at": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "format": "date-time"
+                    },
+                    "created_at": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "format": "date-time"
+                    },
+                    "updated_at": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "format": "date-time"
+                    }
+                },
+                "required": [
+                    "id",
+                    "tenant_id",
+                    "company_id",
+                    "shipment_id",
+                    "supplier_id",
+                    "service_code",
+                    "label",
+                    "amount",
+                    "currency_code",
+                    "supplier_invoice_number",
+                    "invoice_date",
+                    "due_date",
+                    "status",
+                    "note",
+                    "recorded_by",
+                    "validated_by",
+                    "validated_at",
+                    "created_at",
+                    "updated_at"
+                ],
+                "title": "ExpenseModel"
             },
             "InvoiceModel": {
                 "type": "object",
