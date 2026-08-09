@@ -22,7 +22,7 @@ class ServiceCatalogController
             'data' => DB::table('service_catalog')
                 ->where('is_active', true)
                 ->orderBy('position')
-                ->get(['code', 'label', 'family', 'scope']),
+                ->get(['code', 'label', 'family', 'scope', 'default_tc20', 'default_tc40', 'pricing_note']),
         ]);
     }
 }

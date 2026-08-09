@@ -6,7 +6,7 @@ import { useEffect, useState } from "react";
 import { problemMessage, rawApi } from "@/lib/api";
 import { Field, buttonPrimary, buttonSecondary, inputClass } from "@/components/Field";
 import { PlaceCombobox } from "@/components/PlaceCombobox";
-import { ServiceCatalogDatalist, useServiceCatalog } from "@/components/ServiceCatalog";
+import { ServiceCatalogDatalist, suggestedAmount, useServiceCatalog } from "@/components/ServiceCatalog";
 import { useAuth } from "@/stores/auth";
 
 interface CalculatedLine {
@@ -163,9 +163,21 @@ export default function NewQuotePage() {
   /** Saisie de la désignation : un poste connu renseigne code et famille, la ligne libre reste libre. */
   function setDescription(index: number, value: string) {
     const item = catalog.resolve(value);
-    setLines((state) => state.map((line, i) => (i === index
-      ? (item ? { ...line, description: item.label, service_code: item.code, category: item.family } : { ...line, description: value })
-      : line)));
+    setLines((state) => state.map((line, i) => {
+      if (i !== index) return line;
+      if (!item) return { ...line, description: value };
+      // Le tarif standard n'est qu'une proposition : il ne s'écrit que sur une
+      // ligne au prix encore vide, jamais par-dessus une saisie de l'exploitant.
+      const suggested = suggestedAmount(item);
+      const priceEmpty = line.unit_price === "" || line.unit_price === "0";
+      return {
+        ...line,
+        description: item.label,
+        service_code: item.code,
+        category: item.family,
+        unit_price: suggested !== null && priceEmpty ? String(suggested) : line.unit_price,
+      };
+    }));
   }
 
   async function calculate(event: React.FormEvent) {

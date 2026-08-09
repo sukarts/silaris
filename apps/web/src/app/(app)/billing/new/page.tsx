@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { problemMessage, rawApi } from "@/lib/api";
 import { Field, buttonPrimary, buttonSecondary, inputClass } from "@/components/Field";
-import { ServiceCatalogDatalist, useServiceCatalog } from "@/components/ServiceCatalog";
+import { ServiceCatalogDatalist, suggestedAmount, useServiceCatalog } from "@/components/ServiceCatalog";
 
 interface Branch { company_id: string; company_name: string }
 interface TaxRate { id: string; name: string; rate_percent: string }
@@ -160,9 +160,16 @@ export default function NewInvoicePage() {
                       list="service-catalog" value={line.description}
                       onChange={(e) => {
                         const item = catalog.resolve(e.target.value);
-                        // Choisir un poste connu renseigne son code ; la saisie
-                        // libre reste possible et garde le code déjà là.
-                        update(i, item ? { description: item.label, service_code: item.code } : { description: e.target.value });
+                        if (!item) { update(i, { description: e.target.value }); return; }
+                        // Choisir un poste connu renseigne code et tarif standard ;
+                        // le tarif ne s'écrit que sur un prix encore vide.
+                        const suggested = suggestedAmount(item);
+                        const priceEmpty = line.unit_price === "" || line.unit_price === "0";
+                        update(i, {
+                          description: item.label,
+                          service_code: item.code,
+                          ...(suggested !== null && priceEmpty ? { unit_price: String(suggested) } : {}),
+                        });
                       }}
                       className={`${inputClass} !py-1`}
                     />
