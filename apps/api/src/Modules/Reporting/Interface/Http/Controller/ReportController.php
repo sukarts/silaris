@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Silaris\Modules\Reporting\Interface\Http\Controller;
 
 use Barryvdh\DomPDF\Facade\Pdf;
+use Illuminate\Database\Query\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
@@ -35,6 +36,99 @@ class ReportController
         [$from, $to] = $this->range($request);
 
         return response()->json($this->payload($from, $to));
+    }
+
+    /**
+     * GET /v1/reports/agents — efficacité par agent de transit : ce que ses
+     * dossiers de la période promettaient (marge prévue) face à ce qu'ils ont
+     * réellement dégagé (CA facturé net − dépenses validées).
+     */
+    public function agents(Request $request): JsonResponse
+    {
+        [$from, $to] = $this->range($request);
+        $tenantId = $this->tenant->id();
+
+        // Base : les dossiers de la période, par agent. Un dossier compte même
+        // sans cotation ni facture — l'agent l'a bien traité.
+        $rows = DB::table('shipments as s')
+            ->join('users as u', 'u.id', '=', 's.agent_id')
+            ->where('s.tenant_id', $tenantId)
+            ->whereBetween('s.created_at', [$from, $to])
+            ->groupBy('s.agent_id', 'u.first_name', 'u.last_name')
+            ->selectRaw("s.agent_id, u.first_name || ' ' || u.last_name AS agent, count(*) AS dossiers")
+            ->get()
+            ->keyBy('agent_id');
+
+        $forecast = $this->agentSums(
+            DB::table('shipments as s')->join('quotes as q', 'q.id', '=', 's.quote_id')
+                ->where('s.tenant_id', $tenantId)->whereBetween('s.created_at', [$from, $to])
+                ->groupBy('s.agent_id')
+                ->selectRaw('s.agent_id, coalesce(sum(q.total_amount), 0) AS sell, coalesce(sum(q.total_buy_amount), 0) AS cost'),
+        );
+        $revenue = $this->agentScalar(
+            DB::table('shipments as s')->join('invoices as i', 'i.shipment_id', '=', 's.id')
+                ->where('s.tenant_id', $tenantId)->whereBetween('s.created_at', [$from, $to])
+                ->whereIn('i.type', ['invoice', 'credit_note'])->whereIn('i.status', ['validated', 'synced'])
+                ->groupBy('s.agent_id')
+                ->selectRaw("s.agent_id, coalesce(sum(case when i.type = 'credit_note' then -i.total_excl_tax else i.total_excl_tax end), 0) AS v"),
+        );
+        $cost = $this->agentScalar(
+            DB::table('shipments as s')->join('expenses as e', 'e.shipment_id', '=', 's.id')
+                ->where('s.tenant_id', $tenantId)->whereBetween('s.created_at', [$from, $to])
+                ->whereIn('e.status', ['validated', 'paid'])
+                ->groupBy('s.agent_id')
+                ->selectRaw('s.agent_id, coalesce(sum(e.amount), 0) AS v'),
+        );
+
+        $agents = $rows->map(function ($row) use ($forecast, $revenue, $cost): array {
+            $id = (string) $row->agent_id;
+            $forecastMargin = round(($forecast[$id]['sell'] ?? 0) - ($forecast[$id]['cost'] ?? 0), 2);
+            $realRevenue = (float) ($revenue[$id] ?? 0);
+            $realMargin = round($realRevenue - (float) ($cost[$id] ?? 0), 2);
+
+            return [
+                'agent_id' => $id,
+                'agent' => $row->agent,
+                'dossiers' => (int) $row->dossiers,
+                'forecast_margin' => $forecastMargin,
+                'real_margin' => $realMargin,
+                'variance' => round($realMargin - $forecastMargin, 2),
+                'real_rate' => $realRevenue <= 0.0 ? 0.0 : round($realMargin / $realRevenue * 100, 1),
+            ];
+        })->values()->sortByDesc('real_margin')->values()->all();
+
+        return response()->json([
+            'period' => ['from' => $from->toDateString(), 'to' => $to->toDateString()],
+            'agents' => $agents,
+        ]);
+    }
+
+    /**
+     * @param  Builder  $query
+     * @return array<string, array{sell: float, cost: float}>
+     */
+    private function agentSums($query): array
+    {
+        $out = [];
+        foreach ($query->get() as $r) {
+            $out[(string) $r->agent_id] = ['sell' => (float) $r->sell, 'cost' => (float) $r->cost];
+        }
+
+        return $out;
+    }
+
+    /**
+     * @param  Builder  $query
+     * @return array<string, float>
+     */
+    private function agentScalar($query): array
+    {
+        $out = [];
+        foreach ($query->get() as $r) {
+            $out[(string) $r->agent_id] = (float) $r->v;
+        }
+
+        return $out;
     }
 
     /**
