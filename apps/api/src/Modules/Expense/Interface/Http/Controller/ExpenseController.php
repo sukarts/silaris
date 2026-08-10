@@ -6,6 +6,7 @@ namespace Silaris\Modules\Expense\Interface\Http\Controller;
 
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 use Silaris\Modules\Expense\Application\Service\MarginCalculator;
 use Silaris\Modules\Expense\Infrastructure\Persistence\Model\ExpenseModel;
@@ -52,18 +53,31 @@ class ExpenseController
         ]);
     }
 
-    /** POST /v1/shipments/{id}/expenses */
+    /**
+     * POST /v1/shipments/{id}/expenses — une dépense, ou plusieurs d'un coup
+     * (tableau `lines`, façon lignes de facture). Le lot est atomique.
+     */
     public function store(Request $request, string $shipmentId): JsonResponse
     {
         $shipment = ShipmentModel::findOrFail($shipmentId);
-        $data = $this->validatePayload($request);
+        $base = ['shipment_id' => $shipmentId, 'company_id' => $shipment->company_id, 'recorded_by' => $request->user()?->id];
 
-        $expense = ExpenseModel::create([
-            ...$data,
-            'shipment_id' => $shipmentId,
-            'company_id' => $shipment->company_id,
-            'recorded_by' => $request->user()?->id,
-        ]);
+        if ($request->has('lines')) {
+            $rules = ['lines' => ['required', 'array', 'min:1', 'max:50']];
+            foreach ($this->lineRules() as $field => $rule) {
+                $rules["lines.*.{$field}"] = $rule;
+            }
+            $validated = $request->validate($rules);
+
+            $created = DB::transaction(fn (): array => array_map(
+                fn (array $line) => ExpenseModel::create([...$line, ...$base])->fresh('supplier:id,code,name'),
+                $validated['lines'],
+            ));
+
+            return response()->json(['data' => $created], 201);
+        }
+
+        $expense = ExpenseModel::create([...$this->validatePayload($request), ...$base]);
 
         return response()->json($expense->fresh('supplier:id,code,name'), 201);
     }
@@ -105,9 +119,20 @@ class ExpenseController
      */
     private function validatePayload(Request $request, bool $partial = false): array
     {
-        $req = $partial ? 'sometimes' : 'required';
-
         return $request->validate([
+            ...$this->lineRules($partial ? 'sometimes' : 'required'),
+            'status' => ['sometimes', Rule::in(['recorded', 'validated', 'paid', 'cancelled'])],
+        ]);
+    }
+
+    /**
+     * Règles d'une dépense — partagées entre la saisie simple et le lot.
+     *
+     * @return array<string, list<mixed>>
+     */
+    private function lineRules(string $req = 'required'): array
+    {
+        return [
             'supplier_id' => ['nullable', 'uuid', Rule::exists('parties', 'id')->where('type', 'supplier')],
             'service_code' => ['nullable', 'string', 'max:32'],
             'label' => [$req, 'string', 'max:200'],
@@ -116,8 +141,7 @@ class ExpenseController
             'supplier_invoice_number' => ['nullable', 'string', 'max:64'],
             'invoice_date' => ['nullable', 'date'],
             'due_date' => ['nullable', 'date'],
-            'status' => ['sometimes', Rule::in(['recorded', 'validated', 'paid', 'cancelled'])],
             'note' => ['nullable', 'string', 'max:500'],
-        ]);
+        ];
     }
 }
