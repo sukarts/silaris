@@ -68,3 +68,19 @@ it('rattache un fournisseur à la dépense et la liste globalement', function ()
     expect($row['shipment']['reference'])->toBe('IMP-EXP-0001')
         ->and($row['supplier']['name'])->toBe('Transporteur SARL');
 });
+
+it('enregistre plusieurs dépenses en un seul envoi (lignes)', function (): void {
+    $ids = seedCore();
+    $shipmentId = seedDossierWithForecast($ids);
+    $token = tokenFor($ids['user_finance_manager']);
+
+    $this->withToken($token)->postJson("/api/v1/shipments/{$shipmentId}/expenses", [
+        'lines' => [
+            ['label' => 'Acconage', 'amount' => 100_000, 'currency_code' => 'XOF'],
+            ['label' => 'Transport', 'amount' => 50_000, 'currency_code' => 'XOF'],
+        ],
+    ])->assertCreated()->assertJsonCount(2, 'data');
+
+    $rows = $this->withToken($token)->getJson("/api/v1/shipments/{$shipmentId}/expenses")->assertOk()->json('data');
+    expect($rows)->toHaveCount(2);
+});
