@@ -94,3 +94,13 @@ it('refuse une cotation sans ligne', function (): void {
         ->postJson('/api/v1/quotes', quotePayload($ids, $salesId, ['lines' => []]))
         ->assertStatus(422);
 });
+
+it('accepte une cotation à date de validité antérieure (saisie de dossiers passés)', function (): void {
+    $ids = seedCore();
+    $salesId = seedSalesUser($ids);
+
+    // Intégrer un dossier déjà passé : la validité peut être dans le passé.
+    $this->withToken(tokenFor($salesId))
+        ->postJson('/api/v1/quotes', quotePayload($ids, $salesId, ['valid_until' => now()->subMonths(3)->toDateString()]))
+        ->assertCreated();
+});

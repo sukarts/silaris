@@ -51,7 +51,16 @@ export default function NewShipmentPage() {
     etd: "",
     eta: "",
     notes: "",
+    // Dérogation : ouvrir un dossier sans cotation acceptée (import d'historique,
+    // accord verbal). Le dossier part « en attente de dérogation », validé après.
+    waiver_reason: "",
+    direction: "import",
+    mode: "sea_fcl",
+    incoterm_code: "CIF",
+    origin_locode: "",
+    destination_locode: "",
   });
+  const [waiverMode, setWaiverMode] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
@@ -76,6 +85,16 @@ export default function NewShipmentPage() {
   });
 
   const chosenQuote = quotes?.find((quote) => quote.id === form.quote_id);
+
+  // Incoterms : nécessaires seulement quand on ouvre sans cotation.
+  const { data: incoterms } = useQuery({
+    queryKey: ["incoterms"],
+    enabled: waiverMode,
+    queryFn: async () => {
+      const { data } = await rawApi.GET("/v1/referentials/incoterms", { params: { query: { per_page: 20 } } });
+      return (data as { data: { code: string; label: string }[] }).data;
+    },
+  });
 
   // Le périmètre de saisie vient des agences de rattachement de l'utilisateur,
   // pas de l'administration : un agent transit ouvre des dossiers sans avoir
@@ -113,17 +132,31 @@ export default function NewShipmentPage() {
     if (!user) return;
     setSaving(true);
     setError(null);
-    const { data, error: problem } = await rawApi.POST("/v1/shipments", {
-      body: {
-        // Mode, sens, incoterm et ports viennent de la cotation acceptée :
-        // les envoyer ici les laisserait diverger de ce que le client a validé.
-        ...form,
-        agent_id: user.id,
-        etd: form.etd || null,
-        eta: form.eta || null,
-        notes: form.notes || null,
-      },
-    });
+    const common = {
+      client_id: form.client_id,
+      company_id: form.company_id,
+      branch_id: form.branch_id,
+      priority: form.priority,
+      agent_id: user.id,
+      etd: form.etd || null,
+      eta: form.eta || null,
+      notes: form.notes || null,
+    };
+    const body = waiverMode
+      // Sans cotation : le trajet est saisi à la main, avec le motif de dérogation.
+      ? {
+          ...common,
+          waiver_reason: form.waiver_reason,
+          direction: form.direction,
+          mode: form.mode,
+          incoterm_code: form.incoterm_code,
+          origin_locode: form.origin_locode.toUpperCase(),
+          destination_locode: form.destination_locode.toUpperCase(),
+        }
+      // Sur cotation : mode, sens, incoterm et ports viennent de l'accord client.
+      : { ...common, quote_id: form.quote_id };
+
+    const { data, error: problem } = await rawApi.POST("/v1/shipments", { body });
     setSaving(false);
     if (problem) return setError(problemMessage(problem));
     const created = data as { data: { id: string } };
@@ -137,11 +170,16 @@ export default function NewShipmentPage() {
         <p className="text-[13px] text-ink-3">La référence sera générée automatiquement (agence + année + séquence).</p>
       </div>
       <form onSubmit={submit} className="flex flex-col gap-4 rounded-xl border border-line bg-surface p-6 shadow-sm">
-        {form.client_id !== "" && quotes?.length === 0 && (
+        {form.client_id !== "" && quotes?.length === 0 && !waiverMode && (
           <p className="rounded-lg bg-warn-soft px-3 py-2 text-xs text-warn">
-            Ce client n'a aucune cotation acceptée en attente de dossier. Émettez-en une, ou attendez son accord.
+            Ce client n'a aucune cotation acceptée en attente de dossier. Émettez-en une, ou cochez « Ouvrir sans cotation » ci-dessous.
           </p>
         )}
+
+        <label className="flex items-center gap-2 text-[13px] text-ink-2">
+          <input type="checkbox" checked={waiverMode} onChange={(e) => setWaiverMode(e.target.checked)} />
+          Ouvrir sans cotation acceptée (dérogation — import d'historique, accord verbal)
+        </label>
 
         {chosenQuote && (
           <div className="rounded-xl bg-paper p-4">
@@ -167,16 +205,53 @@ export default function NewShipmentPage() {
               ))}
             </select>
           </Field>
-          <Field label="Cotation acceptée">
-            <select required value={form.quote_id} onChange={(e) => set("quote_id", e.target.value)} className={inputClass} disabled={!form.client_id}>
-              <option value="">{form.client_id ? "— Sélectionner —" : "Choisissez d'abord le client"}</option>
-              {quotes?.map((quote) => (
-                <option key={quote.id} value={quote.id}>
-                  {quote.number} — {quote.origin_locode} → {quote.destination_locode}
-                </option>
-              ))}
-            </select>
-          </Field>
+          {!waiverMode && (
+            <Field label="Cotation acceptée">
+              <select required value={form.quote_id} onChange={(e) => set("quote_id", e.target.value)} className={inputClass} disabled={!form.client_id}>
+                <option value="">{form.client_id ? "— Sélectionner —" : "Choisissez d'abord le client"}</option>
+                {quotes?.map((quote) => (
+                  <option key={quote.id} value={quote.id}>
+                    {quote.number} — {quote.origin_locode} → {quote.destination_locode}
+                  </option>
+                ))}
+              </select>
+            </Field>
+          )}
+
+          {waiverMode && (
+            <>
+              <Field label="Motif de dérogation" className="md:col-span-2">
+                <textarea required minLength={15} rows={2} value={form.waiver_reason} onChange={(e) => set("waiver_reason", e.target.value)} className={inputClass} placeholder="Au moins 15 caractères — ex. « Dossier historique antérieur à SILARIS »." />
+              </Field>
+              <Field label="Sens">
+                <select value={form.direction} onChange={(e) => set("direction", e.target.value)} className={inputClass}>
+                  <option value="import">Import</option>
+                  <option value="export">Export</option>
+                  <option value="transit">Transit</option>
+                </select>
+              </Field>
+              <Field label="Mode">
+                <select value={form.mode} onChange={(e) => set("mode", e.target.value)} className={inputClass}>
+                  <option value="sea_fcl">Maritime FCL</option>
+                  <option value="sea_lcl">Maritime LCL</option>
+                  <option value="air">Aérien</option>
+                  <option value="road">Terrestre</option>
+                  <option value="multimodal">Multimodal</option>
+                </select>
+              </Field>
+              <Field label="Incoterm">
+                <select value={form.incoterm_code} onChange={(e) => set("incoterm_code", e.target.value)} className={inputClass}>
+                  {(incoterms ?? [{ code: "CIF", label: "CIF" }]).map((i) => <option key={i.code} value={i.code}>{i.code}</option>)}
+                </select>
+              </Field>
+              <Field label="Origine (LOCODE)">
+                <input required value={form.origin_locode} onChange={(e) => set("origin_locode", e.target.value.toUpperCase())} className={`${inputClass} mono`} placeholder="CNSHA" maxLength={5} />
+              </Field>
+              <Field label="Destination (LOCODE)">
+                <input required value={form.destination_locode} onChange={(e) => set("destination_locode", e.target.value.toUpperCase())} className={`${inputClass} mono`} placeholder="CIABJ" maxLength={5} />
+              </Field>
+            </>
+          )}
 
           <Field label="Société">
             <select required value={form.company_id} onChange={(e) => { set("company_id", e.target.value); set("branch_id", ""); }} className={inputClass}>
