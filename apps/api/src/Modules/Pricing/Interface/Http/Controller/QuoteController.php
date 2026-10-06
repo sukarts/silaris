@@ -95,7 +95,7 @@ class QuoteController
             'incoterm_code' => ['required', 'size:3', 'exists:incoterms,code'],
             'currency_code' => ['required', 'size:3', 'exists:currencies,code'],
             'cargo_summary' => ['sometimes', 'array'],
-            'valid_until' => ['required', 'date', 'after:today'],
+            'valid_until' => ['required', 'date'],
             'lines' => ['required', 'array', 'min:1'],
             'lines.*.service_code' => ['required', 'string', 'max:32'],
             'lines.*.description' => ['required', 'string', 'max:255'],
@@ -147,7 +147,7 @@ class QuoteController
 
         $data = $request->validate([
             'incoterm_code' => ['sometimes', 'size:3', 'exists:incoterms,code'],
-            'valid_until' => ['sometimes', 'date', 'after:today'],
+            'valid_until' => ['sometimes', 'date'],
             'lines' => ['required', 'array', 'min:1'],
             'lines.*.service_code' => ['required', 'string', 'max:32'],
             'lines.*.description' => ['required', 'string', 'max:255'],
