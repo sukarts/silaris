@@ -46,7 +46,7 @@ class StepRequestController
     /** GET /v1/shipments/step-requests — ce que le responsable doit trancher. */
     public function index(): JsonResponse
     {
-        $rows = DB::table('shipment_step_requests AS r')
+        $rows = tenantTable('shipment_step_requests AS r')
             ->join('shipments AS s', 's.id', '=', 'r.shipment_id')
             ->leftJoin('users AS u', 'u.id', '=', 'r.requested_by')
             ->leftJoin('parties AS p', 'p.id', '=', 's.client_id')
@@ -74,7 +74,7 @@ class StepRequestController
             'note' => ['required_if:decision,rejected', 'nullable', 'string', 'max:500'],
         ]);
 
-        $pending = DB::table('shipment_step_requests AS r')
+        $pending = tenantTable('shipment_step_requests AS r')
             ->join('shipments AS s', 's.id', '=', 'r.shipment_id')
             ->where('r.id', $requestId)
             ->first(['r.id', 'r.shipment_id', 'r.to_step', 'r.status', 's.service_id']);

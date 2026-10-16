@@ -200,8 +200,8 @@ class PackageController
         $data = $request->validate([
             'reference' => ['required', 'string', 'max:32'],
             'action' => ['required', Rule::in(['stuffed', 'unstuffed', 'delivered'])],
-            'container_id' => ['required_if:action,stuffed', 'nullable', 'uuid', 'exists:containers,id'],
-            'consolidation_id' => ['nullable', 'uuid', 'exists:consolidations,id'],
+            'container_id' => ['required_if:action,stuffed', 'nullable', 'uuid', tenantExists('containers')],
+            'consolidation_id' => ['nullable', 'uuid', tenantExists('consolidations')],
             'delivered_to' => ['required_if:action,delivered', 'nullable', 'string', 'max:255'],
             'force' => ['sometimes', 'boolean'],
             'otp' => ['nullable', 'string', 'size:6'],

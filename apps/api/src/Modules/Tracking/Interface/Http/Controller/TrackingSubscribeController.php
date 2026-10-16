@@ -40,6 +40,10 @@ class TrackingSubscribeController
             'carrier_scac' => ['nullable', 'string', 'size:4', 'exists:carriers,scac'],
         ]);
 
+        // Le dossier doit être du tenant : sans ce contrôle, un identifiant
+        // deviné abonnerait — et interrogerait, à crédit — le dossier d'un autre.
+        abort_unless(tenantTable('shipments')->where('id', $shipmentId)->exists(), 404);
+
         // La compagnie saisie vaut pour tout le dossier : les conteneurs déjà
         // affectés attendaient précisément cette information.
         $this->subscriber->attachCarrier($shipmentId, $data['carrier_scac'] ?? null);
@@ -102,7 +106,7 @@ class TrackingSubscribeController
                 continue;
             }
 
-            $containerId = DB::table('containers')->where('number', $number)->value('id');
+            $containerId = tenantTable('containers')->where('number', $number)->value('id');
             if ($containerId === null) {
                 $containerId = (string) Str::uuid7();
                 DB::table('containers')->insert([

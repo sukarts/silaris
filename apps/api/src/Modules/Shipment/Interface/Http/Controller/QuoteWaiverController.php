@@ -26,7 +26,7 @@ class QuoteWaiverController
     /** GET /v1/shipments/waivers — file d'attente de la direction. */
     public function index(): JsonResponse
     {
-        $rows = DB::table('shipments AS s')
+        $rows = tenantTable('shipments AS s')
             ->leftJoin('parties AS p', 'p.id', '=', 's.client_id')
             ->leftJoin('users AS u', 'u.id', '=', 's.quote_waiver_requested_by')
             ->where('s.quote_waiver_status', 'pending')
@@ -52,7 +52,7 @@ class QuoteWaiverController
             'note' => ['required_if:decision,rejected', 'nullable', 'string', 'max:500'],
         ]);
 
-        $shipment = DB::table('shipments')->where('id', $shipmentId)
+        $shipment = tenantTable('shipments')->where('id', $shipmentId)
             ->first(['id', 'reference', 'quote_waiver_status']);
 
         if ($shipment === null) {
@@ -68,7 +68,7 @@ class QuoteWaiverController
         }
 
         $decidedBy = Auth::id();
-        DB::table('shipments')->where('id', $shipmentId)->update([
+        tenantTable('shipments')->where('id', $shipmentId)->update([
             'quote_waiver_status' => $data['decision'],
             'quote_waiver_decided_by' => $decidedBy,
             'quote_waiver_decided_at' => now(),

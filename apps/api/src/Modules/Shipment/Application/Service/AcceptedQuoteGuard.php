@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Silaris\Modules\Shipment\Application\Service;
 
-use Illuminate\Support\Facades\DB;
 use Silaris\Modules\Shipment\Domain\Exception\QuoteNotAccepted;
 
 /**
@@ -28,7 +27,7 @@ final readonly class AcceptedQuoteGuard
             throw QuoteNotAccepted::missing();
         }
 
-        $quote = DB::table('quotes')->where('id', $quoteId)->first([
+        $quote = tenantTable('quotes')->where('id', $quoteId)->first([
             'id', 'number', 'status', 'party_id', 'mode', 'direction', 'incoterm_code',
             'origin_locode', 'destination_locode', 'currency_code', 'total_amount',
         ]);
@@ -47,7 +46,7 @@ final readonly class AcceptedQuoteGuard
 
         // Une cotation n'ouvre qu'un dossier : sans cette garde, un même accord
         // client couvrirait plusieurs expéditions facturées séparément.
-        $existing = DB::table('shipments')->where('quote_id', $quoteId)->value('reference');
+        $existing = tenantTable('shipments')->where('quote_id', $quoteId)->value('reference');
         if ($existing !== null) {
             throw QuoteNotAccepted::alreadyUsed($quote->number, (string) $existing);
         }

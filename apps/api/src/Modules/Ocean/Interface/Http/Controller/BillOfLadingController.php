@@ -61,9 +61,9 @@ class BillOfLadingController
     public function store(Request $request): JsonResponse
     {
         $data = $request->validate([
-            'shipment_id' => ['required', 'uuid', 'exists:shipments,id'],
+            'shipment_id' => ['required', 'uuid', tenantExists('shipments')],
             'type' => ['required', Rule::in(['master', 'house'])],
-            'parent_id' => ['nullable', 'uuid', Rule::exists('bills_of_lading', 'id')->where('type', 'master')],
+            'parent_id' => ['nullable', 'uuid', tenantExists('bills_of_lading')->where('type', 'master')],
             'number' => ['required', 'string', 'max:32'],
             'release_type' => ['sometimes', Rule::in(['original', 'telex', 'seaway'])],
             'shipper' => ['required', 'array'],

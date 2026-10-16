@@ -47,13 +47,13 @@ class OpportunityController
         $required = $partial ? 'sometimes' : 'required';
 
         return $request->validate([
-            'party_id' => [$required, 'uuid', 'exists:parties,id'],
+            'party_id' => [$required, 'uuid', tenantExists('parties')],
             'title' => [$required, 'string', 'max:255'],
             'stage' => ['sometimes', Rule::in(self::STAGES)],
             'estimated_value' => ['nullable', 'numeric', 'min:0'],
             'currency_code' => ['nullable', 'size:3', 'exists:currencies,code'],
             'probability' => ['nullable', 'integer', 'min:0', 'max:100'],
-            'owner_id' => [$required, 'uuid', 'exists:users,id'],
+            'owner_id' => [$required, 'uuid', tenantExists('users')],
             'expected_close_date' => ['nullable', 'date'],
             'lost_reason' => ['nullable', 'string', 'max:255'],
         ]);

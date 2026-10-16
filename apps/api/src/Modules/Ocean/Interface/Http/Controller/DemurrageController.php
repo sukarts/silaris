@@ -60,7 +60,7 @@ class DemurrageController
         $endsAt = "ca.{$kind}_ends_at";
         $days = "ca.{$kind}_days";
 
-        return DB::table('container_assignments AS ca')
+        return tenantTable('container_assignments AS ca')
             ->join('containers AS c', 'c.id', '=', 'ca.container_id')
             ->join('shipments AS s', 's.id', '=', 'ca.shipment_id')
             ->leftJoin('parties AS p', 'p.id', '=', 's.client_id')
@@ -110,7 +110,7 @@ class DemurrageController
     public function updateFreeTime(Request $request): JsonResponse
     {
         $data = $request->validate([
-            'shipment_id' => ['required', 'uuid', 'exists:shipments,id'],
+            'shipment_id' => ['required', 'uuid', tenantExists('shipments')],
             'demurrage_free_days' => ['nullable', 'integer', 'min:0', 'max:180'],
             'detention_free_days' => ['nullable', 'integer', 'min:0', 'max:180'],
         ]);

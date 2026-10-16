@@ -10,13 +10,18 @@ use App\Http\Middleware\ResolveTenantFromToken;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Auth\AuthenticationException;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
+use Illuminate\Database\Query\Builder;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\Rule;
+use Illuminate\Validation\Rules\Exists;
 use Illuminate\Validation\ValidationException;
 use Silaris\Modules\Shared\Domain\Exception\DomainException;
+use Silaris\Modules\Shared\Infrastructure\Tenancy\TenantContext;
 use Symfony\Component\HttpKernel\Exception\HttpException;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
@@ -33,6 +38,35 @@ if (! function_exists('problem')) {
             'detail' => $detail,
             ...$extra,
         ], fn ($v) => $v !== null), $status, ['Content-Type' => 'application/problem+json']);
+    }
+}
+
+if (! function_exists('tenantTable')) {
+    /**
+     * Query builder borné au tenant courant — pour les lectures inter-modules
+     * qui passent par DB::table et non par un modèle (BelongsToTenant).
+     * En production l'application se connecte en propriétaire des tables :
+     * la RLS ne la contraint pas, ce filtre est la seule barrière.
+     *
+     * Accepte un alias : tenantTable('shipments AS s') filtre sur s.tenant_id.
+     */
+    function tenantTable(string $table): Builder
+    {
+        $parts = preg_split('/\s+as\s+/i', trim($table));
+        $alias = $parts === false ? $table : end($parts);
+
+        return DB::table($table)->where("{$alias}.tenant_id", app(TenantContext::class)->id());
+    }
+}
+
+if (! function_exists('tenantExists')) {
+    /**
+     * Règle `exists` bornée au tenant courant : un identifiant d'un autre
+     * tenant est traité comme inexistant, jamais comme une 403 révélatrice.
+     */
+    function tenantExists(string $table, string $column = 'id'): Exists
+    {
+        return Rule::exists($table, $column)->where('tenant_id', app(TenantContext::class)->id());
     }
 }
 

@@ -58,7 +58,7 @@ class QuoteController
             'mode' => ['required', Rule::in(['sea_fcl', 'sea_lcl', 'air', 'road'])],
             'origin_locode' => ['required', 'size:5'],
             'destination_locode' => ['required', 'size:5'],
-            'party_id' => ['nullable', 'uuid', 'exists:parties,id'],
+            'party_id' => ['nullable', 'uuid', tenantExists('parties')],
             'containers' => ['sometimes', 'array'],
             'gross_weight_kg' => ['sometimes', 'numeric', 'min:0'],
             'volume_m3' => ['sometimes', 'numeric', 'min:0'],
@@ -85,9 +85,9 @@ class QuoteController
     public function store(Request $request): JsonResponse
     {
         $data = $request->validate([
-            'company_id' => ['required', 'uuid', 'exists:companies,id'],
-            'party_id' => ['required', 'uuid', 'exists:parties,id'],
-            'owner_id' => ['required', 'uuid', 'exists:users,id'],
+            'company_id' => ['required', 'uuid', tenantExists('companies')],
+            'party_id' => ['required', 'uuid', tenantExists('parties')],
+            'owner_id' => ['required', 'uuid', tenantExists('users')],
             'mode' => ['required', Rule::in(['sea_fcl', 'sea_lcl', 'air', 'road', 'multimodal'])],
             'direction' => ['required', Rule::in(['import', 'export', 'transit'])],
             'origin_locode' => ['required', 'size:5'],
@@ -221,8 +221,8 @@ class QuoteController
         $quote = QuoteModel::where('status', 'sent')->findOrFail($quoteId);
         $data = $request->validate([
             'create_shipment' => ['sometimes', 'boolean'],
-            'branch_id' => ['required_if:create_shipment,true', 'uuid', 'exists:branches,id'],
-            'agent_id' => ['required_if:create_shipment,true', 'uuid', 'exists:users,id'],
+            'branch_id' => ['required_if:create_shipment,true', 'uuid', tenantExists('branches')],
+            'agent_id' => ['required_if:create_shipment,true', 'uuid', tenantExists('users')],
         ]);
 
         $quote->update(['status' => 'accepted', 'accepted_at' => now()]);

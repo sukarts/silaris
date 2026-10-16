@@ -17,9 +17,12 @@ class FleetController
      * Un moyen affrété appartient à un fournisseur du CRM ; nul, il relève de
      * la flotte propre.
      *
-     * @var list<string>
+     * @return list<mixed>
      */
-    private const CARRIER_RULES = ['nullable', 'uuid', 'exists:parties,id'];
+    private static function carrierRules(): array
+    {
+        return ['nullable', 'uuid', tenantExists('parties')];
+    }
 
     /**
      * @param  Builder<TModel>  $query
@@ -49,7 +52,7 @@ class FleetController
         return response()->json(TruckModel::create($request->validate([
             'plate_number' => ['required', 'string', 'max:16'],
             'type' => ['nullable', 'string', 'max:32'],
-            'carrier_party_id' => self::CARRIER_RULES,
+            'carrier_party_id' => self::carrierRules(),
             'capacity_kg' => ['nullable', 'numeric', 'min:0'],
             'inspection_due' => ['nullable', 'date'],
             'insurance_due' => ['nullable', 'date'],
@@ -68,7 +71,7 @@ class FleetController
         return response()->json(TrailerModel::create($request->validate([
             'plate_number' => ['required', 'string', 'max:16'],
             'type' => ['nullable', 'string', 'max:32'],
-            'carrier_party_id' => self::CARRIER_RULES,
+            'carrier_party_id' => self::carrierRules(),
         ])), 201);
     }
 
@@ -83,8 +86,8 @@ class FleetController
     {
         return response()->json(DriverModel::create($request->validate([
             'name' => ['required', 'string', 'max:255'],
-            'user_id' => ['nullable', 'uuid', 'exists:users,id'],
-            'carrier_party_id' => self::CARRIER_RULES,
+            'user_id' => ['nullable', 'uuid', tenantExists('users')],
+            'carrier_party_id' => self::carrierRules(),
             'phone' => ['nullable', 'string', 'max:32'],
             'license_number' => ['nullable', 'string', 'max:32'],
             'license_categories' => ['nullable', 'string', 'max:32'],

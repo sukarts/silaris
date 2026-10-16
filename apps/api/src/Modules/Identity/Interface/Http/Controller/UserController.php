@@ -45,9 +45,9 @@ class UserController
             'locale' => ['sometimes', 'in:fr,en'],
             'role_ids' => ['required', 'array', 'min:1'],
             'role_ids.*' => ['uuid', 'exists:roles,id'],
-            'service_id' => ['sometimes', 'nullable', 'uuid', 'exists:services,id'],
+            'service_id' => ['sometimes', 'nullable', 'uuid', tenantExists('services')],
             'branch_ids' => ['required', 'array', 'min:1'],
-            'branch_ids.*' => ['uuid', 'exists:branches,id'],
+            'branch_ids.*' => ['uuid', tenantExists('branches')],
         ]);
 
         // Alphabet sans caractères ambigus : le mot de passe est recopié/transmis.
@@ -109,9 +109,9 @@ class UserController
             'role_ids' => ['sometimes', 'array', 'min:1'],
             'role_ids.*' => ['uuid', 'exists:roles,id'],
             'branch_ids' => ['sometimes', 'array', 'min:1'],
-            'branch_ids.*' => ['uuid', 'exists:branches,id'],
+            'branch_ids.*' => ['uuid', tenantExists('branches')],
             // Le service détermine quel chef valide ses dossiers.
-            'service_id' => ['sometimes', 'nullable', 'uuid', 'exists:services,id'],
+            'service_id' => ['sometimes', 'nullable', 'uuid', tenantExists('services')],
         ]);
 
         DB::transaction(function () use ($user, $data): void {

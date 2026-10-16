@@ -3825,7 +3825,7 @@
             },
             "post": {
                 "operationId": "expense.store",
-                "summary": "POST /v1/shipments/{id}/expenses",
+                "summary": "POST /v1/shipments/{id}/expenses \u2014 une d\u00e9pense, ou plusieurs d'un coup\n(tableau `lines`, fa\u00e7on lignes de facture). Le lot est atomique",
                 "tags": [
                     "Expense"
                 ],
@@ -3847,15 +3847,34 @@
                                 "schema": {
                                     "anyOf": [
                                         {
-                                            "$ref": "#/components/schemas/ExpenseModel"
+                                            "anyOf": [
+                                                {
+                                                    "$ref": "#/components/schemas/ExpenseModel"
+                                                },
+                                                {
+                                                    "type": "null"
+                                                }
+                                            ]
                                         },
                                         {
-                                            "type": "null"
+                                            "type": "object",
+                                            "properties": {
+                                                "data": {
+                                                    "type": "array",
+                                                    "items": {}
+                                                }
+                                            },
+                                            "required": [
+                                                "data"
+                                            ]
                                         }
                                     ]
                                 }
                             }
                         }
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationException"
                     },
                     "403": {
                         "$ref": "#/components/responses/AuthorizationException"
@@ -4020,10 +4039,59 @@
             },
             "post": {
                 "operationId": "fleet.storeTruck",
-                "description": "\u26a0\ufe0f Cannot generate request documentation: Cannot evaluate validation rules (1 evaluators failed):\n  [NodeRulesEvaluator] Cannot access private constant Silaris\\Modules\\Road\\Interface\\Http\\Controller\\FleetController::CARRIER_RULES (at /Users/rahim/SILARIS/apps/api/vendor/dedoc/scramble/src/Support/OperationExtensions/RulesEvaluator/ConstFetchEvaluator.php:42)",
                 "tags": [
                     "Fleet"
                 ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "plate_number": {
+                                        "type": "string",
+                                        "maxLength": 16
+                                    },
+                                    "type": {
+                                        "type": [
+                                            "string",
+                                            "null"
+                                        ],
+                                        "maxLength": 32
+                                    },
+                                    "carrier_party_id": {
+                                        "type": "string"
+                                    },
+                                    "capacity_kg": {
+                                        "type": [
+                                            "number",
+                                            "null"
+                                        ],
+                                        "minimum": 0
+                                    },
+                                    "inspection_due": {
+                                        "type": [
+                                            "string",
+                                            "null"
+                                        ],
+                                        "format": "date-time"
+                                    },
+                                    "insurance_due": {
+                                        "type": [
+                                            "string",
+                                            "null"
+                                        ],
+                                        "format": "date-time"
+                                    }
+                                },
+                                "required": [
+                                    "plate_number"
+                                ]
+                            }
+                        }
+                    }
+                },
                 "responses": {
                     "201": {
                         "description": "",
@@ -4074,10 +4142,38 @@
             },
             "post": {
                 "operationId": "fleet.storeTrailer",
-                "description": "\u26a0\ufe0f Cannot generate request documentation: Cannot evaluate validation rules (1 evaluators failed):\n  [NodeRulesEvaluator] Cannot access private constant Silaris\\Modules\\Road\\Interface\\Http\\Controller\\FleetController::CARRIER_RULES (at /Users/rahim/SILARIS/apps/api/vendor/dedoc/scramble/src/Support/OperationExtensions/RulesEvaluator/ConstFetchEvaluator.php:42)",
                 "tags": [
                     "Fleet"
                 ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "plate_number": {
+                                        "type": "string",
+                                        "maxLength": 16
+                                    },
+                                    "type": {
+                                        "type": [
+                                            "string",
+                                            "null"
+                                        ],
+                                        "maxLength": 32
+                                    },
+                                    "carrier_party_id": {
+                                        "type": "string"
+                                    }
+                                },
+                                "required": [
+                                    "plate_number"
+                                ]
+                            }
+                        }
+                    }
+                },
                 "responses": {
                     "201": {
                         "description": "",
@@ -4128,10 +4224,66 @@
             },
             "post": {
                 "operationId": "fleet.storeDriver",
-                "description": "\u26a0\ufe0f Cannot generate request documentation: Cannot evaluate validation rules (1 evaluators failed):\n  [NodeRulesEvaluator] Cannot access private constant Silaris\\Modules\\Road\\Interface\\Http\\Controller\\FleetController::CARRIER_RULES (at /Users/rahim/SILARIS/apps/api/vendor/dedoc/scramble/src/Support/OperationExtensions/RulesEvaluator/ConstFetchEvaluator.php:42)",
                 "tags": [
                     "Fleet"
                 ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "name": {
+                                        "type": "string",
+                                        "maxLength": 255
+                                    },
+                                    "user_id": {
+                                        "type": [
+                                            "string",
+                                            "null"
+                                        ],
+                                        "format": "uuid"
+                                    },
+                                    "carrier_party_id": {
+                                        "type": "string"
+                                    },
+                                    "phone": {
+                                        "type": [
+                                            "string",
+                                            "null"
+                                        ],
+                                        "maxLength": 32
+                                    },
+                                    "license_number": {
+                                        "type": [
+                                            "string",
+                                            "null"
+                                        ],
+                                        "maxLength": 32
+                                    },
+                                    "license_categories": {
+                                        "type": [
+                                            "string",
+                                            "null"
+                                        ],
+                                        "maxLength": 32
+                                    },
+                                    "license_expiry": {
+                                        "type": [
+                                            "string",
+                                            "null"
+                                        ],
+                                        "format": "date-time"
+                                    }
+                                },
+                                "required": [
+                                    "name"
+                                ]
+                            }
+                        }
+                    }
+                },
                 "responses": {
                     "201": {
                         "description": "",
@@ -12966,6 +13118,9 @@
                     },
                     "422": {
                         "$ref": "#/components/responses/ValidationException"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/ModelNotFoundException"
                     },
                     "403": {
                         "$ref": "#/components/responses/AuthorizationException"

@@ -133,7 +133,7 @@ class ExpenseController
     private function lineRules(string $req = 'required'): array
     {
         return [
-            'supplier_id' => ['nullable', 'uuid', Rule::exists('parties', 'id')->where('type', 'supplier')],
+            'supplier_id' => ['nullable', 'uuid', tenantExists('parties')->where('type', 'supplier')],
             'service_code' => ['nullable', 'string', 'max:32'],
             'label' => [$req, 'string', 'max:200'],
             'amount' => [$req, 'numeric', 'min:0'],

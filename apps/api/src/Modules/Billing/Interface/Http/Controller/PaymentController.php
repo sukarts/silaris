@@ -67,8 +67,8 @@ class PaymentController
     public function store(Request $request): JsonResponse
     {
         $data = $request->validate([
-            'company_id' => ['required', 'uuid', 'exists:companies,id'],
-            'party_id' => ['required', 'uuid', 'exists:parties,id'],
+            'company_id' => ['required', 'uuid', tenantExists('companies')],
+            'party_id' => ['required', 'uuid', tenantExists('parties')],
             'method' => ['required', Rule::in(self::METHODS)],
             'method_reference' => ['nullable', 'string', 'max:120'],
             'currency_code' => ['required', 'string', 'size:3', 'exists:currencies,code'],
@@ -76,7 +76,7 @@ class PaymentController
             'received_on' => ['required', 'date', 'before_or_equal:today'],
             'note' => ['nullable', 'string', 'max:500'],
             'allocations' => ['sometimes', 'array', 'min:1'],
-            'allocations.*.invoice_id' => ['required', 'uuid', 'exists:invoices,id'],
+            'allocations.*.invoice_id' => ['required', 'uuid', tenantExists('invoices')],
             'allocations.*.amount' => ['required', 'numeric', 'gt:0'],
         ]);
 
