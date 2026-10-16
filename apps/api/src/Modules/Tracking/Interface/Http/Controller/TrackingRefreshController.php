@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace Silaris\Modules\Tracking\Interface\Http\Controller;
 
 use Illuminate\Http\JsonResponse;
-use Illuminate\Support\Facades\DB;
 use Silaris\Modules\CarrierConnect\Infrastructure\Support\CircuitBreaker;
 use Silaris\Modules\Tracking\Application\Service\TrackingPoller;
 use Silaris\Modules\Tracking\Domain\Contract\CarrierUnavailable;
@@ -24,7 +23,7 @@ class TrackingRefreshController
 
     public function __invoke(string $shipmentId): JsonResponse
     {
-        $active = DB::table('tracking_subscriptions')
+        $active = tenantTable('tracking_subscriptions')
             ->where('shipment_id', $shipmentId)
             ->where('status', 'active')
             ->get();

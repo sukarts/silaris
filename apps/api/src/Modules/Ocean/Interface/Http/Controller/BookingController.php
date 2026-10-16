@@ -34,7 +34,7 @@ class BookingController
     public function store(Request $request): JsonResponse
     {
         $data = $request->validate([
-            'shipment_id' => ['required', 'uuid', 'exists:shipments,id'],
+            'shipment_id' => ['required', 'uuid', tenantExists('shipments')],
             'carrier_id' => ['required', 'uuid', 'exists:carriers,id'],
             'voyage_id' => ['nullable', 'uuid', 'exists:voyages,id'],
             'booking_number' => ['nullable', 'string', 'max:32'],

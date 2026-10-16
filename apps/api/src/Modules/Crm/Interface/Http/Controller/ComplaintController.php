@@ -32,12 +32,12 @@ class ComplaintController
     public function store(Request $request, TenantContext $tenant): JsonResponse
     {
         $data = $request->validate([
-            'party_id' => ['required', 'uuid', 'exists:parties,id'],
-            'shipment_id' => ['nullable', 'uuid', 'exists:shipments,id'],
+            'party_id' => ['required', 'uuid', tenantExists('parties')],
+            'shipment_id' => ['nullable', 'uuid', tenantExists('shipments')],
             'title' => ['required', 'string', 'max:255'],
             'description' => ['nullable', 'string', 'max:10000'],
             'severity' => ['sometimes', Rule::in(['low', 'medium', 'high', 'critical'])],
-            'assignee_id' => ['nullable', 'uuid', 'exists:users,id'],
+            'assignee_id' => ['nullable', 'uuid', tenantExists('users')],
             'sla_due_at' => ['nullable', 'date'],
         ]);
 
@@ -56,7 +56,7 @@ class ComplaintController
         $data = $request->validate([
             'status' => ['sometimes', Rule::in(['open', 'investigating', 'resolved', 'closed', 'rejected'])],
             'severity' => ['sometimes', Rule::in(['low', 'medium', 'high', 'critical'])],
-            'assignee_id' => ['nullable', 'uuid', 'exists:users,id'],
+            'assignee_id' => ['nullable', 'uuid', tenantExists('users')],
             'resolution' => ['nullable', 'string', 'max:10000'],
             'cost' => ['nullable', 'numeric', 'min:0'],
         ]);

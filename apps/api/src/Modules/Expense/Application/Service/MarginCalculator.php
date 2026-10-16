@@ -51,7 +51,7 @@ final class MarginCalculator
      */
     private function forecast(?string $quoteId): array
     {
-        $quote = $quoteId === null ? null : DB::table('quotes')->where('id', $quoteId)->first(['total_amount', 'total_buy_amount']);
+        $quote = $quoteId === null ? null : tenantTable('quotes')->where('id', $quoteId)->first(['total_amount', 'total_buy_amount']);
         $sell = (float) ($quote->total_amount ?? 0);
         $cost = (float) ($quote->total_buy_amount ?? 0);
 

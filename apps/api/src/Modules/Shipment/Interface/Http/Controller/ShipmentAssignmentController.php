@@ -29,7 +29,7 @@ class ShipmentAssignmentController
     {
         $service = self::ownService();
 
-        $agents = DB::table('users')
+        $agents = tenantTable('users')
             ->where('is_active', true)
             ->when($service !== null, fn ($query) => $query->where('service_id', $service))
             ->orderBy('last_name')
@@ -43,10 +43,10 @@ class ShipmentAssignmentController
     public function assign(Request $request, string $shipmentId): JsonResponse
     {
         $data = $request->validate([
-            'agent_id' => ['required', 'uuid', 'exists:users,id'],
+            'agent_id' => ['required', 'uuid', tenantExists('users')],
         ]);
 
-        $shipment = DB::table('shipments')->where('id', $shipmentId)
+        $shipment = tenantTable('shipments')->where('id', $shipmentId)
             ->first(['id', 'reference', 'service_id', 'agent_id']);
 
         if ($shipment === null) {
@@ -58,7 +58,7 @@ class ShipmentAssignmentController
             return response()->json(['message' => "Ce dossier relève d'un autre service."], 403);
         }
 
-        $agent = DB::table('users')->where('id', $data['agent_id'])
+        $agent = tenantTable('users')->where('id', $data['agent_id'])
             ->first(['id', 'first_name', 'last_name', 'service_id', 'is_active']);
 
         if ($agent->is_active === false) {
@@ -73,7 +73,7 @@ class ShipmentAssignmentController
             ], 422);
         }
 
-        DB::table('shipments')->where('id', $shipmentId)
+        tenantTable('shipments')->where('id', $shipmentId)
             ->update(['agent_id' => $agent->id, 'updated_at' => now()]);
 
         DB::table('shipment_events')->insert([

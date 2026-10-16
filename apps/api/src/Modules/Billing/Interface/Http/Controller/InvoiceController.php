@@ -89,7 +89,7 @@ class InvoiceController
     {
         // Lecture inter-module par le query builder, pas par le modèle du module
         // Pricing : la facturation ne dépend pas des entités de la cotation.
-        $quote = DB::table('quotes')->where('id', $quoteId)->where('status', 'accepted')
+        $quote = tenantTable('quotes')->where('id', $quoteId)->where('status', 'accepted')
             ->first(['id', 'company_id', 'party_id', 'currency_code', 'total_amount']);
 
         abort_if($quote === null, 404, 'Cotation introuvable ou non acceptée : seule une cotation validée par le client se facture.');
@@ -99,7 +99,7 @@ class InvoiceController
 
         // Le dossier ouvert sur la cotation, s'il existe : la facture s'y
         // rattache pour que règlement et recouvrement retombent sur le dossier.
-        $shipmentId = DB::table('shipments')->where('quote_id', $quote->id)->value('id');
+        $shipmentId = tenantTable('shipments')->where('quote_id', $quote->id)->value('id');
 
         $invoice = DB::transaction(function () use ($quote, $lines, $shipmentId) {
             $invoice = InvoiceModel::create([
@@ -272,11 +272,11 @@ class InvoiceController
     private function validatePayload(Request $request): array
     {
         return $request->validate([
-            'company_id' => ['required', 'uuid', 'exists:companies,id'],
+            'company_id' => ['required', 'uuid', tenantExists('companies')],
             'type' => ['required', Rule::in(['proforma', 'invoice'])],
-            'party_id' => ['required', 'uuid', 'exists:parties,id'],
-            'shipment_id' => ['nullable', 'uuid', 'exists:shipments,id'],
-            'quote_id' => ['nullable', 'uuid', 'exists:quotes,id'],
+            'party_id' => ['required', 'uuid', tenantExists('parties')],
+            'shipment_id' => ['nullable', 'uuid', tenantExists('shipments')],
+            'quote_id' => ['nullable', 'uuid', tenantExists('quotes')],
             'currency_code' => ['required', 'size:3', 'exists:currencies,code'],
             'lines' => ['required', 'array', 'min:1'],
             'lines.*.service_code' => ['required', 'string', 'max:32'],
@@ -284,7 +284,7 @@ class InvoiceController
             'lines.*.quantity' => ['required', 'numeric', 'min:0.001'],
             'lines.*.unit' => ['required', Rule::in(['container', 'kg', 'm3', 'wm', 'flat', 'percent', 'unit'])],
             'lines.*.unit_price' => ['required', 'numeric', 'min:0'],
-            'lines.*.tax_rate_id' => ['nullable', 'uuid', 'exists:tax_rates,id'],
+            'lines.*.tax_rate_id' => ['nullable', 'uuid', tenantExists('tax_rates')],
         ]);
     }
 

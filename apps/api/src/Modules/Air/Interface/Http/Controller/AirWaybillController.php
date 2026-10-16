@@ -61,9 +61,9 @@ class AirWaybillController
     public function store(Request $request): JsonResponse
     {
         $data = $request->validate([
-            'shipment_id' => ['required', 'uuid', 'exists:shipments,id'],
+            'shipment_id' => ['required', 'uuid', tenantExists('shipments')],
             'type' => ['required', Rule::in(['master', 'house'])],
-            'parent_id' => ['nullable', 'uuid', Rule::exists('air_waybills', 'id')->where('type', 'master')],
+            'parent_id' => ['nullable', 'uuid', tenantExists('air_waybills')->where('type', 'master')],
             'number' => ['required', 'string', 'max:16'],
             'airline_id' => ['nullable', 'uuid', 'exists:airlines,id'],
             'gross_weight_kg' => ['nullable', 'numeric', 'min:0'],
@@ -145,7 +145,7 @@ class AirWaybillController
     public function consolidate(Request $request, string $awbId): JsonResponse
     {
         $data = $request->validate([
-            'parent_id' => ['present', 'nullable', 'uuid', Rule::exists('air_waybills', 'id')->where('type', 'master')],
+            'parent_id' => ['present', 'nullable', 'uuid', tenantExists('air_waybills')->where('type', 'master')],
         ]);
 
         $awb = AirWaybillModel::where('type', 'house')->findOrFail($awbId);

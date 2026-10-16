@@ -78,7 +78,7 @@ class TelematicsController
     /** GET /v1/missions/{id}/positions — trace de la mission pour l'exploitation. */
     public function missionTrack(Request $request, string $missionId): JsonResponse
     {
-        $mission = DB::table('missions')->where('id', $missionId)->firstOrFail();
+        $mission = tenantTable('missions')->where('id', $missionId)->firstOrFail();
 
         $validated = $request->validate([
             'limit' => ['sometimes', 'integer', 'min:1', 'max:1000'],
@@ -131,7 +131,7 @@ class TelematicsController
             'identifier' => ['required', 'string', 'max:64'],
             'label' => ['required', 'string', 'max:255'],
             'kind' => ['sometimes', Rule::in(['beacon', 'phone', 'gateway'])],
-            'truck_id' => ['nullable', 'uuid', 'exists:trucks,id'],
+            'truck_id' => ['nullable', 'uuid', tenantExists('trucks')],
         ]);
 
         $key = 'dev_'.bin2hex(random_bytes(24));
@@ -164,7 +164,7 @@ class TelematicsController
     public function devices(): JsonResponse
     {
         return response()->json([
-            'data' => DB::table('tracking_devices as d')
+            'data' => tenantTable('tracking_devices as d')
                 ->leftJoin('trucks as t', 't.id', '=', 'd.truck_id')
                 ->orderBy('d.label')
                 ->get([
@@ -179,14 +179,14 @@ class TelematicsController
     {
         $data = $request->validate([
             'label' => ['sometimes', 'string', 'max:255'],
-            'truck_id' => ['sometimes', 'nullable', 'uuid', 'exists:trucks,id'],
+            'truck_id' => ['sometimes', 'nullable', 'uuid', tenantExists('trucks')],
             'is_active' => ['sometimes', 'boolean'],
         ]);
 
-        $updated = DB::table('tracking_devices')->where('id', $deviceId)
+        $updated = tenantTable('tracking_devices')->where('id', $deviceId)
             ->update([...$data, 'updated_at' => now()]);
         abort_if($updated === 0, 404);
 
-        return response()->json(DB::table('tracking_devices')->where('id', $deviceId)->first());
+        return response()->json(tenantTable('tracking_devices')->where('id', $deviceId)->first());
     }
 }

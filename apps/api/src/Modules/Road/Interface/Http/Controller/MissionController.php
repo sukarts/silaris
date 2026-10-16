@@ -76,12 +76,12 @@ class MissionController
     public function store(Request $request, TenantContext $tenant): JsonResponse
     {
         $data = $request->validate([
-            'shipment_id' => ['nullable', 'uuid', 'exists:shipments,id'],
-            'carrier_party_id' => ['nullable', 'uuid', 'exists:parties,id'],
+            'shipment_id' => ['nullable', 'uuid', tenantExists('shipments')],
+            'carrier_party_id' => ['nullable', 'uuid', tenantExists('parties')],
             'carrier_reference' => ['nullable', 'string', 'max:64'],
-            'truck_id' => ['nullable', 'uuid', 'exists:trucks,id'],
-            'trailer_id' => ['nullable', 'uuid', 'exists:trailers,id'],
-            'driver_id' => ['nullable', 'uuid', 'exists:drivers,id'],
+            'truck_id' => ['nullable', 'uuid', tenantExists('trucks')],
+            'trailer_id' => ['nullable', 'uuid', tenantExists('trailers')],
+            'driver_id' => ['nullable', 'uuid', tenantExists('drivers')],
             'type' => ['sometimes', Rule::in(['delivery', 'pickup', 'transfer'])],
             'window_start' => ['nullable', 'date'],
             'window_end' => ['nullable', 'date', 'after_or_equal:window_start'],

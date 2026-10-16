@@ -141,7 +141,7 @@ class PartyController
             'credit_limit' => ['nullable', 'numeric', 'min:0'],
             'notification_prefs' => ['sometimes', 'array'],
             'tags' => ['sometimes', 'array'],
-            'owner_id' => ['nullable', 'uuid', 'exists:users,id'],
+            'owner_id' => ['nullable', 'uuid', tenantExists('users')],
         ]);
     }
 }

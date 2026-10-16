@@ -62,8 +62,8 @@ class ContainerController
     {
         $container = ContainerModel::findOrFail($containerId);
         $data = $request->validate([
-            'shipment_id' => ['required', 'uuid', 'exists:shipments,id'],
-            'booking_id' => ['nullable', 'uuid', 'exists:bookings,id'],
+            'shipment_id' => ['required', 'uuid', tenantExists('shipments')],
+            'booking_id' => ['nullable', 'uuid', tenantExists('bookings')],
             'seal_number' => ['nullable', 'string', 'max:32'],
             'vgm_kg' => ['nullable', 'numeric', 'min:0'],
         ]);

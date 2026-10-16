@@ -743,7 +743,10 @@ export interface paths {
         /** GET /v1/shipments/{id}/expenses — dépenses du dossier + marge */
         get: operations["expense.index"];
         put?: never;
-        /** POST /v1/shipments/{id}/expenses */
+        /**
+         * POST /v1/shipments/{id}/expenses — une dépense, ou plusieurs d'un coup
+         *     (tableau `lines`, façon lignes de facture). Le lot est atomique
+         */
         post: operations["expense.store"];
         delete?: never;
         options?: never;
@@ -795,10 +798,6 @@ export interface paths {
         };
         get: operations["fleet.trucks"];
         put?: never;
-        /**
-         * @description ⚠️ Cannot generate request documentation: Cannot evaluate validation rules (1 evaluators failed):
-         *       [NodeRulesEvaluator] Cannot access private constant Silaris\Modules\Road\Interface\Http\Controller\FleetController::CARRIER_RULES (at /Users/rahim/SILARIS/apps/api/vendor/dedoc/scramble/src/Support/OperationExtensions/RulesEvaluator/ConstFetchEvaluator.php:42)
-         */
         post: operations["fleet.storeTruck"];
         delete?: never;
         options?: never;
@@ -815,10 +814,6 @@ export interface paths {
         };
         get: operations["fleet.trailers"];
         put?: never;
-        /**
-         * @description ⚠️ Cannot generate request documentation: Cannot evaluate validation rules (1 evaluators failed):
-         *       [NodeRulesEvaluator] Cannot access private constant Silaris\Modules\Road\Interface\Http\Controller\FleetController::CARRIER_RULES (at /Users/rahim/SILARIS/apps/api/vendor/dedoc/scramble/src/Support/OperationExtensions/RulesEvaluator/ConstFetchEvaluator.php:42)
-         */
         post: operations["fleet.storeTrailer"];
         delete?: never;
         options?: never;
@@ -835,10 +830,6 @@ export interface paths {
         };
         get: operations["fleet.drivers"];
         put?: never;
-        /**
-         * @description ⚠️ Cannot generate request documentation: Cannot evaluate validation rules (1 evaluators failed):
-         *       [NodeRulesEvaluator] Cannot access private constant Silaris\Modules\Road\Interface\Http\Controller\FleetController::CARRIER_RULES (at /Users/rahim/SILARIS/apps/api/vendor/dedoc/scramble/src/Support/OperationExtensions/RulesEvaluator/ConstFetchEvaluator.php:42)
-         */
         post: operations["fleet.storeDriver"];
         delete?: never;
         options?: never;
@@ -5210,11 +5201,14 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ExpenseModel"] | null;
+                    "application/json": (components["schemas"]["ExpenseModel"] | null) | {
+                        data: unknown[];
+                    };
                 };
             };
             401: components["responses"]["AuthenticationException"];
             403: components["responses"]["AuthorizationException"];
+            422: components["responses"]["ValidationException"];
         };
     };
     "expense.destroy": {
@@ -5321,7 +5315,20 @@ export interface operations {
             path?: never;
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": {
+                    plate_number: string;
+                    type?: string | null;
+                    carrier_party_id?: string;
+                    capacity_kg?: number | null;
+                    /** Format: date-time */
+                    inspection_due?: string | null;
+                    /** Format: date-time */
+                    insurance_due?: string | null;
+                };
+            };
+        };
         responses: {
             201: {
                 headers: {
@@ -5364,7 +5371,15 @@ export interface operations {
             path?: never;
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": {
+                    plate_number: string;
+                    type?: string | null;
+                    carrier_party_id?: string;
+                };
+            };
+        };
         responses: {
             201: {
                 headers: {
@@ -5407,7 +5422,21 @@ export interface operations {
             path?: never;
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": {
+                    name: string;
+                    /** Format: uuid */
+                    user_id?: string | null;
+                    carrier_party_id?: string;
+                    phone?: string | null;
+                    license_number?: string | null;
+                    license_categories?: string | null;
+                    /** Format: date-time */
+                    license_expiry?: string | null;
+                };
+            };
+        };
         responses: {
             201: {
                 headers: {
@@ -9319,6 +9348,7 @@ export interface operations {
             };
             401: components["responses"]["AuthenticationException"];
             403: components["responses"]["AuthorizationException"];
+            404: components["responses"]["ModelNotFoundException"];
             422: components["responses"]["ValidationException"];
         };
     };

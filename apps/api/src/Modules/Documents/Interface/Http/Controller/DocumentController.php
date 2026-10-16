@@ -51,9 +51,9 @@ class DocumentController
     public function store(Request $request): JsonResponse
     {
         $data = $request->validate([
-            'document_id' => ['nullable', 'uuid', 'exists:documents,id'],
-            'shipment_id' => ['nullable', 'uuid', 'exists:shipments,id'],
-            'party_id' => ['nullable', 'uuid', 'exists:parties,id'],
+            'document_id' => ['nullable', 'uuid', tenantExists('documents')],
+            'shipment_id' => ['nullable', 'uuid', tenantExists('shipments')],
+            'party_id' => ['nullable', 'uuid', tenantExists('parties')],
             'type' => ['required_without:document_id', Rule::in(self::TYPES)],
             'title' => ['required_without:document_id', 'string', 'max:255'],
             'visibility' => ['sometimes', Rule::in(['internal', 'client', 'confidential'])],
