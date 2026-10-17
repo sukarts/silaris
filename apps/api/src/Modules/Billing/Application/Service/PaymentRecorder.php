@@ -227,7 +227,10 @@ final class PaymentRecorder
         abort_if($sum > $amount + 0.0049, 422, 'Les imputations dépassent le montant reçu.');
 
         foreach ($lines as $line) {
-            $invoice = InvoiceModel::find($line['invoice_id']);
+            // Verrou ligne : deux encaissements simultanés sur la même facture
+            // (double-clic, deux postes) se sérialisent, le second voit le
+            // reste déjà réduit au lieu de solder la facture deux fois.
+            $invoice = InvoiceModel::lockForUpdate()->find($line['invoice_id']);
 
             abort_if($invoice === null, 422, 'Facture inconnue dans les imputations.');
             abort_if($invoice->isDraft(), 422, "Une facture en brouillon ne peut pas être réglée : {$invoice->id}");

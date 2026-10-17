@@ -82,19 +82,23 @@ class ExpenseController
         return response()->json($expense->fresh('supplier:id,code,name'), 201);
     }
 
-    /** PATCH /v1/expenses/{id} */
+    /**
+     * PATCH /v1/expenses/{id} — tant qu'elle n'est pas validée. Au-delà, elle
+     * pèse dans la marge et le classement des agents : seule la validation
+     * (expenses.validate) en change l'état.
+     */
     public function update(Request $request, string $expenseId): JsonResponse
     {
-        $expense = ExpenseModel::findOrFail($expenseId);
+        $expense = ExpenseModel::where('status', 'recorded')->findOrFail($expenseId);
         $expense->update($this->validatePayload($request, partial: true));
 
         return response()->json($expense->fresh('supplier:id,code,name'));
     }
 
-    /** DELETE /v1/expenses/{id} */
+    /** DELETE /v1/expenses/{id} — même règle que la modification. */
     public function destroy(string $expenseId): JsonResponse
     {
-        ExpenseModel::findOrFail($expenseId)->delete();
+        ExpenseModel::where('status', 'recorded')->findOrFail($expenseId)->delete();
 
         return response()->json(null, 204);
     }
@@ -119,10 +123,9 @@ class ExpenseController
      */
     private function validatePayload(Request $request, bool $partial = false): array
     {
-        return $request->validate([
-            ...$this->lineRules($partial ? 'sometimes' : 'required'),
-            'status' => ['sometimes', Rule::in(['recorded', 'validated', 'paid', 'cancelled'])],
-        ]);
+        // Pas de `status` ici : une dépense naît « enregistrée » et ne change
+        // d'état que par /validate.
+        return $request->validate($this->lineRules($partial ? 'sometimes' : 'required'));
     }
 
     /**

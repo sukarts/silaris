@@ -246,6 +246,15 @@ class InvoiceController
         $data = $request->validate(['reason' => ['required', 'string', 'max:255']]);
 
         $creditNote = DB::transaction(function () use ($original, $data) {
+            // Un avoir couvre toute la facture : un second rendrait le client
+            // créditeur sans contrepartie. Verrou ligne contre le double-clic.
+            InvoiceModel::lockForUpdate()->findOrFail($original->id);
+            abort_if(
+                InvoiceModel::where('original_invoice_id', $original->id)->exists(),
+                422,
+                "La facture {$original->number} a déjà un avoir.",
+            );
+
             $creditNote = InvoiceModel::create([
                 'company_id' => $original->company_id,
                 'type' => 'credit_note',

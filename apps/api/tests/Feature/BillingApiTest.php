@@ -40,4 +40,8 @@ it('valide une facture (numéro légal, échéance) puis la protège, et génèr
     $creditNote->assertCreated();
     expect($creditNote->json('type'))->toBe('credit_note')
         ->and($creditNote->json('original_invoice_id'))->toBe($invoiceId);
+
+    // Un seul avoir par facture : le second rendrait le client créditeur.
+    $this->withToken($adminToken)->postJson("/api/v1/invoices/{$invoiceId}/credit-note", ['reason' => 'Doublon'])
+        ->assertUnprocessable();
 });
