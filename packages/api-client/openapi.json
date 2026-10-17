@@ -3888,7 +3888,7 @@
         "/v1/expenses/{expenseId}": {
             "patch": {
                 "operationId": "expense.update",
-                "summary": "PATCH /v1/expenses/{id}",
+                "summary": "PATCH /v1/expenses/{id} \u2014 tant qu'elle n'est pas valid\u00e9e. Au-del\u00e0, elle\np\u00e8se dans la marge et le classement des agents : seule la validation\n(expenses.validate) en change l'\u00e9tat",
                 "tags": [
                     "Expense"
                 ],
@@ -3923,7 +3923,7 @@
             },
             "delete": {
                 "operationId": "expense.destroy",
-                "summary": "DELETE /v1/expenses/{id}",
+                "summary": "DELETE /v1/expenses/{id} \u2014 m\u00eame r\u00e8gle que la modification",
                 "tags": [
                     "Expense"
                 ],

@@ -23,9 +23,24 @@ class PortalQuoteController
             ->with('lines')
             ->orderByDesc('created_at')
             ->limit(50)
-            ->get();
+            ->get()
+            ->each(self::forClient(...));
 
         return response()->json(['data' => $quotes]);
+    }
+
+    /**
+     * Le client ne voit jamais le prix d'achat : c'est la marge du transitaire.
+     * Masqué ici et non sur le modèle, l'agence en a besoin dans ses écrans.
+     */
+    private static function forClient(QuoteModel $quote): QuoteModel
+    {
+        $quote->makeHidden('total_buy_amount');
+        if ($quote->relationLoaded('lines')) {
+            $quote->lines->each->makeHidden('buy_price');
+        }
+
+        return $quote;
     }
 
     public function accept(Request $request, string $quoteId): JsonResponse
@@ -37,7 +52,7 @@ class PortalQuoteController
         $quote->update(['status' => 'accepted', 'accepted_at' => now()]);
         // La création du dossier reste une décision interne (Étape 17 — accept côté agence).
 
-        return response()->json($quote->fresh());
+        return response()->json(self::forClient($quote->fresh()));
     }
 
     public function reject(Request $request, string $quoteId): JsonResponse
@@ -52,7 +67,7 @@ class PortalQuoteController
             'rejection_reason' => $request->validate(['reason' => ['nullable', 'string', 'max:255']])['reason'] ?? 'Refusé via portail',
         ]);
 
-        return response()->json($quote->fresh());
+        return response()->json(self::forClient($quote->fresh()));
     }
 
     /** GET /portal/quotes/{id}/pdf — cotation du client connecté uniquement. */

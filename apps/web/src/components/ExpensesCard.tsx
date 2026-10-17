@@ -120,7 +120,7 @@ export function ExpensesCard({ shipmentId }: { shipmentId: string }) {
                       {e.status === "recorded" && canValidate && (
                         <button onClick={() => validate.mutate(e.id)} disabled={validate.isPending} className="text-xs font-semibold text-sea hover:underline">Valider</button>
                       )}
-                      {canDelete && (
+                      {e.status === "recorded" && canDelete && (
                         <button onClick={() => remove.mutate(e.id)} disabled={remove.isPending} className="text-xs font-semibold text-crit hover:underline">Supprimer</button>
                       )}
                     </div>
