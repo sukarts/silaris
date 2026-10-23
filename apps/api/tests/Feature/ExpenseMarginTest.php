@@ -37,6 +37,32 @@ it('dégage la marge réelle face à la prévisionnelle une fois les dépenses v
         ->and((float) $m['variance'])->toBe(700_000.0);
 });
 
+it('ne laisse pas l\'agent fixer le statut d\'une dépense ni toucher une dépense validée', function (): void {
+    $ids = seedCore();
+    $shipmentId = seedDossierWithForecast($ids);
+    $agent = tokenFor($ids['user_transit_agent']);
+
+    // Le statut envoyé est ignoré : la dépense naît « enregistrée »…
+    $expense = $this->withToken($agent)->postJson("/api/v1/shipments/{$shipmentId}/expenses", [
+        'label' => 'Transport', 'amount' => 50_000, 'currency_code' => 'XOF', 'status' => 'paid',
+    ])->assertCreated()->json();
+    expect($expense['status'])->toBe('recorded');
+
+    // …et ne change pas par PATCH, seul /validate en décide.
+    $this->withToken($agent)->patchJson("/api/v1/expenses/{$expense['id']}", ['status' => 'paid'])->assertOk();
+    expect(DB::table('expenses')->where('id', $expense['id'])->value('status'))->toBe('recorded');
+
+    // Une fois validée, ni modification ni suppression : elle pèse dans la marge.
+    freshAuth();
+    $this->withToken(tokenFor($ids['user_accountant']))->postJson("/api/v1/expenses/{$expense['id']}/validate", ['status' => 'validated'])->assertOk();
+    freshAuth();
+    $this->withToken($agent)->patchJson("/api/v1/expenses/{$expense['id']}", ['amount' => 1])->assertNotFound();
+    // Même avec expenses.delete (responsable exploitation), une dépense validée ne s'efface plus.
+    freshAuth();
+    $this->withToken(tokenFor($ids['user_ops_manager']))->deleteJson("/api/v1/expenses/{$expense['id']}")->assertNotFound();
+    expect((float) DB::table('expenses')->where('id', $expense['id'])->value('amount'))->toBe(50_000.0);
+});
+
 it('refuse la saisie d\'une dépense à un rôle sans expenses.create', function (): void {
     $ids = seedCore();
     $shipmentId = seedDossierWithForecast($ids);

@@ -764,11 +764,15 @@ export interface paths {
         get?: never;
         put?: never;
         post?: never;
-        /** DELETE /v1/expenses/{id} */
+        /** DELETE /v1/expenses/{id} — même règle que la modification */
         delete: operations["expense.destroy"];
         options?: never;
         head?: never;
-        /** PATCH /v1/expenses/{id} */
+        /**
+         * PATCH /v1/expenses/{id} — tant qu'elle n'est pas validée. Au-delà, elle
+         *     pèse dans la marge et le classement des agents : seule la validation
+         *     (expenses.validate) en change l'état
+         */
         patch: operations["expense.update"];
         trace?: never;
     };
